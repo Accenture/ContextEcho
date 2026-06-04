@@ -27,7 +27,7 @@ forked branch — without perturbing the main session.
 
 ## Key findings
 
-Measured across **23 frontier models from 10 organizations** on three
+Measured across **24 frontier models from 10 organizations** on three
 anonymized real Claude Code sessions (3,746–9,716 turns):
 
 | # | Finding | Takeaway |
