@@ -16,6 +16,10 @@ that snapshots a real Claude Code session prefix, forks the
 conversation state, and probes any chat-completions API target on the
 forked branch — without perturbing the main session.
 
+<p align="center">
+  <img src="images/context_echo_intro.png" alt="ContextEcho framework overview" width="100%" />
+</p>
+
 This repository contains the **runtime, experiment runners, analysis,
 and plotting code**. The donated session transcripts and the ~42K
 per-cell JSON responses are released separately as the
