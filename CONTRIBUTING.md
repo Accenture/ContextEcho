@@ -47,7 +47,7 @@ anyone can find a low-effort entry point:
 
 | Contribution type | Points | Notes |
 |-------------------|:------:|-------|
-| **Donate a qualifying session** | 2 | A real agentic-coding (or related) session that passes the PII + in-scope review. New domains / languages / model families are especially valuable. |
+| **Donate a qualifying session** | 2 (+1 novelty) | A real agentic-coding (or related) session that passes the PII + in-scope review. Declare the **agent, model, org, domain, language, turns, and compactions** (see [`CONTRIBUTORS.md`](CONTRIBUTORS.md)). A session that fills a **coverage gap** (new agent like Codex/Cursor, new model, new org, new language) earns a **+1 novelty bonus**. |
 | **Build a provider adapter** | 4 | Wire a new chat-completions API target into the harness, with a parity check. |
 | **Annotate an existing session** | 1 | Label drift onset, rank drift severity, or validate the redaction of a donated session. |
 | **Engineering / analysis** | 1–4 | New probes, scorers, figures, or analysis. Counts toward authorship only with meaningful effort (≈15+ hours). |
