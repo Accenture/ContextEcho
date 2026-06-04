@@ -3,11 +3,16 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2605.24279-b31b1b.svg)](https://arxiv.org/abs/2605.24279)
 [![Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-contextecho2026-yellow)](https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
 Code release for:
 
 > **ContextEcho: A Benchmark for Persona Drift in Long Agentic-Coding Sessions**
 > Xianzhong Ding, Yangyang Yu, Changwei Liu, Bill Zhao. arXiv:2605.24279, 2026.
+
+## News
+
+- **June 2026** — ContextEcho is released alongside our [arXiv preprint](https://arxiv.org/abs/2605.24279), with the full harness, three donated sessions, and the per-cell evaluation corpus on [Hugging Face](https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho).
 
 ContextEcho measures whether a frontier LLM's trained Assistant persona
 survives long agentic-coding sessions (thousands of tool-using turns,
@@ -19,6 +24,22 @@ forked branch — without perturbing the main session.
 <p align="center">
   <img src="images/context_echo_intro.png" alt="ContextEcho framework overview" width="100%" />
 </p>
+
+## Key findings
+
+Measured across **23 frontier models from 10 organizations** on three
+anonymized real Claude Code sessions (3,746–9,716 turns):
+
+| # | Finding | Takeaway |
+|---|---------|----------|
+| 1 | **Drift is general, not family-specific** | Persona drift appears across organizations, not just one model family. |
+| 2 | **Compaction does not reliably reset it** | In-session context compaction fails to restore the trained register. |
+| 3 | **A single-shot anchor restores the persona** | One ~110-token anchor turn recovers the trained register across measured targets, persisting 20+ turns. |
+| 4 | **Downstream effects are mode-dependent** | Drift can aid tool-using continuation, but in tool-free chat it breaks format contracts and inflates output length. |
+
+See the [paper](https://arxiv.org/abs/2605.24279) for the full results and
+per-target tables, and [`REPRODUCE.md`](REPRODUCE.md) for the
+claim-by-claim reproduction.
 
 This repository contains the **runtime, experiment runners, analysis,
 and plotting code**. The donated session transcripts and the ~42K
@@ -163,6 +184,18 @@ estimates.
 The dual license is standard for ML benchmarks that bundle data and
 software — Apache-2.0 is the appropriate license for source code,
 while CC-BY-SA-4.0 is the appropriate license for the dataset.
+
+---
+
+## Acknowledgments
+
+- The three anonymized session donors, who consented to the release of
+  their Claude Code transcripts under the project's donor consent terms.
+- The maintainers of [SWE-bench](https://www.swebench.com/) and
+  [Terminal-Bench](https://www.tbench.ai/), whose task suites the
+  downstream-cost experiments build on.
+- The model providers whose chat-completions APIs are evaluated as
+  targets in the panel.
 
 ---
 
