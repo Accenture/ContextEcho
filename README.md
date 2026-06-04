@@ -55,7 +55,7 @@ differently late in a long session (left arm = real session context, right arm
 = length-matched neutral control):
 
 <p align="center">
-  <img src="images/demo_drift.gif" alt="Persona drift demo" width="80%" />
+  <img src="images/demo_drift.gif" alt="Persona drift demo" width="100%" />
 </p>
 
 **Try it live.** The repository ships an interactive, token-streamed
