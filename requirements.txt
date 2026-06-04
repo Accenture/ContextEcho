@@ -1,0 +1,31 @@
+# ContextEcho runtime dependencies — pinned for BlackDuck Hub OSS scan.
+# Python 3.13 (also tested on 3.11). All deps are permissive-licensed
+# (MIT / Apache-2.0 / BSD).
+
+# LLM provider clients
+anthropic==0.84.0
+openai==2.24.0
+litellm==1.85.1              # patches CVE-2026-40217 (RCE in /guardrails endpoint, not used by us as client lib, BDH still flags by version)
+
+# Plotting + reporting
+matplotlib==3.10.8
+numpy==2.3.3
+scipy==1.17.1
+pandas==2.3.2
+python-pptx==1.0.2
+lxml==6.1.1                  # patches CVE-2026-41066 (XXE)
+
+# Data validation
+pydantic==2.12.5
+
+# Utility / IO
+tqdm==4.67.1
+requests==2.34.2             # patches CVE-2026-25645 (temp-file reuse)
+
+# HuggingFace dataset release tooling
+huggingface_hub==1.10.2
+datasets==4.8.4
+
+# Optional / experiment-specific
+modal==1.4.2                 # cloud execution for some experiments
+terminal-bench==0.2.10       # downstream TerminalBench evaluation (0.2.10 = last version with LICENSE in sdist; 0.2.11+ regressed)
