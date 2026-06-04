@@ -162,6 +162,24 @@ estimates.
 
 ---
 
+## Contributing
+
+ContextEcho is a **living benchmark** — its value grows with every real coding
+session it covers. We welcome contributions, and we credit them.
+
+- **Run it on your own session** for a free persona-drift report (yours to keep,
+  whether or not you donate).
+- **Donate a session or annotation** to join the
+  [contributor leaderboard](CONTRIBUTORS.md).
+- **Clear the contribution threshold** for **co-authorship on the next dataset
+  release** (rolling re-authorship — missing the first paper doesn't close the
+  door).
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the points scale, the local-first
+redaction pipeline, the confidentiality rules, and exactly what you get.
+
+---
+
 ## Citation
 
 ```bibtex
