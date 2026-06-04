@@ -171,17 +171,6 @@ estimates.
 
 ---
 
-## What's not in this repo
-
-- **LaTeX sources for the paper** (see the [arXiv preprint](https://arxiv.org/abs/2605.24279); not part of
-  the artifact)
-- **Per-cell response data and donor session transcripts** (separate
-  [dataset release](https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho))
-- **Internal pre-registration notes and orchestration logs** (kept local
-  to keep the artifact reviewer-readable)
-
----
-
 ## Contributing
 
 ContextEcho is a **living benchmark** — its value grows with every real coding
