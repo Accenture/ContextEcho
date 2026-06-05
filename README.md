@@ -54,9 +54,16 @@ per-cell JSON responses are released separately as the
 differently late in a long session (left arm = real session context, right arm
 = length-matched neutral control):
 
+<!-- For a crisp inline VIDEO player, drag images/demo_drift.mp4 into a GitHub
+     issue/PR comment, then paste the returned user-attachments URL on its own
+     line here (GitHub renders it as a player). The GIF below is the fallback. -->
+
 <p align="center">
   <img src="images/demo_drift.gif" alt="Persona drift demo" width="100%" />
 </p>
+
+> 🎬 A sharper screen recording is available at
+> [`images/demo_drift.mp4`](images/demo_drift.mp4) (1920×1012, full color).
 
 **Try it live.** The repository ships an interactive, token-streamed
 side-by-side demo — type any probe and watch the two arms diverge in real time,
