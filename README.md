@@ -54,9 +54,9 @@ per-cell JSON responses are released separately as the
 differently late in a long session (left arm = real session context, right arm
 = length-matched neutral control):
 
-| Drift (no anchor) | Mitigation (A-anchor applied) |
-|---|---|
-| https://github.com/user-attachments/assets/d8ee4dc3-f6dc-4992-8ca7-5e7d678011ad | https://github.com/user-attachments/assets/62e5ccb4-d4c0-4a92-a571-59c547ab7d3a |
+**Left: drift (no anchor) — Right: mitigation (A-anchor applied)**
+
+https://github.com/user-attachments/assets/5ee5629d-ea0a-4e3f-bf67-0cc72652c148
 
 **Try it live.** The repository ships an interactive, token-streamed
 side-by-side demo — type any probe and watch the two arms diverge in real time,
