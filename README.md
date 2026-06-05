@@ -54,12 +54,9 @@ per-cell JSON responses are released separately as the
 differently late in a long session (left arm = real session context, right arm
 = length-matched neutral control):
 
-https://github.com/user-attachments/assets/d8ee4dc3-f6dc-4992-8ca7-5e7d678011ad
+**Left: drift (no anchor) — Right: mitigation (A-anchor applied)**
 
-**Mitigation in action** — a single ~110-token A-anchor turn restores the
-trained Assistant register, persisting 20+ turns:
-
-https://github.com/user-attachments/assets/62e5ccb4-d4c0-4a92-a571-59c547ab7d3a
+https://github.com/user-attachments/assets/d56eff44-e586-4946-855f-cebc405ecc94
 
 **Try it live.** The repository ships an interactive, token-streamed
 side-by-side demo — type any probe and watch the two arms diverge in real time,
