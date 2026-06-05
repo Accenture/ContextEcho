@@ -56,6 +56,11 @@ differently late in a long session (left arm = real session context, right arm
 
 https://github.com/user-attachments/assets/d8ee4dc3-f6dc-4992-8ca7-5e7d678011ad
 
+**Mitigation in action** — a single ~110-token A-anchor turn restores the
+trained Assistant register, persisting 20+ turns:
+
+https://github.com/user-attachments/assets/62e5ccb4-d4c0-4a92-a571-59c547ab7d3a
+
 **Try it live.** The repository ships an interactive, token-streamed
 side-by-side demo — type any probe and watch the two arms diverge in real time,
 with a live drift score. See [`demo_live/`](demo_live/):
