@@ -228,4 +228,10 @@ while CC-BY-SA-4.0 is the appropriate license for the dataset.
 
 ## Star History
 
-[![Star History Chart](https://starchart.cc/Accenture/ContextEcho.svg)](https://starchart.cc/Accenture/ContextEcho)
+<a href="https://star-history.com/#Accenture/ContextEcho&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Accenture/ContextEcho&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Accenture/ContextEcho&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Accenture/ContextEcho&type=Date" />
+  </picture>
+</a>
