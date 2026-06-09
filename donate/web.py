@@ -803,6 +803,7 @@ function renderSessions(){
       redacted = null; described = null; submitted = !!donated;
       renderSelectedCard(s, idx);
       status('redactStatus', donated ? 'This session is already marked donated locally. Pick a different session to avoid duplicate submissions.' : '');
+      status('discoverStatus', '');
       refreshButtons();
     };
     list.appendChild(row);
