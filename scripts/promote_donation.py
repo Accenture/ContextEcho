@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import subprocess
@@ -21,8 +22,21 @@ def safe_label(text: str) -> str:
     return out[:64] or "donor"
 
 
+def default_label(manifest: dict, submission: Path) -> str:
+    base = manifest.get("credit_name") or manifest.get("contributor") or "donor"
+    return safe_label(f"{base}-{submission.name}")
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def run_review(submission: Path, python: str, run_quick: bool) -> dict:
@@ -66,7 +80,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Promote one accepted donation into a public dataset tree.")
     p.add_argument("submission", type=Path, help="pending/submission-* folder")
     p.add_argument("--dataset-root", type=Path, default=Path("data_archive_release_v2"))
-    p.add_argument("--label", default="", help="public session label; default from manifest/submission")
+    p.add_argument("--label", default="", help="public session label; default is contributor plus submission id")
     p.add_argument("--python", default=sys.executable)
     p.add_argument("--run-quick", action="store_true", help="require quick validation before promotion")
     p.add_argument("--force", action="store_true", help="promote even if review decision is not ACCEPTABLE")
@@ -92,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     manifest = load_json(manifest_path)
-    label = safe_label(args.label or manifest.get("credit_name") or manifest.get("contributor") or sub.name)
+    label = safe_label(args.label) if args.label else default_label(manifest, sub)
     dataset = args.dataset_root
     public_session = dataset / "data" / "sessions" / f"session_{label}.jsonl"
     donation_dir = dataset / "data" / "donations" / label
@@ -108,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
     record = {
         "submission_id": sub.name,
         "label": label,
+        "session_sha256": sha256_file(session),
         "session_path": str(public_session.relative_to(dataset)),
         "manifest_path": str((donation_dir / MANIFEST_NAME).relative_to(dataset)),
         "consent_path": str((donation_dir / CONSENT_NAME).relative_to(dataset)),

@@ -29,6 +29,11 @@ def safe_label(text: str) -> str:
     return out[:64] or "donor"
 
 
+def default_label(manifest: dict, submission: Path) -> str:
+    base = manifest.get("credit_name") or manifest.get("contributor") or "donor"
+    return safe_label(f"{base}-{submission.name}")
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -159,7 +164,7 @@ def analyze_quick(label: str, python: str, target: str) -> dict:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Review one downloaded staging donation.")
     p.add_argument("submission", type=Path, help="pending/submission-* folder")
-    p.add_argument("--label", default="", help="validation label; default from submission/contributor")
+    p.add_argument("--label", default="", help="validation label; default is contributor plus submission id")
     p.add_argument("--python", default=sys.executable)
     p.add_argument("--run-quick", action="store_true", help="run 30-cell API validation gate")
     p.add_argument("--env-file", type=Path,
@@ -189,9 +194,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if manifest_path.exists():
         manifest = load_json(manifest_path)
-        label_source = args.label or manifest.get("credit_name") or manifest.get("contributor") or sub.name
         report["metadata"] = {
-            "label": safe_label(str(label_source)),
+            "label": safe_label(args.label) if args.label else default_label(manifest, sub),
             "contributor": manifest.get("contributor"),
             "credit_name": manifest.get("credit_name"),
             "institute": manifest.get("contributor_institute"),
