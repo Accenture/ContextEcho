@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+SUBMISSION_FILES = ("session.redacted.jsonl", "manifest.json", "CONSENT.md")
 
 
 def run(cmd: list[str]) -> int:
@@ -35,6 +38,61 @@ def promoted_submission_ids(dataset_root: Path) -> set[str]:
     return ids
 
 
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def submission_fingerprint(submission: Path) -> str:
+    h = hashlib.sha256()
+    for name in SUBMISSION_FILES:
+        path = submission / name
+        h.update(name.encode())
+        h.update(b"\0")
+        if path.exists():
+            h.update(sha256_file(path).encode())
+        else:
+            h.update(b"MISSING")
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def review_registry_path(dataset_root: Path) -> Path:
+    return dataset_root / "data" / "donations" / "reviewed_submissions.jsonl"
+
+
+def load_review_registry(dataset_root: Path) -> dict[str, dict]:
+    path = review_registry_path(dataset_root)
+    records: dict[str, dict] = {}
+    if not path.exists():
+        return records
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        submission_id = record.get("submission_id")
+        if isinstance(submission_id, str):
+            records[submission_id] = record
+    return records
+
+
+def append_review_record(dataset_root: Path, record: dict) -> None:
+    path = review_registry_path(dataset_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = load_review_registry(dataset_root)
+    existing[record["submission_id"]] = record
+    path.write_text(
+        "\n".join(json.dumps(r, sort_keys=True) for r in existing.values()) + "\n",
+        encoding="utf-8",
+    )
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Download and review all staged donations.")
     p.add_argument("--staging-dir", type=Path, default=Path("hf_staging_download"))
@@ -45,6 +103,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--dataset-root", type=Path, default=Path("data_archive_release_v2"))
     p.add_argument("--include-promoted", action="store_true",
                    help="re-review submissions already recorded as promoted in the local ledger")
+    p.add_argument("--include-reviewed", action="store_true",
+                   help="re-review unchanged submissions already recorded in the review registry")
     return p.parse_args(argv)
 
 
@@ -61,25 +121,54 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     already_promoted = promoted_submission_ids(args.dataset_root)
+    reviewed = load_review_registry(args.dataset_root)
     failures = 0
-    accepted: list[Path] = []
-    skipped = 0
+    accepted: list[tuple[Path, str]] = []
+    skipped_promoted = 0
+    skipped_reviewed = 0
     for sub in pending:
-        if sub.name in already_promoted and not args.include_promoted:
-            skipped += 1
+        fingerprint = submission_fingerprint(sub)
+        if sub.name in already_promoted and not (args.include_promoted or args.include_reviewed):
+            skipped_promoted += 1
             print(f"[intake] skip already promoted: {sub.name}")
+            continue
+        previous = reviewed.get(sub.name)
+        if (
+            previous
+            and previous.get("fingerprint") == fingerprint
+            and not args.include_reviewed
+        ):
+            skipped_reviewed += 1
+            print(f"[intake] skip already reviewed: {sub.name} ({previous.get('decision', 'unknown')})")
             continue
         cmd = [args.python, "scripts/review_donation.py", str(sub)]
         if args.run_quick:
             cmd.append("--run-quick")
         rc = run(cmd)
         if rc == 0:
-            accepted.append(sub)
+            accepted.append((sub, fingerprint))
+            if not args.promote:
+                append_review_record(args.dataset_root, {
+                    "submission_id": sub.name,
+                    "fingerprint": fingerprint,
+                    "decision": "ACCEPTABLE",
+                    "reviewed_utc": datetime.now(timezone.utc).isoformat(),
+                    "quick_validation": bool(args.run_quick),
+                    "promoted": False,
+                })
         else:
             failures += 1
+            append_review_record(args.dataset_root, {
+                "submission_id": sub.name,
+                "fingerprint": fingerprint,
+                "decision": "CHECK_REQUIRED",
+                "reviewed_utc": datetime.now(timezone.utc).isoformat(),
+                "quick_validation": bool(args.run_quick),
+                "promoted": False,
+            })
 
     if args.promote:
-        for sub in accepted:
+        for sub, fingerprint in accepted:
             cmd = [
                 args.python,
                 "scripts/promote_donation.py",
@@ -92,9 +181,19 @@ def main(argv: list[str] | None = None) -> int:
             rc = run(cmd)
             if rc != 0:
                 failures += 1
+                continue
+            append_review_record(args.dataset_root, {
+                "submission_id": sub.name,
+                "fingerprint": fingerprint,
+                "decision": "ACCEPTABLE",
+                "reviewed_utc": datetime.now(timezone.utc).isoformat(),
+                "quick_validation": bool(args.run_quick),
+                "promoted": True,
+            })
 
     print(f"[intake] accepted: {len(accepted)}")
-    print(f"[intake] skipped promoted: {skipped}")
+    print(f"[intake] skipped promoted: {skipped_promoted}")
+    print(f"[intake] skipped reviewed: {skipped_reviewed}")
     print(f"[intake] needs attention: {failures}")
     return 0 if failures == 0 else 1
 
