@@ -129,6 +129,75 @@ def already_submitted(source_path: str | Path = "", artifact_path: str | Path = 
     return False
 
 
+def parse_submit_output(output: str) -> dict:
+    url = (re.search(r"https?://\S+", output) or [None])[0] or ""
+    repo = (re.search(r"\[submit\] target repo\s*:\s*(.+)", output) or [None, ""])[1].strip()
+    submission = (re.search(r"\[submit\] submission\s*:\s*(pending/submission-[^/\s]+/)", output) or [None, ""])[1].strip()
+    uploads = [
+        {"source": m.group(1).strip(), "target": m.group(2).strip()}
+        for m in re.finditer(r"\[submit\]\s+(.+?)\s+->\s+(.+)", output)
+    ]
+    return {"url": url, "repo": repo, "submission": submission, "uploads": uploads}
+
+
+def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[Path, dict]:
+    stem = session.stem.replace(".redacted", "")
+    manifest_path = session.with_name(f"{stem}.manifest.json")
+    manifest = {}
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            manifest = {}
+    parsed = parse_submit_output(output)
+    receipt = {
+        "submitted_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "submission": parsed["submission"],
+        "review_url": parsed["url"],
+        "target_repo": parsed["repo"],
+        "source_path": str(source_path or ""),
+        "redacted_file": str(session),
+        "contributor": manifest.get("contributor", "anonymous"),
+        "credit_name": manifest.get("credit_name", manifest.get("contributor", "anonymous")),
+        "contributor_email": manifest.get("contributor_email", ""),
+        "institute": manifest.get("contributor_institute", ""),
+        "agent": manifest.get("agent", ""),
+        "model": manifest.get("model", ""),
+        "org": manifest.get("org", ""),
+        "turns": manifest.get("turns", ""),
+        "compactions": manifest.get("compactions", ""),
+        "uploads": parsed["uploads"],
+    }
+    lines = [
+        "# ContextEcho Donation Receipt",
+        "",
+        "This receipt confirms that the local donation tool submitted verified redacted artifacts for maintainer review.",
+        "",
+        f"- Submitted UTC: {receipt['submitted_utc']}",
+        f"- Submission: {receipt['submission'] or 'unknown'}",
+        f"- Review URL: {receipt['review_url'] or 'private staging link unavailable'}",
+        f"- Target repo: {receipt['target_repo'] or 'unknown'}",
+        f"- Credit name: {receipt['credit_name']}",
+        f"- Email: {receipt['contributor_email'] or 'not provided'}",
+        f"- Institute: {receipt['institute'] or 'not provided'}",
+        f"- Agent/model: {receipt['agent']} / {receipt['model']}",
+        f"- Turns: {receipt['turns']}",
+        f"- Compactions: {receipt['compactions']}",
+        "",
+        "Uploaded artifacts:",
+    ]
+    for item in receipt["uploads"]:
+        lines.append(f"- {item['source']} -> {item['target']}")
+    lines.extend([
+        "",
+        "Status: pending maintainer review. Credit is awarded after acceptance.",
+        "",
+    ])
+    receipt_path = session.with_name("DONATION_RECEIPT.md")
+    receipt_path.write_text("\n".join(lines), encoding="utf-8")
+    return receipt_path, receipt
+
+
 def annotate_donated(sessions: list[dict]) -> list[dict]:
     donated = load_donated_keys()
     out = []
@@ -254,6 +323,9 @@ INDEX_HTML = r"""<!doctype html>
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
     .result { display:none; border:1px solid var(--line); border-radius:18px; padding:16px; background:#fbfff4; margin-top:12px; }
     .result.show { display:block; }
+    .success-panel { border:2px solid #1f6f43; background:linear-gradient(135deg,#e6f7df,#fffdf5); box-shadow:0 20px 70px rgba(31,111,67,.2); }
+    .success-title { font-size:32px; font-weight:950; letter-spacing:-.04em; color:#13552f; }
+    .success-subtitle { font-size:17px; color:#3e5d3d; margin-top:4px; }
     .result-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .badge { display:inline-block; border-radius:999px; padding:5px 10px; font-weight:900; font-size:13px; }
     .badge.pass { background:#dff1d9; color:#13552f; }
@@ -527,26 +599,52 @@ function renderDescribeResult(data){
   `;
   $('describeResult').classList.add('show');
 }
-function renderSubmitResult(text){
-  const pr = (text.match(/https?:\/\/\S+/) || [''])[0];
-  const repo = (text.match(/\[submit\] target repo\s*:\s*(.+)/) || [,''])[1];
-  const folder = (text.match(/\[submit\] submission\s*:\s*(.+)/) || [,''])[1];
-  const uploads = [...text.matchAll(/\[submit\]\s+(.+?)\s+->\s+(.+)/g)]
-    .map(m => `<span class="metric">${escapeHtml(m[1].trim())} → <strong>${escapeHtml(m[2].trim())}</strong></span>`)
+function receiptEmailHref(receipt, receiptPath){
+  const email = receipt.contributor_email || '';
+  const subject = `ContextEcho donation receipt ${receipt.submission || ''}`.trim();
+  const body = [
+    'ContextEcho donation receipt',
+    '',
+    `Submission: ${receipt.submission || 'unknown'}`,
+    `Review URL: ${receipt.review_url || 'private staging link unavailable'}`,
+    `Credit name: ${receipt.credit_name || 'anonymous'}`,
+    `Agent/model: ${(receipt.agent || '')} / ${(receipt.model || '')}`,
+    `Turns: ${receipt.turns || ''}`,
+    `Compactions: ${receipt.compactions || ''}`,
+    `Receipt file: ${receiptPath || ''}`,
+    '',
+    'Status: pending maintainer review. Credit is awarded after acceptance.'
+  ].join('\n');
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+function renderSubmitResult(data){
+  const text = data.output || '';
+  const receipt = data.receipt || {};
+  const pr = receipt.review_url || (text.match(/https?:\/\/\S+/) || [''])[0];
+  const repo = receipt.target_repo || (text.match(/\[submit\] target repo\s*:\s*(.+)/) || [,''])[1];
+  const folder = receipt.submission || (text.match(/\[submit\] submission\s*:\s*(.+)/) || [,''])[1];
+  const uploadRows = receipt.uploads || [...text.matchAll(/\[submit\]\s+(.+?)\s+->\s+(.+)/g)].map(m => ({source:m[1].trim(), target:m[2].trim()}));
+  const uploads = uploadRows
+    .map(m => `<span class="metric">${escapeHtml(m.source)} -> <strong>${escapeHtml(m.target)}</strong></span>`)
     .join('');
+  const emailHref = receipt.contributor_email ? receiptEmailHref(receipt, data.receipt_path) : '';
   $('submitResult').innerHTML = `
-    <div class="result-head">
-      <div><span class="badge pass">Submitted</span></div>
-      <div class="muted">Maintainers will review the private staging submission.</div>
+    <div class="success-title">Submission received</div>
+    <div class="success-subtitle">Your verified redacted session was uploaded for private maintainer review.</div>
+    <div class="metrics">
+      <span class="metric">Status: <strong>pending review</strong></span>
+      <span class="metric">Credit: <strong>+2 pending</strong></span>
+      <span class="metric">Novelty: <strong>+1 possible bonus</strong></span>
     </div>
-    <div class="field"><div class="field-label">Credits</div><div class="metrics"><span class="metric">+2 pending review</span><span class="metric">+1 possible novelty bonus</span></div></div>
     ${pr ? `<div class="field"><div class="field-label">Private maintainer review link</div><div class="row"><a href="${escapeHtml(pr)}" target="_blank" rel="noopener"><button>Open Link</button></a></div><div class="pathbox">${escapeHtml(pr)}</div><div class="hint">This link may require access to the private Hugging Face staging dataset.</div></div>` : ''}
     ${repo ? `<div class="field"><div class="field-label">Target repo</div><div class="pathbox">${escapeHtml(repo)}</div></div>` : ''}
     ${folder ? `<div class="field"><div class="field-label">Submission folder</div><div class="pathbox">${escapeHtml(folder)}</div></div>` : ''}
+    ${data.receipt_path ? `<div class="field"><div class="field-label">Receipt</div><div class="row"><button id="revealReceipt" class="secondary">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary">Email Receipt</button></a>` : ''}</div><div class="pathbox">${escapeHtml(data.receipt_path)}</div><div class="hint">${emailHref ? 'Email opens your mail app with the receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
     ${uploads ? `<div class="field"><div class="field-label">Uploaded files</div><div class="metrics">${uploads}</div></div>` : ''}
     <div class="row" style="margin-top:14px"><button id="submitAnother" class="secondary">Submit another session</button></div>
   `;
-  $('submitResult').classList.add('show');
+  $('submitResult').classList.add('show', 'success-panel');
+  if(data.receipt_path) $('revealReceipt').onclick = () => post('/api/open_path', {path:data.receipt_path, reveal:true}).catch(e => status('submitStatus','ERROR: '+e.message));
   $('submitAnother').onclick = () => goStep(1);
 }
 function setProgress(pct){
@@ -719,7 +817,7 @@ $('submitBtn').onclick = async () => {
     const data = await post('/api/submit', {redacted_file:redacted.redacted_file, source_path:selected ? selected.path : ''});
     submitted = true;
     if(selected && selected.path){ selected.donated = true; donatedPaths.add(selected.path); saveDonatedPaths(); renderSessions(); }
-    renderSubmitResult(data.output);
+    renderSubmitResult(data);
     status('submitStatus', 'Submission marked donated locally. Pick another session to submit more.');
     refreshButtons();
   }
@@ -871,7 +969,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": output or f"submit failed with code {rc}"}, 400)
             return
         save_donation_record(source_path=source_path or "", artifact_path=session, output=output)
-        self._json({"output": output})
+        receipt_path, receipt = write_receipt(session, source_path or "", output)
+        self._json({"output": output, "receipt_path": str(receipt_path), "receipt": receipt})
 
     def _handle_open_path(self) -> None:
         data = self._read_json()
