@@ -80,6 +80,13 @@ def run_cmd(cmd: list[str], env: dict | None = None, cwd: Path = REPO_ROOT) -> t
     return proc.returncode, proc.stdout
 
 
+def output_tail(text: str, limit: int = 4000) -> str:
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return "...[truncated]...\n" + text[-limit:]
+
+
 def verify_session(path: Path, python: str) -> dict:
     verify_cwd = TOOLS_ROOT if (TOOLS_ROOT / "donate" / "verify.py").exists() else REPO_ROOT
     rc, out = run_cmd([python, "-m", "donate.verify", str(path.resolve())], cwd=verify_cwd)
@@ -234,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
             "passed": quick["passed"],
             "returncode": quick["returncode"],
             "elapsed_sec": quick["elapsed_sec"],
+            "output_tail": output_tail(quick["output"]),
         }
         report["checks"]["quick_validation"] = analyze_quick(label, args.python, args.target)
 
@@ -274,6 +282,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  quick cells            : {q.get('scored_cells')}/{q.get('expected_cells')}")
             print(f"  quick gap              : {q.get('gap_filler_minus_claude'):+.3f}")
             print(f"  quick runtime sec      : {report['checks']['quick_validation_run']['elapsed_sec']}")
+            if not q.get("acceptable"):
+                tail = report["checks"]["quick_validation_run"].get("output_tail", "")
+                if tail:
+                    print("\nQuick validation output:")
+                    print(tail)
         print(f"\nDecision: {report['decision']}")
 
     return 0 if report["decision"] == "ACCEPTABLE" else 1

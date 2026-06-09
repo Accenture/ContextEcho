@@ -1,0 +1,7 @@
+# Dependencies for maintainer-side donation intake and quick validation.
+# Donors only need requirements-donate.txt.
+-r requirements-donate.txt
+
+# Quick validation uses the Anthropic target/judge harness and NumPy summary.
+anthropic==0.84.0
+numpy==2.3.3
