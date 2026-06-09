@@ -601,12 +601,12 @@ function renderDescribeResult(data){
 }
 function receiptEmailHref(receipt, receiptPath){
   const email = receipt.contributor_email || '';
-  const subject = `ContextEcho donation receipt ${receipt.submission || ''}`.trim();
+  const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'unknown';
+  const subject = `ContextEcho donation receipt ${publicId}`.trim();
   const body = [
     'ContextEcho donation receipt',
     '',
-    `Submission: ${receipt.submission || 'unknown'}`,
-    `Review URL: ${receipt.review_url || 'private staging link unavailable'}`,
+    `Submission ID: ${publicId}`,
     `Credit name: ${receipt.credit_name || 'anonymous'}`,
     `Agent/model: ${(receipt.agent || '')} / ${(receipt.model || '')}`,
     `Turns: ${receipt.turns || ''}`,
@@ -618,14 +618,10 @@ function receiptEmailHref(receipt, receiptPath){
   return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 function renderSubmitResult(data){
-  const text = data.output || '';
   const receipt = data.receipt || {};
-  const pr = receipt.review_url || (text.match(/https?:\/\/\S+/) || [''])[0];
-  const repo = receipt.target_repo || (text.match(/\[submit\] target repo\s*:\s*(.+)/) || [,''])[1];
-  const folder = receipt.submission || (text.match(/\[submit\] submission\s*:\s*(.+)/) || [,''])[1];
-  const uploadRows = receipt.uploads || [...text.matchAll(/\[submit\]\s+(.+?)\s+->\s+(.+)/g)].map(m => ({source:m[1].trim(), target:m[2].trim()}));
-  const uploads = uploadRows
-    .map(m => `<span class="metric">${escapeHtml(m.source)} -> <strong>${escapeHtml(m.target)}</strong></span>`)
+  const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'recorded locally';
+  const uploads = (receipt.uploads || [])
+    .map(m => `<span class="metric">${escapeHtml(m.source)}</span>`)
     .join('');
   const emailHref = receipt.contributor_email ? receiptEmailHref(receipt, data.receipt_path) : '';
   $('submitResult').innerHTML = `
@@ -636,11 +632,9 @@ function renderSubmitResult(data){
       <span class="metric">Credit: <strong>+2 pending</strong></span>
       <span class="metric">Novelty: <strong>+1 possible bonus</strong></span>
     </div>
-    ${pr ? `<div class="field"><div class="field-label">Private maintainer review link</div><div class="row"><a href="${escapeHtml(pr)}" target="_blank" rel="noopener"><button>Open Link</button></a></div><div class="pathbox">${escapeHtml(pr)}</div><div class="hint">This link may require access to the private Hugging Face staging dataset.</div></div>` : ''}
-    ${repo ? `<div class="field"><div class="field-label">Target repo</div><div class="pathbox">${escapeHtml(repo)}</div></div>` : ''}
-    ${folder ? `<div class="field"><div class="field-label">Submission folder</div><div class="pathbox">${escapeHtml(folder)}</div></div>` : ''}
+    <div class="field"><div class="field-label">Submission ID</div><div class="pathbox">${escapeHtml(publicId)}</div><div class="hint">Save this ID for support. Maintainers can use it to find your private staging submission.</div></div>
     ${data.receipt_path ? `<div class="field"><div class="field-label">Receipt</div><div class="row"><button id="revealReceipt" class="secondary">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary">Email Receipt</button></a>` : ''}</div><div class="pathbox">${escapeHtml(data.receipt_path)}</div><div class="hint">${emailHref ? 'Email opens your mail app with the receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
-    ${uploads ? `<div class="field"><div class="field-label">Uploaded files</div><div class="metrics">${uploads}</div></div>` : ''}
+    ${uploads ? `<div class="field"><div class="field-label">Submitted files</div><div class="metrics">${uploads}</div></div>` : ''}
     <div class="row" style="margin-top:14px"><button id="submitAnother" class="secondary">Submit another session</button></div>
   `;
   $('submitResult').classList.add('show', 'success-panel');
