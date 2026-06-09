@@ -46,6 +46,8 @@ class DescribeTests(unittest.TestCase):
         self.assertEqual(manifest["language"], "Python")
         self.assertEqual(manifest["contributor"], "donor-handle")
         self.assertEqual(manifest["source_format"], "codex-cli-jsonl")
+        self.assertEqual(manifest["privacy_tier"], "full_redacted")
+        self.assertIn("persona_drift_benchmarking", manifest["allowed_uses"])
 
 
 if __name__ == "__main__":

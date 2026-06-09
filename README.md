@@ -151,6 +151,8 @@ see `data_archive_release/DATASHEET.md` §8 and `make verify-pii`.
 | `archive/` | consent template + pre-registration documents |
 | `Makefile` | reproduction targets (`make help` for the full list) |
 | `REPRODUCE.md` | claim-by-claim reproduction table |
+| `DONOR_PRIVACY.md` | donor-facing privacy tiers and guarantees |
+| `DATA_USE_POLICY.md` | allowed and disallowed uses for donated data |
 | `requirements.txt` | Python dependencies |
 | `requirements-donate.txt` | minimal dependencies for the donation wizard |
 
@@ -198,6 +200,13 @@ The wizard discovers local Claude Code/Codex sessions, redacts and verifies
 the selected session on your machine, writes `session.redacted.jsonl`,
 `manifest.json`, and `CONSENT.md`, then submits only those redacted artifacts
 to private maintainer review.
+
+ContextEcho analyzes assistant behavior, not donor personality. The default
+privacy tier is **full redacted**: transcript structure and task semantics are
+kept after PII/secrets/custom terms are removed. Donors who want stronger
+privacy can choose **user-minimized**, which masks donor-authored free text
+after redaction. See [`DONOR_PRIVACY.md`](DONOR_PRIVACY.md) and
+[`DATA_USE_POLICY.md`](DATA_USE_POLICY.md).
 
 Maintainers convert accepted private staging submissions into the next public
 dataset candidate with:

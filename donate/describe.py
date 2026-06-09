@@ -43,6 +43,7 @@ I attest that:
 **Contributor (for credit; may be a handle/pseudonym):** {contributor}
 **Email (optional, maintainer contact only):** {email}
 **Institute (optional):** {institute}
+**Privacy tier:** {privacy_tier}
 **Date:** {date}
 **Tool version:** {tool_version}
 """
@@ -67,6 +68,7 @@ def write_manifest_and_consent(
     contributor: str,
     email: str = "",
     institute: str = "",
+    privacy_tier: str = "full_redacted",
 ) -> tuple[Path, Path, dict]:
     """Write the donation manifest and consent file next to a redacted session."""
     session_id = "S?"  # assigned by maintainer on merge
@@ -83,6 +85,14 @@ def write_manifest_and_consent(
         "credit_name": contributor or "anonymous",
         "contributor_email": email,
         "contributor_institute": institute,
+        "privacy_tier": privacy_tier,
+        "allowed_uses": ["persona_drift_benchmarking"],
+        "disallowed_uses": [
+            "donor_profiling",
+            "psychological_analysis",
+            "sentiment_analysis_of_donors",
+            "deanonymization",
+        ],
         "tool_version": TOOL_VERSION,
         "source_format": auto.get("source_format", "unknown"),
         "metadata_confidence": auto.get("confidence", {}),
@@ -100,6 +110,7 @@ def write_manifest_and_consent(
         contributor=manifest["contributor"],
         email=email or "",
         institute=institute or "",
+        privacy_tier=privacy_tier,
         date=dt.date.today().isoformat(),
         tool_version=TOOL_VERSION,
     ))

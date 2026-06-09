@@ -20,6 +20,7 @@
     "org": {"type": ["string", "null"]},
     "turns": {"type": ["integer", "string", "null"]},
     "compactions": {"type": ["integer", "string", "null"]},
+    "privacy_tier": {"type": ["string", "null"]},
     "source_format": {"type": ["string", "null"]}
   },
   "additionalProperties": false

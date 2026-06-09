@@ -193,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
             "org": manifest.get("org"),
             "turns": manifest.get("turns"),
             "compactions": manifest.get("compactions"),
+            "privacy_tier": manifest.get("privacy_tier", "full_redacted"),
             "source_format": manifest.get("source_format"),
             "submitted_utc": manifest.get("submitted_utc"),
         }
@@ -255,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"submission : {sub}")
         print(f"label      : {label}")
         meta = report["metadata"]
-        for key in ("contributor", "institute", "agent", "model", "org", "turns", "compactions", "source_format"):
+        for key in ("contributor", "institute", "agent", "model", "org", "turns", "compactions", "privacy_tier", "source_format"):
             if meta.get(key) not in {None, ""}:
                 print(f"{key:11s}: {meta[key]}")
         print("\nChecks:")

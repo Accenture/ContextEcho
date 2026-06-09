@@ -23,6 +23,7 @@ from urllib.request import Request, urlopen
 
 from donate import describe as describe_mod
 from donate import discover as discover_mod
+from donate import minimize as minimize_mod
 from donate import redact as redact_mod
 from donate import submit as submit_mod
 from donate.adapters.base import is_redacted_artifact
@@ -164,6 +165,7 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
         "agent": manifest.get("agent", ""),
         "model": manifest.get("model", ""),
         "org": manifest.get("org", ""),
+        "privacy_tier": manifest.get("privacy_tier", "full_redacted"),
         "turns": manifest.get("turns", ""),
         "compactions": manifest.get("compactions", ""),
         "uploads": parsed["uploads"],
@@ -179,6 +181,7 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
         f"- Email: {receipt['contributor_email'] or 'not provided'}",
         f"- Institute: {receipt['institute'] or 'not provided'}",
         f"- Agent/model: {receipt['agent']} / {receipt['model']}",
+        f"- Privacy tier: {receipt['privacy_tier']}",
         f"- Turns: {receipt['turns']}",
         f"- Compactions: {receipt['compactions']}",
         "",
@@ -351,6 +354,10 @@ INDEX_HTML = r"""<!doctype html>
     .actions { justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
     .compact-input-row label { margin:0; white-space:nowrap; }
     .compact-input-row input { flex:0 1 300px; min-width:220px; }
+    .privacy-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+    .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
+    .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
+    .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:800px) { main { padding:20px 12px 44px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } table { font-size:12px; display:block; overflow-x:auto; } .hero,.card { border-radius:20px; } .actions { justify-content:flex-start; } }
   </style>
 </head>
@@ -401,6 +408,11 @@ INDEX_HTML = r"""<!doctype html>
     <h2>2. Redact + Verify</h2>
     <div id="selectedCard" class="selected-card"></div>
     <div class="danger">Only donate personal, internal tooling, or open-source sessions. Do not donate client-confidential/NDA data.</div>
+    <p class="muted"><strong>ContextEcho analyzes assistant behavior, not donor personality.</strong> Choose how much of your own wording to keep.</p>
+    <div class="privacy-options">
+      <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><strong>Full redacted</strong><div class="hint">Default. Keeps task flow and semantics after PII/secrets/custom terms are removed. Highest scientific fidelity.</div></label>
+      <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><strong>User-minimized</strong><div class="hint">Masks donor free-text after redaction. Assistant/tool behavior remains; lower detail, stronger privacy.</div></label>
+    </div>
     <p class="muted">Automatic redaction covers common sensitive data such as paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</p>
     <label><input id="safeConfirm" type="checkbox" style="width:auto"> I confirm this session is safe to donate.</label>
     <div id="scrubRow" class="row compact-input-row" style="margin-top:12px">
@@ -475,6 +487,7 @@ const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
 let publicStats = {};
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
+function privacyTier(){ return document.querySelector('input[name="privacyTier"]:checked')?.value || 'full_redacted'; }
 function goStep(n){
   for(let i=1;i<=4;i++){
     $('step'+i).classList.toggle('active', i===n);
@@ -540,7 +553,7 @@ function renderRedactResult(data){
   $('redactResult').innerHTML = `
     <div class="result-head">
       <div><span class="badge ${data.verify_passed ? 'pass' : 'fail'}">${data.verify_passed ? 'Verified clean' : 'Verify failed'}</span></div>
-      <div class="muted">Redaction complete</div>
+      <div class="muted">${data.privacy_tier === 'user_minimized' ? 'Redaction + user minimization complete' : 'Redaction complete'}</div>
     </div>
     <div class="field"><div class="field-label">Redacted file</div><div class="pathbox">${escapeHtml(data.redacted_file)}</div></div>
     <div class="row" style="margin-top:8px"><button class="secondary" id="revealRedactedFile">Reveal File</button></div>
@@ -605,6 +618,7 @@ function receiptEmailHref(receipt, receiptPath){
     `Submission ID: ${publicId}`,
     `Credit name: ${receipt.credit_name || 'anonymous'}`,
     `Agent/model: ${(receipt.agent || '')} / ${(receipt.model || '')}`,
+    `Privacy tier: ${receipt.privacy_tier || 'full_redacted'}`,
     `Turns: ${receipt.turns || ''}`,
     `Compactions: ${receipt.compactions || ''}`,
     `Receipt file: ${receiptPath || ''}`,
@@ -726,6 +740,20 @@ $('prevPage').onclick = () => { if(page > 0){ page--; renderSessions(); } };
 $('nextPage').onclick = () => { if((page + 1) * pageSize < sessions.length){ page++; renderSessions(); } };
 $('safeConfirm').onchange = refreshButtons;
 $('reviewConfirm').onchange = refreshButtons;
+document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
+  el.onchange = () => {
+    if(redacted){
+      redacted = null;
+      described = null;
+      $('reviewConfirm').checked = false;
+      $('redactResult').classList.remove('show');
+      $('searchPanel').classList.remove('show');
+      $('searchResult').classList.remove('show');
+      status('redactStatus', 'Privacy mode changed. Click Redact and Verify again before moving on.');
+    }
+    refreshButtons();
+  };
+});
 $('scrub').oninput = () => {
   if(redacted){
     $('reviewConfirm').checked = false;
@@ -760,7 +788,7 @@ $('redactBtn').onclick = async () => {
   setBusy('redactProgress', true, 30);
   status('redactStatus','Redacting locally, then running verify. This may take several minutes...');
   try {
-    redacted = await post('/api/redact', {path:selected.path, scrub:$('scrub').value, auto:selected, confirm_safe:$('safeConfirm').checked});
+    redacted = await post('/api/redact', {path:selected.path, scrub:$('scrub').value, auto:selected, confirm_safe:$('safeConfirm').checked, privacy_tier:privacyTier()});
     setBusy('redactProgress', true, 100);
     described = null;
     submitted = false;
@@ -780,6 +808,7 @@ $('describeBtn').onclick = async () => {
     described = await post('/api/describe', {
       redacted_file:redacted.redacted_file,
       auto:selected,
+      privacy_tier:redacted.privacy_tier || privacyTier(),
       contributor:$('contributorName').value,
       email:$('contributorEmail').value,
       institute:$('contributorInstitute').value
@@ -898,15 +927,22 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("selected file already looks redacted; choose the original session log")
         auto = data.get("auto") or discover_mod.inspect_session(src)
         scrub_terms = {t.strip() for t in str(data.get("scrub", "")).split(",") if t.strip()}
+        privacy_tier = str(data.get("privacy_tier") or "full_redacted")
+        if privacy_tier not in {"full_redacted", "user_minimized"}:
+            raise ValueError("invalid privacy tier")
         out_dir = donation_output_dir(auto)
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / redacted_output_name(src)
         stats = redact_mod.redact_file(src, out, scrub_terms, progress=False)
+        if privacy_tier == "user_minimized":
+            min_stats = minimize_mod.minimize_file(out, out)
+            stats.update({f"minimize_{k}": v for k, v in min_stats.items()})
         verify_ok = submit_mod.verify_passed(out)
         self._json({
             "redacted_file": str(out),
             "output_dir": str(out_dir),
             "stats": stats,
+            "privacy_tier": privacy_tier,
             "verify_passed": verify_ok,
         })
 
@@ -923,6 +959,7 @@ class Handler(BaseHTTPRequestHandler):
             contributor=str(data.get("contributor", "") or "anonymous"),
             email=str(data.get("email", "") or ""),
             institute=str(data.get("institute", "") or ""),
+            privacy_tier=str(data.get("privacy_tier") or "full_redacted"),
         )
         self._json({"manifest": str(manifest), "consent": str(consent)})
 

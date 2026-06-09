@@ -122,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         "org": manifest.get("org"),
         "turns": manifest.get("turns"),
         "compactions": manifest.get("compactions"),
+        "privacy_tier": manifest.get("privacy_tier", "full_redacted"),
         "source_format": manifest.get("source_format"),
     }
     append_ledger(ledger, record)
