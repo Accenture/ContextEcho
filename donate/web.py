@@ -56,23 +56,77 @@ def session_key(path: str | Path) -> str:
     return hashlib.sha256(str(Path(path).expanduser()).encode("utf-8")).hexdigest()[:16]
 
 
-def load_donated_keys() -> set[str]:
+def artifact_key(path: str | Path) -> str:
+    p = Path(path).expanduser()
+    h = hashlib.sha256()
+    with p.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()[:16]
+
+
+def load_donation_registry() -> dict:
     try:
         data = json.loads(DONATION_REGISTRY.read_text())
-        return {str(x) for x in data.get("source_keys", [])}
+        if isinstance(data, dict):
+            return data
     except Exception:
-        return set()
+        pass
+    return {}
+
+
+def load_donated_keys() -> set[str]:
+    data = load_donation_registry()
+    return {str(x) for x in data.get("source_keys", [])}
+
+
+def load_donated_artifact_keys() -> set[str]:
+    data = load_donation_registry()
+    return {str(x) for x in data.get("artifact_keys", [])}
+
+
+def save_donation_record(source_path: str | Path = "", artifact_path: str | Path = "", output: str = "") -> None:
+    DONATION_ROOT.mkdir(parents=True, exist_ok=True)
+    data = load_donation_registry()
+    source_keys = {str(x) for x in data.get("source_keys", [])}
+    artifact_keys = {str(x) for x in data.get("artifact_keys", [])}
+    submissions = list(data.get("submissions", []))
+    source = str(source_path or "")
+    artifact = str(artifact_path or "")
+    skey = session_key(source) if source else ""
+    akey = artifact_key(artifact) if artifact and Path(artifact).expanduser().exists() else ""
+    if skey:
+        source_keys.add(skey)
+    if akey:
+        artifact_keys.add(akey)
+    m = re.search(r"\[submit\] submission\s*:\s*(pending/submission-[^/\s]+/)", output)
+    submissions.append({
+        "submitted_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "source_key": skey,
+        "artifact_key": akey,
+        "submission": m.group(1) if m else "",
+    })
+    payload = {
+        "updated_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "source_keys": sorted(source_keys),
+        "artifact_keys": sorted(artifact_keys),
+        "submissions": submissions,
+    }
+    DONATION_REGISTRY.write_text(json.dumps(payload, indent=2) + "\n")
 
 
 def save_donated_key(path: str | Path) -> None:
-    DONATION_ROOT.mkdir(parents=True, exist_ok=True)
-    keys = load_donated_keys()
-    keys.add(session_key(path))
-    payload = {
-        "updated_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
-        "source_keys": sorted(keys),
-    }
-    DONATION_REGISTRY.write_text(json.dumps(payload, indent=2) + "\n")
+    save_donation_record(source_path=path)
+
+
+def already_submitted(source_path: str | Path = "", artifact_path: str | Path = "") -> bool:
+    if source_path and session_key(source_path) in load_donated_keys():
+        return True
+    if artifact_path:
+        p = Path(artifact_path).expanduser()
+        if p.exists() and artifact_key(p) in load_donated_artifact_keys():
+            return True
+    return False
 
 
 def annotate_donated(sessions: list[dict]) -> list[dict]:
@@ -345,6 +399,7 @@ let sessions = [];
 let selected = null;
 let redacted = null;
 let described = null;
+let submitted = false;
 let page = 0;
 const pageSize = 10;
 const $ = id => document.getElementById(id);
@@ -359,6 +414,7 @@ function goStep(n){
   }
 }
 function refreshButtons(){
+  const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(selected.path)));
   $('pickNext').disabled = !selected;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('addMoreScrub').disabled = !(selected && $('safeConfirm').checked && redacted);
@@ -366,7 +422,7 @@ function refreshButtons(){
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
   $('describeBtn').disabled = !(redacted && redacted.verify_passed);
   $('describeNext').disabled = !described;
-  $('submitBtn').disabled = !described;
+  $('submitBtn').disabled = !described || submitted || selectedDonated;
 }
 function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=1000&&c>0?'best':(t>=1000?'long':'short'); }
 function turns(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
@@ -521,9 +577,9 @@ function renderSessions(){
       tr.onclick = () => {
         document.querySelectorAll('tr.selected').forEach(x=>x.classList.remove('selected'));
         tr.classList.add('selected'); selected = s;
-        redacted = null; described = null;
+        redacted = null; described = null; submitted = !!donated;
         renderSelectedCard(s, idx);
-        status('redactStatus', '');
+        status('redactStatus', donated ? 'This session is already marked donated locally. Pick a different session to avoid duplicate submissions.' : '');
         refreshButtons();
       };
     tbody.appendChild(tr);
@@ -625,6 +681,7 @@ $('redactBtn').onclick = async () => {
     redacted = await post('/api/redact', {path:selected.path, scrub:$('scrub').value, auto:selected, confirm_safe:$('safeConfirm').checked});
     setBusy('redactProgress', true, 100);
     described = null;
+    submitted = false;
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
     status('redactStatus', redacted.verify_passed ? 'Review the result above. Add more scrub terms if needed, then check the review box to continue.' : 'Verify failed. Add more scrub terms and re-run.');
@@ -647,7 +704,7 @@ $('describeBtn').onclick = async () => {
     });
     renderDescribeResult(described);
     status('describeStatus', 'Review the generated files, then continue to submit.');
-    status('submitStatus', 'Ready to submit.');
+    status('submitStatus', submitted ? 'This session is already marked donated locally.' : 'Ready to submit.');
     refreshButtons();
   } catch(e) { status('describeStatus','ERROR: '+e.message); }
   finally { setBusy('describeProgress', false); refreshButtons(); }
@@ -660,12 +717,14 @@ $('submitBtn').onclick = async () => {
   status('submitStatus','Submitting PR...');
   try {
     const data = await post('/api/submit', {redacted_file:redacted.redacted_file, source_path:selected ? selected.path : ''});
+    submitted = true;
     if(selected && selected.path){ selected.donated = true; donatedPaths.add(selected.path); saveDonatedPaths(); renderSessions(); }
     renderSubmitResult(data.output);
-    status('submitStatus', 'Submission marked donated locally. You can submit another session if you want.');
+    status('submitStatus', 'Submission marked donated locally. Pick another session to submit more.');
+    refreshButtons();
   }
   catch(e) { status('submitStatus','ERROR: '+e.message); }
-  finally { setBusy('submitProgress', false); $('submitBtn').disabled = false; }
+  finally { setBusy('submitProgress', false); refreshButtons(); }
 };
 loadProjectStats();
 </script>
@@ -790,6 +849,16 @@ class Handler(BaseHTTPRequestHandler):
         session = Path(data.get("redacted_file", "")).expanduser()
         if not session.exists():
             raise ValueError(f"not found: {session}")
+        source_path = data.get("source_path")
+        if already_submitted(source_path, session):
+            self._json({
+                "error": (
+                    "This session or redacted artifact is already marked submitted locally. "
+                    "Pick another session, or delete ~/Downloads/ContextEcho_donations/"
+                    ".donated_sessions.json only if the previous submission truly failed."
+                )
+            }, 409)
+            return
         # Capture submit's terminal-style output for the browser.
         import contextlib
         import io
@@ -801,9 +870,7 @@ class Handler(BaseHTTPRequestHandler):
         if rc != 0:
             self._json({"error": output or f"submit failed with code {rc}"}, 400)
             return
-        source_path = data.get("source_path")
-        if source_path:
-            save_donated_key(source_path)
+        save_donation_record(source_path=source_path or "", artifact_path=session, output=output)
         self._json({"output": output})
 
     def _handle_open_path(self) -> None:

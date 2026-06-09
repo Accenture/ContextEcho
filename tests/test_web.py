@@ -1,7 +1,17 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import mock
 
-from donate.web import _parse_donated_sessions, annotate_donated, session_key
+from donate.web import (
+    _parse_donated_sessions,
+    already_submitted,
+    annotate_donated,
+    artifact_key,
+    load_donated_artifact_keys,
+    save_donation_record,
+    session_key,
+)
 
 
 class WebTests(unittest.TestCase):
@@ -16,6 +26,24 @@ class WebTests(unittest.TestCase):
             rows = annotate_donated([{"path": path}, {"path": "/tmp/other.jsonl"}])
         self.assertTrue(rows[0]["donated"])
         self.assertFalse(rows[1]["donated"])
+
+    def test_save_donation_record_tracks_artifact_and_blocks_duplicates(self):
+        with TemporaryDirectory() as td:
+            registry = Path(td) / ".donated_sessions.json"
+            source = Path(td) / "source.jsonl"
+            artifact = Path(td) / "session.redacted.jsonl"
+            source.write_text('{"type":"user"}\n')
+            artifact.write_text('{"type":"user","message":"<PERSON>"}\n')
+
+            with mock.patch("donate.web.DONATION_ROOT", Path(td)), mock.patch("donate.web.DONATION_REGISTRY", registry):
+                save_donation_record(
+                    source_path=source,
+                    artifact_path=artifact,
+                    output="[submit] submission  : pending/submission-abc12345/",
+                )
+                self.assertIn(artifact_key(artifact), load_donated_artifact_keys())
+                self.assertTrue(already_submitted(source, artifact))
+                self.assertTrue(already_submitted("", artifact))
 
 
 if __name__ == "__main__":
