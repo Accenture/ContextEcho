@@ -67,7 +67,10 @@ class WebTests(unittest.TestCase):
             self.assertTrue(receipt_path.exists())
             self.assertEqual(receipt["submission"], "pending/submission-abc12345/")
             self.assertEqual(receipt["contributor_email"], "d@example.com")
-            self.assertIn("pending/submission-abc12345/", receipt_path.read_text())
+            text = receipt_path.read_text()
+            self.assertIn("pending/submission-abc12345/", text)
+            self.assertNotIn("persona-drift-staging", text)
+            self.assertNotIn("huggingface.co", text)
 
     def test_parse_submit_output(self):
         parsed = parse_submit_output(

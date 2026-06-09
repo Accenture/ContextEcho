@@ -175,8 +175,6 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
         "",
         f"- Submitted UTC: {receipt['submitted_utc']}",
         f"- Submission: {receipt['submission'] or 'unknown'}",
-        f"- Review URL: {receipt['review_url'] or 'private staging link unavailable'}",
-        f"- Target repo: {receipt['target_repo'] or 'unknown'}",
         f"- Credit name: {receipt['credit_name']}",
         f"- Email: {receipt['contributor_email'] or 'not provided'}",
         f"- Institute: {receipt['institute'] or 'not provided'}",
@@ -187,7 +185,7 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
         "Uploaded artifacts:",
     ]
     for item in receipt["uploads"]:
-        lines.append(f"- {item['source']} -> {item['target']}")
+        lines.append(f"- {item['source']}")
     lines.extend([
         "",
         "Status: pending maintainer review. Credit is awarded after acceptance.",
