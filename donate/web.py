@@ -347,6 +347,8 @@ INDEX_HTML = r"""<!doctype html>
     .progress { width:100%; height:12px; border-radius:999px; overflow:hidden; background:#e5eadc; margin-top:12px; display:none; }
     .progress > div { height:100%; width:0%; background:linear-gradient(90deg,#1f6f43,#89b65b); transition:width .2s ease; }
     .danger { color:#7f241b; font-weight:800; background:#fff1ed; border:1px solid #f2c9c0; padding:10px 12px; border-radius:14px; }
+    .privacy-callout { margin-top:18px; background:#eef8e8; border:1px solid #b8d7ad; border-left:6px solid var(--accent); border-radius:18px; padding:14px 16px; }
+    .privacy-callout strong { color:#13552f; }
     .ok { color:var(--accent); font-weight:800; }
     .hint { font-size:13px; color:var(--muted); margin-top:6px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
@@ -366,6 +368,7 @@ INDEX_HTML = r"""<!doctype html>
   <section class="hero">
     <h1>ContextEcho Donation Wizard</h1>
     <div class="topline">Donate a coding-agent session in a few local-first steps. Raw logs stay on this machine; only verified redacted artifacts can be submitted.</div>
+    <div class="privacy-callout"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality. Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
     <div class="steps">
       <span id="pill1" class="step-pill active">1 Pick</span>
       <span id="pill2" class="step-pill">2 Redact</span>

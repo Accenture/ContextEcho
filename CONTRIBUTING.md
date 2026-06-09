@@ -8,6 +8,13 @@ credit them.
 This document explains **how to contribute** and, just as importantly,
 **what you get for contributing**.
 
+> **Donor privacy.** ContextEcho analyzes assistant behavior, not donor
+> personality. The default mode is **full redacted**, which removes PII,
+> secrets, paths, and custom scrub terms while preserving task flow. Donors can
+> choose **user-minimized** mode to mask donor-authored free text after
+> redaction. See [`DONOR_PRIVACY.md`](DONOR_PRIVACY.md) and
+> [`DATA_USE_POLICY.md`](DATA_USE_POLICY.md).
+
 ---
 
 ## TL;DR — what you get
@@ -112,11 +119,9 @@ python3 -m donate
 Maintainers re-run PII/secret checks, JSONL validation, consent checks, and a
 quick 30-cell scientific validation before a session counts toward points.
 
-The default privacy tier is **full redacted**, which preserves transcript
-semantics after PII/secrets/custom terms are removed. Donors can choose
-**user-minimized** to mask donor-authored free text after redaction. ContextEcho
-does not use donations for donor profiling, psychological analysis, sentiment
-analysis of donors, or deanonymization; see [`DATA_USE_POLICY.md`](DATA_USE_POLICY.md).
+ContextEcho does not use donations for donor profiling, psychological analysis,
+sentiment analysis of donors, or deanonymization; see
+[`DATA_USE_POLICY.md`](DATA_USE_POLICY.md).
 Accepted sessions are promoted into the next public dataset candidate, not
 directly into the live public dataset:
 
