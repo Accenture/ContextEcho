@@ -1,0 +1,24 @@
+{
+  "patterns": [
+    {
+      "regex": "donor-real-name",
+      "replacement": "<PERSON>",
+      "ignore_case": true
+    },
+    {
+      "regex": "donor\\.email@example\\.com",
+      "replacement": "<EMAIL>",
+      "ignore_case": true
+    },
+    {
+      "regex": "/Users/donorname",
+      "replacement": "/Users/<USER>",
+      "ignore_case": false
+    },
+    {
+      "regex": "internal-project-codename",
+      "replacement": "<PROJECT>",
+      "ignore_case": true
+    }
+  ]
+}

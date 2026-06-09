@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContextEcho donation ledger row",
+  "type": "object",
+  "required": ["submission_id", "label", "session_path", "decision", "promoted_utc"],
+  "properties": {
+    "submission_id": {"type": "string"},
+    "label": {"type": "string"},
+    "session_path": {"type": "string"},
+    "manifest_path": {"type": "string"},
+    "consent_path": {"type": "string"},
+    "review_report_path": {"type": "string"},
+    "decision": {"type": "string"},
+    "promoted_utc": {"type": "string"},
+    "contributor": {"type": ["string", "null"]},
+    "credit_name": {"type": ["string", "null"]},
+    "institute": {"type": ["string", "null"]},
+    "agent": {"type": ["string", "null"]},
+    "model": {"type": ["string", "null"]},
+    "org": {"type": ["string", "null"]},
+    "turns": {"type": ["integer", "string", "null"]},
+    "compactions": {"type": ["integer", "string", "null"]},
+    "source_format": {"type": ["string", "null"]}
+  },
+  "additionalProperties": false
+}

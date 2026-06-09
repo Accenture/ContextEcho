@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContextEcho donation manifest",
+  "type": "object",
+  "required": ["agent", "model", "org", "turns", "compactions"],
+  "properties": {
+    "contributor": {"type": ["string", "null"]},
+    "credit_name": {"type": ["string", "null"]},
+    "contributor_institute": {"type": ["string", "null"]},
+    "agent": {"type": "string"},
+    "model": {"type": "string"},
+    "org": {"type": "string"},
+    "turns": {"type": ["integer", "string"]},
+    "compactions": {"type": ["integer", "string"]},
+    "source_format": {"type": ["string", "null"]},
+    "submitted_utc": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

@@ -3,10 +3,14 @@
 # Run `make help` to see all targets. Each target wraps the underlying
 # Python command documented in REPRODUCE.md.
 
-.PHONY: help setup verify-pii smoke-test \
+.PHONY: help setup setup-donate verify-pii smoke-test \
         fig1 fig2-taxonomy fig2-forest fig4 fig5 fig6 \
         fig-app-anchor-decay fig-app-anchor-size fig-app-crossjudge \
         fig-app-crosssession fig-app-full25 fig-app-onset \
+        download-donations intake-donations promote-donation \
+        review-donation review-donation-quick \
+        fig-session-validation session-validation-dry-run session-validation-quick \
+        session-validation-quick-summary session-validation-summary \
         figs-body figs-app figs-all \
         clean-pyc
 
@@ -17,8 +21,20 @@ help:
 	@echo ""
 	@echo "  Setup & verification:"
 	@echo "    make setup            install Python dependencies"
+	@echo "    make setup-donate     install minimal local donation wizard dependencies"
 	@echo "    make verify-pii       run PII redaction grep audit on data_archive_release/"
 	@echo "    make smoke-test       run a 1-cell harness check"
+	@echo "    make download-donations                  download private HF staging donations"
+	@echo "    make intake-donations                    download + technical-review all pending donations"
+	@echo "    make intake-donations RUN_QUICK=1        include quick validation gate"
+	@echo "    make intake-donations PROMOTE=1          promote accepted donations into data_archive_release_v2/"
+	@echo "    make review-donation SUBMISSION=...       one-command maintainer technical review"
+	@echo "    make review-donation-quick SUBMISSION=... run review + 30-cell quick validation"
+	@echo "    make promote-donation SUBMISSION=...      promote one accepted donation"
+	@echo "    make session-validation-dry-run SESSION=... LABEL=...  plan a new donor validation"
+	@echo "    make session-validation-quick SESSION=... LABEL=...    run 30-cell donor intake check"
+	@echo "    make session-validation-quick-summary LABEL=...        summarize quick validation"
+	@echo "    make session-validation-summary LABEL=...              summarize validation outputs"
 	@echo ""
 	@echo "  Body figures (paper §3-§4):"
 	@echo "    make fig1             persona-space combined panel"
@@ -36,6 +52,7 @@ help:
 	@echo "    make fig-app-crosssession    per-position trajectories on 3 sessions"
 	@echo "    make fig-app-full25          full 25-probe forest"
 	@echo "    make fig-app-onset           pre-C1 turn sweep"
+	@echo "    make fig-session-validation  existing + v2 candidate session trajectories"
 	@echo "    make figs-app                all appendix figures"
 	@echo ""
 	@echo "    make figs-all         all body + appendix figures"
@@ -48,6 +65,9 @@ help:
 
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
+
+setup-donate:
+	$(PYTHON) -m pip install -r requirements-donate.txt
 
 # Verify-pii delegates to the anonymizer's built-in audit, which loads
 # its pattern panel from the gitignored `scripts/.redaction_patterns.json`.
@@ -73,6 +93,67 @@ smoke-test:
 	assert 'response_text' in cell or 'response' in cell, 'cell missing response field'; \
 	print('[ok] cell loaded:', cell.get('cell_id') or 'unknown id'); \
 	print('[ok] release tree is structurally valid')"
+
+download-donations:
+	$(PYTHON) scripts/download_donations.py
+
+intake-donations:
+	$(PYTHON) scripts/intake_donations.py \
+	  $(if $(RUN_QUICK),--run-quick,) \
+	  $(if $(PROMOTE),--promote,)
+
+review-donation:
+	@if [ -z "$(SUBMISSION)" ]; then \
+	  echo "Usage: make review-donation SUBMISSION=hf_staging_download/pending/submission-xxxx"; \
+	  exit 2; \
+	fi
+	$(PYTHON) scripts/review_donation.py "$(SUBMISSION)"
+
+review-donation-quick:
+	@if [ -z "$(SUBMISSION)" ]; then \
+	  echo "Usage: make review-donation-quick SUBMISSION=hf_staging_download/pending/submission-xxxx"; \
+	  exit 2; \
+	fi
+	$(PYTHON) scripts/review_donation.py "$(SUBMISSION)" --run-quick
+
+promote-donation:
+	@if [ -z "$(SUBMISSION)" ]; then \
+	  echo "Usage: make promote-donation SUBMISSION=hf_staging_download/pending/submission-xxxx"; \
+	  exit 2; \
+	fi
+	$(PYTHON) scripts/promote_donation.py "$(SUBMISSION)" \
+	  $(if $(RUN_QUICK),--run-quick,)
+
+session-validation-dry-run:
+	@if [ -z "$(SESSION)" ] || [ -z "$(LABEL)" ]; then \
+	  echo "Usage: make session-validation-dry-run SESSION=/path/session.redacted.jsonl LABEL=donor04"; \
+	  exit 2; \
+	fi
+	$(PYTHON) experiments/e18_session_validation/run.py --session "$(SESSION)" --label "$(LABEL)" --quick --dry-run
+
+session-validation-quick:
+	@if [ -z "$(SESSION)" ] || [ -z "$(LABEL)" ]; then \
+	  echo "Usage: make session-validation-quick SESSION=/path/session.redacted.jsonl LABEL=donor04"; \
+	  exit 2; \
+	fi
+	$(PYTHON) experiments/e18_session_validation/run.py --session "$(SESSION)" --label "$(LABEL)" --quick
+
+session-validation-quick-summary:
+	@if [ -z "$(LABEL)" ]; then \
+	  echo "Usage: make session-validation-quick-summary LABEL=donor04"; \
+	  exit 2; \
+	fi
+	$(PYTHON) analysis/analyze_session_validation.py \
+	  --root results_v2_candidate/session_validation_quick/$(LABEL)/claude-sonnet-4-5 \
+	  --positions 3 --probes 5
+
+session-validation-summary:
+	@if [ -z "$(LABEL)" ]; then \
+	  echo "Usage: make session-validation-summary LABEL=donor04"; \
+	  exit 2; \
+	fi
+	$(PYTHON) analysis/analyze_session_validation.py \
+	  --root results_v2_candidate/session_validation/$(LABEL)/claude-sonnet-4-5
 
 # === Body figures ===
 
@@ -116,6 +197,9 @@ fig-app-full25:
 
 fig-app-onset:
 	$(PYTHON) plotting/fig_app_onset.py
+
+fig-session-validation:
+	$(PYTHON) plotting/fig_session_validation.py
 
 figs-app: fig-app-anchor-decay fig-app-anchor-size fig-app-crossjudge \
           fig-app-crosssession fig-app-full25 fig-app-onset

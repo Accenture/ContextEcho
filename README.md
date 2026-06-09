@@ -146,10 +146,13 @@ see `data_archive_release/DATASHEET.md` §8 and `make verify-pii`.
 | `analysis/` | aggregation, statistical tests, paper-claim auditors |
 | `plotting/` | one `.py` per paper figure (e.g. `fig2_forest_panelwide.py`) |
 | `scripts/` | utilities (anonymizer, Croissant generator, per-experiment runner wrappers) |
+| `donate/` | local browser/terminal wizard for donating a redacted coding-agent session |
+| `schemas/` | donation manifest and public-ledger JSON schemas |
 | `archive/` | consent template + pre-registration documents |
 | `Makefile` | reproduction targets (`make help` for the full list) |
 | `REPRODUCE.md` | claim-by-claim reproduction table |
 | `requirements.txt` | Python dependencies |
+| `requirements-donate.txt` | minimal dependencies for the donation wizard |
 
 ---
 
@@ -183,6 +186,29 @@ session it covers. We welcome contributions, and we credit them.
 - **Clear the contribution threshold** for **co-authorship on the next dataset
   release** (rolling re-authorship — missing the first paper doesn't close the
   door).
+
+Donate from this cloned repository with the local browser wizard:
+
+```bash
+make setup-donate
+python3 -m donate --web
+```
+
+The wizard discovers local Claude Code/Codex sessions, redacts and verifies
+the selected session on your machine, writes `session.redacted.jsonl`,
+`manifest.json`, and `CONSENT.md`, then submits only those redacted artifacts
+to private maintainer review.
+
+Maintainers convert accepted private staging submissions into the next public
+dataset candidate with:
+
+```bash
+make intake-donations RUN_QUICK=1 PROMOTE=1
+```
+
+Accepted sessions are copied into `data_archive_release_v2/data/sessions/`,
+with consent, manifests, review reports, and a donation ledger under
+`data_archive_release_v2/data/donations/`.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the points scale, the local-first
 redaction pipeline, the confidentiality rules, and exactly what you get.

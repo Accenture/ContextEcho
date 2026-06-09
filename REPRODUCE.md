@@ -173,6 +173,84 @@ The anonymizer's redaction-pattern panel is loaded at runtime from
 surface forms). Add new patterns there if the donor's pre-redaction
 was incomplete.
 
+### Validating a newly approved donation for v2
+
+After a Hugging Face staging PR is approved, run the quick validation gate
+before adding the session to a public release. This does not rerun the full
+benchmark. The default intake check uses 3 evenly spaced trajectory positions,
+one target (`claude-sonnet-4-5`), the 5 coding-self probes, and two arms
+(`claude_session` vs. length-matched `filler`) for 30 cells total.
+
+The single-command maintainer path is:
+
+```bash
+# Technical review only; no API calls.
+make review-donation \
+  SUBMISSION=hf_staging_download/pending/submission-eef1f032
+
+# Technical review + 30-cell quick validation; requires ANTHROPIC_API_KEY.
+make review-donation-quick \
+  SUBMISSION=hf_staging_download/pending/submission-eef1f032
+```
+
+Maintainers can run the full staging-to-public-candidate intake with:
+
+```bash
+make download-donations
+make intake-donations RUN_QUICK=1 PROMOTE=1
+```
+
+This downloads private staging submissions, reviews each pending donation,
+runs the quick validation gate, and promotes accepted sessions into
+`data_archive_release_v2/`. That tree is the candidate for the next public
+dataset release; it includes all accepted redacted sessions plus manifests,
+consent files, review reports, and `data/donations/ledger.jsonl`.
+
+```bash
+# 1. First check that the approved redacted file is structurally usable.
+python3 -m donate.verify /path/to/session.redacted.jsonl
+python3 - <<'PY'
+import json, pathlib
+p = pathlib.Path("/path/to/session.redacted.jsonl")
+bad = 0
+for line in p.read_text(encoding="utf-8", errors="replace").splitlines():
+    try: json.loads(line)
+    except Exception: bad += 1
+print("invalid_jsonl_lines:", bad)
+PY
+
+# 2. Plan the trajectory without API calls.
+make session-validation-dry-run \
+  SESSION=/path/to/session.redacted.jsonl \
+  LABEL=donor04
+
+# 3. Run the quick validation cells (requires ANTHROPIC_API_KEY).
+make session-validation-quick \
+  SESSION=/path/to/session.redacted.jsonl \
+  LABEL=donor04
+
+# 4. Summarize and plot the candidate trajectory.
+make session-validation-quick-summary LABEL=donor04
+make fig-session-validation
+```
+
+Quick outputs are written under
+`results_v2_candidate/session_validation_quick/`. If the quick gate passes
+and the session is scientifically important, optionally run the full 600-cell
+validation:
+
+```bash
+python3 experiments/e18_session_validation/run.py \
+  --session /path/to/session.redacted.jsonl \
+  --label donor04
+make session-validation-summary LABEL=donor04
+```
+
+Accept a donated session for v2 if the file passes verification, the quick
+validation has parsed judge scores for all 30 cells, both arms are present
+across positions, and the trajectory is interpretable. A weak/null drift gap
+is still useful; corruption, over-redaction, or missing consent is not.
+
 ---
 
 ## Repository layout (quick reference)

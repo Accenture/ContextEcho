@@ -80,21 +80,46 @@ release* as authors. Missing the first paper does not close the door.
 
 > **Privacy is local-first.** You redact your session **on your own machine**
 > and only ever upload already-clean data. We never receive your raw session.
-> A pull request is public the moment it is opened, so all scrubbing must
-> happen **before** you open it.
+> Uploads go to a private maintainer staging area first; nothing becomes public
+> until maintainers accept it into a release.
 
-1. **Capture** — export the Claude Code session you want to donate.
-2. **Redact locally** — run the redaction tool. It scrubs home paths, emails,
-   API keys, tokens, IPs, and a scrub-list of your own identifiers.
-3. **Verify** — run the PII verifier. It must report **zero residual PII**
-   before you proceed. If it flags anything, resolve it first.
-4. **Consent** — fill in the donor consent form (CC-BY-SA-4.0).
-5. **Submit** — fork the repo, add your redacted session + consent under a new
-   session ID, and open a pull request.
+From a cloned checkout:
 
-A maintainer (and CI) re-verifies PII on the PR. **Two independent reviewers**
-confirm the session is in-scope and clean before it is merged and counts
-toward your points.
+```bash
+make setup-donate
+python3 -m donate --web
+```
+
+The browser wizard runs locally and guides you through:
+
+1. **Discover** — find local Claude Code and Codex CLI sessions.
+2. **Pick** — choose one session to donate.
+3. **Redact + verify** — scrub names, emails, paths, usernames, URLs, API keys,
+   tokens, and optional extra terms on your machine.
+4. **Review** — reveal the redacted file and optionally search for missed
+   private terms before continuing.
+5. **Describe + consent** — write `manifest.json` and `CONSENT.md` with credit
+   information and CC-BY-SA-4.0 consent.
+6. **Submit** — upload only the verified redacted session, manifest, and consent
+   as a private staging pull request for maintainer review.
+
+The terminal fallback is:
+
+```bash
+python3 -m donate
+```
+
+Maintainers re-run PII/secret checks, JSONL validation, consent checks, and a
+quick 30-cell scientific validation before a session counts toward points.
+Accepted sessions are promoted into the next public dataset candidate, not
+directly into the live public dataset:
+
+```bash
+make intake-donations RUN_QUICK=1 PROMOTE=1
+```
+
+This writes release-ready files under `data_archive_release_v2/`, including the
+redacted session, manifest, consent, review report, and public donation ledger.
 
 ### ⚠️ Confidentiality — read before donating
 

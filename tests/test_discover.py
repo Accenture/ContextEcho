@@ -1,0 +1,107 @@
+from __future__ import annotations
+
+import json
+import contextlib
+import io
+import tempfile
+import unittest
+from pathlib import Path
+
+from donate.discover import discover, discover_iter, inspect_session
+from donate.adapters.base import is_redacted_artifact
+
+
+def write_jsonl(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+
+class DiscoverTests(unittest.TestCase):
+    def test_redacted_artifact_detection(self) -> None:
+        self.assertTrue(is_redacted_artifact(Path("session.redacted.jsonl")))
+        self.assertTrue(is_redacted_artifact(Path("/tmp/ContextEcho_donations/run/session.jsonl")))
+        self.assertFalse(is_redacted_artifact(Path("session.jsonl")))
+
+    def test_codex_manual_path_is_classified_and_inspected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".codex" / "sessions" / "rollout.jsonl"
+            rows = [
+                {
+                    "type": "session_meta",
+                    "payload": {"cwd": "/Users/alice/Documents/work/agent-project"},
+                },
+                {
+                    "type": "turn_context",
+                    "payload": {"model": "gpt-5", "summary": "ordinary context summary"},
+                },
+                {
+                    "type": "response_item",
+                    "payload": {"type": "message", "role": "assistant", "content": []},
+                },
+            ]
+            write_jsonl(path, rows)
+
+            info = inspect_session(path)
+
+        self.assertEqual(info["agent"], "Codex CLI")
+        self.assertEqual(info["source_format"], "codex-cli-jsonl")
+        self.assertEqual(info["model"], "gpt-5")
+        self.assertEqual(info["org"], "OpenAI")
+        self.assertEqual(info["turns"], 3)
+        self.assertEqual(info["compactions"], 0)
+        self.assertEqual(info["project"], "work-agent-project")
+
+    def test_claude_manual_path_is_classified_and_counts_explicit_compaction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = (
+                Path(tmp)
+                / ".claude"
+                / "projects"
+                / "-Users-alice-Documents-client-safe-repo"
+                / "session.jsonl"
+            )
+            rows = [
+                {"model": "claude-opus-4-7", "message": {"role": "user"}},
+                {"model": "claude-opus-4-8", "isCompactSummary": True},
+                {"type": "compact_file_reference"},
+            ]
+            write_jsonl(path, rows)
+
+            info = inspect_session(path)
+
+        self.assertEqual(info["agent"], "Claude Code")
+        self.assertEqual(info["source_format"], "claude-code-jsonl")
+        self.assertEqual(info["org"], "Anthropic")
+        self.assertEqual(info["turns"], 3)
+        self.assertEqual(info["compactions"], 1)
+        self.assertEqual(info["project"], "client-safe-repo")
+
+    def test_unknown_jsonl_falls_back_to_generic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "custom-agent.jsonl"
+            write_jsonl(path, [{"model": "qwen3-32b"}, {"type": "context_compaction"}])
+
+            info = inspect_session(path)
+
+        self.assertEqual(info["agent"], "Unknown agent")
+        self.assertEqual(info["source_format"], "generic-jsonl")
+        self.assertEqual(info["org"], "Alibaba")
+        self.assertEqual(info["compactions"], 1)
+
+    def test_discover_progress_can_be_disabled_for_json_callers(self) -> None:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            sessions = discover(max_per_agent=0, progress=False)
+
+        self.assertEqual(sessions, [])
+        self.assertEqual(buf.getvalue(), "")
+
+    def test_discover_iter_emits_done_event(self) -> None:
+        events = list(discover_iter(max_per_agent=0))
+        self.assertTrue(events)
+        self.assertEqual(events[-1]["event"], "done")
+        self.assertEqual(events[-1]["sessions"], [])
+
+
+if __name__ == "__main__":
+    unittest.main()
