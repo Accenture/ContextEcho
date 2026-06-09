@@ -120,6 +120,13 @@ def save_donated_key(path: str | Path) -> None:
     save_donation_record(source_path=path)
 
 
+def clear_donation_registry() -> bool:
+    existed = DONATION_REGISTRY.exists()
+    if existed:
+        DONATION_REGISTRY.unlink()
+    return existed
+
+
 def already_submitted(source_path: str | Path = "", artifact_path: str | Path = "") -> bool:
     if source_path and session_key(source_path) in load_donated_keys():
         return True
@@ -341,6 +348,8 @@ INDEX_HTML = r"""<!doctype html>
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
+    .reset-donated { margin-top:12px; justify-content:center; }
+    .reset-donated button { padding:8px 12px; font-size:12px; }
     .sessions-card { min-height:342px; }
     .session-head { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
     .session-head h2 { font-size:21px; }
@@ -447,6 +456,10 @@ INDEX_HTML = r"""<!doctype html>
           <div class="stat-card"><div class="stat-icon" data-icon="gift"></div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
         </div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
+        <div class="row reset-donated">
+          <button id="clearDonatedBtn" class="secondary">Clear local donated labels</button>
+        </div>
+        <div class="hint" style="text-align:center">Only resets this browser/machine label. It does not delete or retract submitted data.</div>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
       </div>
@@ -838,6 +851,23 @@ $('discoverBtn').onclick = async () => {
   } catch(e) { status('discoverStatus','ERROR: '+e.message); }
   finally { $('discoverBtn').disabled = false; }
 };
+$('clearDonatedBtn').onclick = async () => {
+  const ok = confirm('Clear local donated labels on this browser and machine? This does not delete or retract any submitted data.');
+  if(!ok) return;
+  try {
+    await post('/api/clear_donated_labels', {});
+    donatedPaths.clear();
+    saveDonatedPaths();
+    sessions = sessions.map(s => ({...s, donated:false}));
+    if(selected) selected.donated = false;
+    submitted = false;
+    renderSessions();
+    refreshButtons();
+    status('discoverStatus', 'Local donated labels cleared. Submitted data and maintainer records are unchanged.');
+  } catch(e) {
+    status('discoverStatus','ERROR: '+e.message);
+  }
+};
 $('prevPage').onclick = () => { if(page > 0){ page--; renderSessions(); } };
 $('nextPage').onclick = () => { if((page + 1) * pageSize < sessions.length){ page++; renderSessions(); } };
 $('safeConfirm').onchange = refreshButtons;
@@ -1013,6 +1043,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_open_path()
             elif self.path == "/api/search_redacted":
                 self._handle_search_redacted()
+            elif self.path == "/api/clear_donated_labels":
+                self._handle_clear_donated_labels()
             else:
                 self._json({"error": "not found"}, 404)
         except Exception as e:
@@ -1075,8 +1107,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({
                 "error": (
                     "This session or redacted artifact is already marked submitted locally. "
-                    "Pick another session, or delete ~/Downloads/ContextEcho_donations/"
-                    ".donated_sessions.json only if the previous submission truly failed."
+                    "Pick another session, or use Clear local donated labels only if the previous "
+                    "submission truly failed."
                 )
             }, 409)
             return
@@ -1094,6 +1126,14 @@ class Handler(BaseHTTPRequestHandler):
         save_donation_record(source_path=source_path or "", artifact_path=session, output=output)
         receipt_path, receipt = write_receipt(session, source_path or "", output)
         self._json({"output": output, "receipt_path": str(receipt_path), "receipt": receipt})
+
+    def _handle_clear_donated_labels(self) -> None:
+        existed = clear_donation_registry()
+        self._json({
+            "cleared": True,
+            "server_registry_existed": existed,
+            "message": "Local donated labels cleared. Submitted data and maintainer records are unchanged.",
+        })
 
     def _handle_open_path(self) -> None:
         data = self._read_json()

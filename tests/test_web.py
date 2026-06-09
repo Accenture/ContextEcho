@@ -8,6 +8,7 @@ from donate.web import (
     already_submitted,
     annotate_donated,
     artifact_key,
+    clear_donation_registry,
     load_donated_artifact_keys,
     parse_submit_output,
     save_donation_record,
@@ -46,6 +47,19 @@ class WebTests(unittest.TestCase):
                 self.assertIn(artifact_key(artifact), load_donated_artifact_keys())
                 self.assertTrue(already_submitted(source, artifact))
                 self.assertTrue(already_submitted("", artifact))
+
+    def test_clear_donation_registry_removes_local_duplicate_memory(self):
+        with TemporaryDirectory() as td:
+            registry = Path(td) / ".donated_sessions.json"
+            source = Path(td) / "source.jsonl"
+            source.write_text('{"type":"user"}\n')
+
+            with mock.patch("donate.web.DONATION_ROOT", Path(td)), mock.patch("donate.web.DONATION_REGISTRY", registry):
+                save_donation_record(source_path=source)
+                self.assertTrue(already_submitted(source))
+                self.assertTrue(clear_donation_registry())
+                self.assertFalse(already_submitted(source))
+                self.assertFalse(clear_donation_registry())
 
     def test_write_receipt_records_submission_details(self):
         with TemporaryDirectory() as td:
