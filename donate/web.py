@@ -287,35 +287,75 @@ INDEX_HTML = r"""<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ContextEcho Donation Wizard</title>
   <style>
-    :root { --ink:#172016; --muted:#667062; --line:#d7ddcf; --paper:#faf8ef; --card:#fffdf5; --accent:#1f6f43; --accent2:#d97731; --warn:#9d4f08; --bad:#a63124; }
-    body { margin:0; font:16px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:radial-gradient(circle at 12% 8%,#fff6c8 0 16%,transparent 28%), radial-gradient(circle at 88% 5%,#cfe8dc 0 18%,transparent 32%), linear-gradient(135deg,#f8f2dc,#eef5e7 55%,#e4f0ee); }
-    main { max-width:1040px; margin:0 auto; padding:34px 20px 60px; }
-    h1 { margin:0 0 8px; font-size:clamp(30px,4vw,46px); letter-spacing:-.045em; line-height:1.02; }
-    h2 { margin:0 0 8px; font-size:24px; letter-spacing:-.02em; }
-    .hero, .card { background:rgba(255,253,245,.92); border:1px solid rgba(149,163,132,.38); border-radius:26px; box-shadow:0 22px 80px rgba(38,58,32,.14); backdrop-filter:blur(10px); }
-    .hero { padding:30px; position:relative; overflow:hidden; }
-    .hero:after { content:""; position:absolute; right:-70px; top:-70px; width:190px; height:190px; border-radius:50%; background:rgba(217,119,49,.14); }
-    .card { padding:24px; margin-top:18px; }
+    :root { --ink:#111b18; --muted:#5f6662; --line:#dfe2da; --paper:#f6f7ed; --card:#fffef8; --accent:#17713f; --accent2:#e8a823; --soft:#eef6e8; --bad:#a63124; }
+    body { margin:0; font:16px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:radial-gradient(circle at 8% 0%,#fff7d5 0 18%,transparent 34%), radial-gradient(circle at 90% 8%,#dceedd 0 17%,transparent 34%), linear-gradient(135deg,#f7f3dd,#eef6ea 52%,#e5f1ee); }
+    main { max-width:1480px; margin:0 auto; padding:22px 28px 44px; }
+    h1 { margin:0 0 8px; font-size:clamp(34px,4vw,46px); letter-spacing:-.055em; line-height:1.02; }
+    h2 { margin:0 0 8px; font-size:30px; letter-spacing:-.04em; line-height:1.08; }
+    .hero, .card, .bottom-nav { background:rgba(255,255,250,.9); border:1px solid rgba(127,138,119,.28); border-radius:24px; box-shadow:0 18px 58px rgba(43,59,37,.13); backdrop-filter:blur(10px); }
+    .hero { padding:34px 40px 28px; position:relative; overflow:hidden; }
+    .hero-top { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; }
+    .card { padding:34px 40px; }
+    .card.step { margin-top:22px; }
     .step { display:none; }
     .step.active { display:block; }
-    .steps { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
-    .step-pill { border:1px solid var(--line); border-radius:999px; padding:7px 11px; background:#f3f0df; color:var(--muted); font-size:13px; font-weight:800; }
-    .step-pill.active { background:var(--accent); color:white; border-color:var(--accent); }
-    .step-pill.done { background:#dff1d9; color:#13552f; border-color:#b7d5af; }
+    .steps { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:18px; margin-top:46px; align-items:center; }
+    .step-pill { position:relative; display:flex; align-items:center; gap:14px; color:#6a6f6b; font-size:18px; font-weight:850; }
+    .step-pill:after { content:""; height:4px; flex:1; border-radius:999px; background:#e2e4df; margin-left:8px; }
+    .step-pill:last-child:after { display:none; }
+    .step-num { display:grid; place-items:center; width:44px; height:44px; border-radius:999px; background:#e8e9e6; color:#555b58; font-weight:950; }
+    .step-pill.active { color:var(--accent); }
+    .step-pill.active .step-num, .step-pill.done .step-num { background:var(--accent); color:white; box-shadow:0 8px 20px rgba(23,113,63,.24); }
+    .step-pill.active:after, .step-pill.done:after { background:var(--accent); }
+    .hero-progress { display:flex; align-items:center; gap:18px; padding-top:8px; min-width:220px; justify-content:flex-end; }
+    .progress-label { text-align:right; color:var(--muted); font-size:18px; }
+    .progress-label strong { display:block; color:var(--accent); font-size:22px; }
+    .ring { --pct:25; width:104px; height:104px; border-radius:50%; display:grid; place-items:center; background:conic-gradient(var(--accent) calc(var(--pct) * 1%), #e9ebe5 0); position:relative; font-weight:950; color:var(--accent); font-size:24px; }
+    .ring:before { content:""; position:absolute; inset:8px; border-radius:50%; background:#fffef8; box-shadow:inset 0 0 0 1px rgba(0,0,0,.03); }
+    .ring span { position:relative; }
     .muted { color:var(--muted); }
     .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-    button { border:0; border-radius:999px; padding:11px 17px; background:var(--accent); color:white; font-weight:800; cursor:pointer; box-shadow:0 8px 20px rgba(31,111,67,.18); }
+    button { border:0; border-radius:10px; padding:15px 22px; background:var(--accent); color:white; font-weight:900; cursor:pointer; box-shadow:0 12px 24px rgba(23,113,63,.22); font-size:16px; }
     button.secondary { background:#e8eddc; color:var(--ink); box-shadow:none; }
     button:hover:not(:disabled) { transform:translateY(-1px); }
     button:disabled { opacity:.5; cursor:not-allowed; }
     input, textarea { width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:14px; padding:11px 13px; background:white; color:var(--ink); font:inherit; }
     input:focus, textarea:focus { outline:3px solid rgba(31,111,67,.16); border-color:#7cb67d; }
     label { display:block; font-weight:700; margin:12px 0 6px; }
-    table { width:100%; border-collapse:separate; border-spacing:0; margin-top:12px; font-size:14px; overflow:hidden; border:1px solid var(--line); border-radius:16px; }
-    thead { background:#eef3e8; }
-    th, td { padding:9px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
-    tr:hover { background:#f4f7ec; }
-    tr.selected { background:#e4f2df; outline:2px solid #7cb67d; outline-offset:-2px; }
+    .pick-grid { display:grid; grid-template-columns:minmax(420px,.9fr) minmax(520px,1.1fr); gap:24px; margin-top:22px; }
+    .pick-intro { min-height:428px; }
+    .intro-head { display:flex; gap:28px; align-items:flex-start; padding-bottom:28px; border-bottom:1px solid var(--line); }
+    .folder-icon { width:100px; height:100px; border-radius:22px; display:grid; place-items:center; background:linear-gradient(135deg,#eef6d4,#f7faeb); }
+    .folder-icon:before { content:""; width:56px; height:38px; border:4px solid var(--accent); border-radius:7px; box-sizing:border-box; box-shadow:0 -13px 0 -8px var(--accent); }
+    .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; margin:30px 0 26px; }
+    .stat-card { text-align:center; background:transparent; border:0; padding:0; min-height:0; }
+    .stat-icon { width:68px; height:68px; margin:0 auto 10px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; font-size:26px; }
+    .stat-card:nth-child(2) .stat-icon { background:#e9f2e5; color:var(--accent); }
+    .stat-card:nth-child(3) .stat-icon { background:#f6eadb; color:#dc4b30; }
+    .stat-card:nth-child(4) .stat-icon { background:#efedf5; color:#7657a8; }
+    .stat-value { font-size:28px; line-height:1; font-weight:950; letter-spacing:-.035em; }
+    .stat-label { margin-top:7px; color:#3d4440; font-size:14px; font-weight:650; }
+    .discover-main { width:100%; border-radius:10px; padding:18px 24px; font-size:22px; box-shadow:0 16px 30px rgba(23,113,63,.22); }
+    .sessions-card { min-height:428px; }
+    .session-head { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:22px; }
+    .session-head h2 { font-size:24px; }
+    .count-badge { border-radius:10px; padding:8px 14px; color:var(--accent); background:#eaf4e5; font-weight:900; }
+    .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
+    .session-row { display:grid; grid-template-columns:52px minmax(190px,1fr) 80px 86px 90px 28px; gap:14px; align-items:center; padding:16px 18px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
+    .session-row:last-child { border-bottom:0; }
+    .session-row:hover, .session-row.selected { background:#f4f8ef; }
+    .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
+    .session-icon { width:42px; height:42px; display:grid; place-items:center; border-radius:50%; background:#e8f1e4; color:var(--accent); font-weight:950; }
+    .session-title { font-weight:900; font-size:16px; }
+    .session-sub { color:#5f6662; margin-top:3px; font-size:14px; }
+    .session-num { font-weight:900; font-size:17px; }
+    .session-cap { color:#4e5551; font-size:13px; }
+    .chev { color:var(--accent); font-size:26px; font-weight:400; }
+    .empty-sessions { padding:34px; text-align:center; color:var(--muted); }
+    .bottom-nav { margin-top:22px; padding:14px 40px; display:flex; justify-content:space-between; align-items:center; gap:18px; }
+    .tip { display:flex; gap:12px; align-items:center; color:#3f4843; }
+    .tip:before { content:"?"; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; border:2px solid var(--accent); color:var(--accent); font-weight:950; }
+    .next-button { min-width:190px; font-size:18px; }
     .pill { display:inline-block; border-radius:999px; padding:3px 8px; font-size:12px; font-weight:800; background:#edf1e4; }
     .pill.best { background:#dff1d9; color:#13552f; }
     .pill.long { background:#e8ecd7; color:#5c5d16; }
@@ -336,10 +376,6 @@ INDEX_HTML = r"""<!doctype html>
     .pathbox { margin-top:4px; padding:9px 10px; border-radius:10px; background:white; border:1px solid var(--line); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; overflow:auto; }
     .metrics { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .metric { background:#edf3e8; border:1px solid #d5e4ce; border-radius:999px; padding:6px 10px; font-size:13px; }
-    .stats { display:grid; grid-template-columns:repeat(4,minmax(120px,1fr)); gap:10px; margin:14px 0 18px; }
-    .stat-card { background:#f4f8eb; border:1px solid #d6e4c9; border-radius:18px; padding:13px 14px; min-height:66px; }
-    .stat-value { font-size:24px; line-height:1; font-weight:950; letter-spacing:-.035em; }
-    .stat-label { margin-top:7px; color:var(--muted); font-size:12px; font-weight:850; text-transform:uppercase; letter-spacing:.04em; }
     .selected-card { display:none; border:2px solid #7cb67d; background:#eef8e8; border-radius:18px; padding:14px; margin-top:14px; }
     .selected-card.show { display:block; }
     .search-panel { display:none; border:1px dashed #b8c9ad; border-radius:16px; padding:14px; margin-top:12px; background:#fffef7; }
@@ -352,7 +388,7 @@ INDEX_HTML = r"""<!doctype html>
     .ok { color:var(--accent); font-weight:800; }
     .hint { font-size:13px; color:var(--muted); margin-top:6px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    .topline { color:var(--muted); max-width:720px; font-size:17px; }
+    .topline { color:var(--muted); max-width:760px; font-size:22px; }
     .actions { justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
     .compact-input-row label { margin:0; white-space:nowrap; }
     .compact-input-row input { flex:0 1 300px; min-width:220px; }
@@ -360,49 +396,70 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:800px) { main { padding:20px 12px 44px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } table { font-size:12px; display:block; overflow-x:auto; } .hero,.card { border-radius:20px; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-row { grid-template-columns:44px minmax(180px,1fr) 74px 76px 28px; } .session-duration { display:none; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; margin-top:24px; } .step-pill:after { display:none; } .session-row { grid-template-columns:40px 1fr 28px; } .session-turns,.session-cmp,.session-duration { display:none; } .privacy-options { grid-template-columns:1fr; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
 <main>
   <section class="hero">
-    <h1>ContextEcho Donation Wizard</h1>
-    <div class="topline">Donate a coding-agent session in a few local-first steps. Raw logs stay on this machine; only verified redacted artifacts can be submitted.</div>
+    <div class="hero-top">
+      <div>
+        <h1>ContextEcho Donation Wizard</h1>
+        <div class="topline">Donate a coding-agent session in a few local-first steps.</div>
+      </div>
+      <div class="hero-progress">
+        <div class="progress-label"><strong id="stepLabel">Step 1 of 4</strong><span id="stepPercentText">25% complete</span></div>
+        <div id="progressRing" class="ring" style="--pct:25"><span id="progressRingText">25%</span></div>
+      </div>
+    </div>
     <div class="privacy-callout"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
     <div class="steps">
-      <span id="pill1" class="step-pill active">1 Pick</span>
-      <span id="pill2" class="step-pill">2 Redact</span>
-      <span id="pill3" class="step-pill">3 Describe</span>
-      <span id="pill4" class="step-pill">4 Submit</span>
+      <span id="pill1" class="step-pill active"><span class="step-num">1</span><span>Pick a Session</span></span>
+      <span id="pill2" class="step-pill"><span class="step-num">2</span><span>Redact</span></span>
+      <span id="pill3" class="step-pill"><span class="step-num">3</span><span>Describe</span></span>
+      <span id="pill4" class="step-pill"><span class="step-num">4</span><span>Submit</span></span>
     </div>
   </section>
 
-  <section id="step1" class="card step active">
-    <h2>1. Pick a Session</h2>
-    <p class="muted">Choose a real session. Longer sessions with compactions are most useful.</p>
-    <p class="hint">Public stats load from GitHub/Hugging Face. Donated badges are tracked locally after web submissions.</p>
-    <div id="projectStats" class="stats" aria-live="polite">
-      <div class="stat-card"><div class="stat-value">...</div><div class="stat-label">GitHub stars</div></div>
-      <div class="stat-card"><div class="stat-value">...</div><div class="stat-label">Dataset downloads</div></div>
-      <div class="stat-card"><div class="stat-value">...</div><div class="stat-label">Dataset likes</div></div>
-      <div class="stat-card"><div class="stat-value">...</div><div class="stat-label">Donated sessions</div></div>
+  <section id="step1" class="step active">
+    <div class="pick-grid">
+      <div class="card pick-intro">
+        <div class="intro-head">
+          <div class="folder-icon"></div>
+          <div>
+            <h2>1. Pick a Session</h2>
+            <p class="muted">Choose a real session. Longer sessions with compactions provide the most benchmark value.</p>
+          </div>
+        </div>
+        <div id="projectStats" class="stats" aria-live="polite">
+          <div class="stat-card"><div class="stat-icon">*</div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
+          <div class="stat-card"><div class="stat-icon">v</div><div class="stat-value">...</div><div class="stat-label">Dataset Downloads</div></div>
+          <div class="stat-card"><div class="stat-icon">&lt;3</div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
+          <div class="stat-card"><div class="stat-icon">+</div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
+        </div>
+        <button id="discoverBtn" class="discover-main">Discover Sessions</button>
+        <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
+        <div id="discoverProgress" class="progress"><div></div></div>
+      </div>
+      <div class="card sessions-card">
+        <div class="session-head">
+          <h2>Recently discovered sessions</h2>
+          <span id="sessionCount" class="count-badge">0 found</span>
+        </div>
+        <div id="sessionList" class="session-list">
+          <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
+        </div>
+        <div id="pager" class="row" style="display:none; margin-top:18px; justify-content:center">
+          <button id="prevPage" class="secondary">Previous</button>
+          <span id="pageInfo" class="muted"></span>
+          <button id="nextPage" class="secondary">Next</button>
+        </div>
+      </div>
     </div>
-    <div class="row">
-      <button id="discoverBtn">Discover Sessions</button>
-    </div>
-    <div id="discoverStatus" class="muted" style="margin-top:10px">Click discover to scan Claude/Codex sessions.</div>
-    <div id="discoverProgress" class="progress"><div></div></div>
-    <table id="sessions" hidden>
-      <thead><tr><th>#</th><th>Fit</th><th>Status</th><th>Agent</th><th>Turns</th><th>Cmp</th><th>Date</th><th>Project</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <div id="pager" class="row" style="display:none; margin-top:12px">
-      <button id="prevPage" class="secondary">Previous</button>
-      <span id="pageInfo" class="muted"></span>
-      <button id="nextPage" class="secondary">Next</button>
-    </div>
-    <div class="row actions">
-      <button id="pickNext" disabled>Next: Redact</button>
+    <div class="bottom-nav">
+      <div class="tip"><strong>Tip:</strong> Sessions with more turns and compactions are more valuable for the research community.</div>
+      <button id="pickNext" class="next-button" disabled>Next: Redact  -&gt;</button>
     </div>
   </section>
 
@@ -484,18 +541,23 @@ let redacted = null;
 let described = null;
 let submitted = false;
 let page = 0;
-const pageSize = 10;
+const pageSize = 4;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
 let publicStats = {};
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
 function privacyTier(){ return document.querySelector('input[name="privacyTier"]:checked')?.value || 'full_redacted'; }
 function goStep(n){
+  const pct = n * 25;
   for(let i=1;i<=4;i++){
     $('step'+i).classList.toggle('active', i===n);
     $('pill'+i).classList.toggle('active', i===n);
     $('pill'+i).classList.toggle('done', i<n);
   }
+  $('stepLabel').textContent = `Step ${n} of 4`;
+  $('stepPercentText').textContent = `${pct}% complete`;
+  $('progressRing').style.setProperty('--pct', pct);
+  $('progressRingText').textContent = `${pct}%`;
 }
 function refreshButtons(){
   const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(selected.path)));
@@ -523,13 +585,14 @@ function escapeHtml(s){
 }
 function renderProjectStats(){
   const cards = [
-    ['GitHub stars', publicStats.github_stars],
-    ['Dataset downloads', publicStats.dataset_downloads],
-    ['Dataset likes', publicStats.dataset_likes],
-    ['Donated sessions', publicStats.donated_sessions],
+    ['*', 'GitHub Stars', publicStats.github_stars],
+    ['v', 'Dataset Downloads', publicStats.dataset_downloads],
+    ['<3', 'Dataset Likes', publicStats.dataset_likes],
+    ['+', 'Donated Sessions', publicStats.donated_sessions],
   ];
-  $('projectStats').innerHTML = cards.map(([label, value]) => `
+  $('projectStats').innerHTML = cards.map(([icon, label, value]) => `
     <div class="stat-card">
+      <div class="stat-icon">${escapeHtml(icon)}</div>
       <div class="stat-value">${escapeHtml(fmtStat(value))}</div>
       <div class="stat-label">${escapeHtml(label)}</div>
     </div>
@@ -669,24 +732,40 @@ async function post(url, body){
   return data;
 }
 function renderSessions(){
-  const tbody = $('sessions').querySelector('tbody'); tbody.innerHTML = '';
+  const list = $('sessionList');
+  list.innerHTML = '';
   const start = page * pageSize;
   const rows = sessions.slice(start, start + pageSize);
+  $('sessionCount').textContent = `${sessions.length} found`;
+  if(!rows.length){
+    list.innerHTML = '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
+  }
   rows.forEach((s,i) => {
     const idx = start + i;
-    const tr = document.createElement('tr');
+    const row = document.createElement('div');
     const donated = !!s.donated || donatedPaths.has(s.path);
-    tr.innerHTML = `<td>${idx+1}</td><td><span class="pill ${fit(s)}">${fit(s)}</span></td><td>${donated ? '<span class="pill donated">donated</span>' : ''}</td><td>${s.agent||''}</td><td>${turns(s.turns)}</td><td>${s.compactions||0}</td><td>${s.modified||'?'}</td><td>${s.project||''}</td>`;
-    if (selected && selected.path === s.path) tr.classList.add('selected');
-      tr.onclick = () => {
-        document.querySelectorAll('tr.selected').forEach(x=>x.classList.remove('selected'));
-        tr.classList.add('selected'); selected = s;
-        redacted = null; described = null; submitted = !!donated;
-        renderSelectedCard(s, idx);
-        status('redactStatus', donated ? 'This session is already marked donated locally. Pick a different session to avoid duplicate submissions.' : '');
-        refreshButtons();
-      };
-    tbody.appendChild(tr);
+    row.className = 'session-row';
+    row.innerHTML = `
+      <div class="session-icon">&lt;/&gt;</div>
+      <div>
+        <div class="session-title">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.project || 'unknown project')} ${donated ? '<span class="pill donated">donated</span>' : ''}</div>
+        <div class="session-sub">${escapeHtml(s.modified || '?')}</div>
+      </div>
+      <div class="session-turns"><div class="session-num">${turns(s.turns)}</div><div class="session-cap">turns</div></div>
+      <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div><div class="session-cap">compactions</div></div>
+      <div class="session-duration"><div class="session-num">${fit(s)}</div><div class="session-cap">fit</div></div>
+      <div class="chev">&gt;</div>
+    `;
+    if (selected && selected.path === s.path) row.classList.add('selected');
+    row.onclick = () => {
+      document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
+      row.classList.add('selected'); selected = s;
+      redacted = null; described = null; submitted = !!donated;
+      renderSelectedCard(s, idx);
+      status('redactStatus', donated ? 'This session is already marked donated locally. Pick a different session to avoid duplicate submissions.' : '');
+      refreshButtons();
+    };
+    list.appendChild(row);
   });
   const totalPages = Math.max(1, Math.ceil(sessions.length / pageSize));
   $('pageInfo').textContent = `Page ${page + 1} of ${totalPages} · showing ${sessions.length ? start + 1 : 0}-${Math.min(start + pageSize, sessions.length)} of ${sessions.length}`;
@@ -733,7 +812,6 @@ $('discoverBtn').onclick = async () => {
     page = 0;
     status('discoverStatus', `Found ${sessions.length} usable sessions. Click a row to select.`);
     renderSessions();
-    $('sessions').hidden = false;
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
   } catch(e) { status('discoverStatus','ERROR: '+e.message); }
   finally { $('discoverBtn').disabled = false; }
