@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,25 @@ def run(cmd: list[str]) -> int:
     return proc.returncode
 
 
+def promoted_submission_ids(dataset_root: Path) -> set[str]:
+    ledger = dataset_root / "data" / "donations" / "ledger.jsonl"
+    ids: set[str] = set()
+    if not ledger.exists():
+        return ids
+    for line in ledger.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        submission_id = record.get("submission_id")
+        decision = record.get("decision")
+        if isinstance(submission_id, str) and decision == "ACCEPTABLE":
+            ids.add(submission_id)
+    return ids
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Download and review all staged donations.")
     p.add_argument("--staging-dir", type=Path, default=Path("hf_staging_download"))
@@ -23,6 +43,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--run-quick", action="store_true")
     p.add_argument("--promote", action="store_true", help="promote submissions that pass review")
     p.add_argument("--dataset-root", type=Path, default=Path("data_archive_release_v2"))
+    p.add_argument("--include-promoted", action="store_true",
+                   help="re-review submissions already recorded as promoted in the local ledger")
     return p.parse_args(argv)
 
 
@@ -38,9 +60,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[intake] no submissions found under {args.staging_dir / 'pending'}")
         return 0
 
+    already_promoted = promoted_submission_ids(args.dataset_root)
     failures = 0
     accepted: list[Path] = []
+    skipped = 0
     for sub in pending:
+        if sub.name in already_promoted and not args.include_promoted:
+            skipped += 1
+            print(f"[intake] skip already promoted: {sub.name}")
+            continue
         cmd = [args.python, "scripts/review_donation.py", str(sub)]
         if args.run_quick:
             cmd.append("--run-quick")
@@ -66,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
                 failures += 1
 
     print(f"[intake] accepted: {len(accepted)}")
+    print(f"[intake] skipped promoted: {skipped}")
     print(f"[intake] needs attention: {failures}")
     return 0 if failures == 0 else 1
 

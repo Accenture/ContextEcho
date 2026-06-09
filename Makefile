@@ -29,6 +29,7 @@ help:
 	@echo "    make intake-donations                    download + technical-review all pending donations"
 	@echo "    make intake-donations RUN_QUICK=1        include quick validation gate"
 	@echo "    make intake-donations PROMOTE=1          promote accepted donations into data_archive_release_v2/"
+	@echo "    make intake-donations INCLUDE_PROMOTED=1 re-review already promoted submissions"
 	@echo "    make review-donation SUBMISSION=...       one-command maintainer technical review"
 	@echo "    make review-donation-quick SUBMISSION=... run review + 30-cell quick validation"
 	@echo "    make promote-donation SUBMISSION=...      promote one accepted donation"
@@ -104,7 +105,8 @@ download-donations:
 intake-donations:
 	$(PYTHON) scripts/intake_donations.py \
 	  $(if $(RUN_QUICK),--run-quick,) \
-	  $(if $(PROMOTE),--promote,)
+	  $(if $(PROMOTE),--promote,) \
+	  $(if $(INCLUDE_PROMOTED),--include-promoted,)
 
 review-donation:
 	@if [ -z "$(SUBMISSION)" ]; then \
