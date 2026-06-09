@@ -748,7 +748,24 @@ function renderSubmitResult(data){
   `;
   $('submitResult').classList.add('show', 'success-panel');
   if(data.receipt_path) $('revealReceipt').onclick = () => post('/api/open_path', {path:data.receipt_path, reveal:true}).catch(e => status('submitStatus','ERROR: '+e.message));
-  $('submitAnother').onclick = () => goStep(1);
+  $('submitAnother').onclick = () => { resetSessionArtifacts(); goStep(1); };
+}
+function resetSessionArtifacts(){
+  selected = null;
+  redacted = null;
+  described = null;
+  submitted = false;
+  document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
+  ['selectedCard','redactResult','describeResult','submitResult','searchResult'].forEach(id => {
+    $(id).innerHTML = '';
+    $(id).classList.remove('show', 'success-panel');
+  });
+  $('searchPanel').classList.remove('show');
+  $('reviewConfirm').checked = false;
+  $('safeConfirm').checked = false;
+  ['redactStatus','describeStatus','submitStatus','discoverStatus'].forEach(id => status(id, ''));
+  ['redactProgress','describeProgress','submitProgress','searchProgress'].forEach(id => setBusy(id, false));
+  refreshButtons();
 }
 function setProgress(pct){
   $('discoverProgress').style.display = 'block';
