@@ -90,6 +90,11 @@ def known_session_hashes(dataset_root: Path, reviewed: dict[str, dict] | None = 
     for record in iter_jsonl_records(ledger):
         session_hash = record.get("session_sha256") or record.get("artifact_sha256")
         submission_id = record.get("submission_id")
+        session_path = record.get("session_path")
+        if not session_hash and isinstance(session_path, str):
+            promoted_session = dataset_root / session_path
+            if promoted_session.exists():
+                session_hash = sha256_file(promoted_session)
         if isinstance(session_hash, str) and isinstance(submission_id, str):
             hashes[session_hash] = submission_id
     for submission_id, record in (reviewed or load_review_registry(dataset_root)).items():
@@ -194,6 +199,8 @@ def main(argv: list[str] | None = None) -> int:
                     "quick_validation": bool(args.run_quick),
                     "promoted": False,
                 })
+                if session_hash:
+                    session_hashes.setdefault(session_hash, sub.name)
         else:
             failures += 1
             append_review_record(args.dataset_root, {
@@ -205,6 +212,8 @@ def main(argv: list[str] | None = None) -> int:
                 "quick_validation": bool(args.run_quick),
                 "promoted": False,
             })
+            if session_hash:
+                session_hashes.setdefault(session_hash, sub.name)
 
     if args.promote:
         for sub, fingerprint, session_hash in accepted:
@@ -230,6 +239,8 @@ def main(argv: list[str] | None = None) -> int:
                 "quick_validation": bool(args.run_quick),
                 "promoted": True,
             })
+            if session_hash:
+                session_hashes.setdefault(session_hash, sub.name)
 
     print(f"[intake] accepted: {len(accepted)}")
     print(f"[intake] skipped promoted: {skipped_promoted}")

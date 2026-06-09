@@ -8,6 +8,7 @@ from scripts.intake_donations import (
     known_session_hashes,
     load_review_registry,
     promoted_submission_ids,
+    sha256_file,
     submission_fingerprint,
     submission_session_hash,
 )
@@ -87,6 +88,26 @@ class IntakeDonationTests(unittest.TestCase):
             })
 
             self.assertEqual(known_session_hashes(root)[session_hash], "submission-one")
+
+    def test_known_session_hashes_reads_legacy_ledger_session_path(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            session = root / "data" / "sessions" / "session_old.jsonl"
+            ledger = root / "data" / "donations" / "ledger.jsonl"
+            session.parent.mkdir(parents=True)
+            ledger.parent.mkdir(parents=True)
+            session.write_text('{"type":"user","content":"old"}\n', encoding="utf-8")
+            ledger.write_text(
+                json.dumps({
+                    "submission_id": "submission-old",
+                    "decision": "ACCEPTABLE",
+                    "session_path": "data/sessions/session_old.jsonl",
+                })
+                + "\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(known_session_hashes(root), {sha256_file(session): "submission-old"})
 
 
 if __name__ == "__main__":
