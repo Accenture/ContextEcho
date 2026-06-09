@@ -341,7 +341,7 @@ INDEX_HTML = r"""<!doctype html>
     .session-head h2 { font-size:21px; }
     .count-badge { border-radius:10px; padding:6px 12px; color:var(--accent); background:#eaf4e5; font-weight:900; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
-    .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(250px,1fr) 110px 80px 92px 70px; gap:12px; align-items:center; }
+    .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(250px,1fr) 110px 80px 66px 82px; gap:18px; align-items:center; }
     .session-table-head { padding:10px 14px; background:#f2f5ef; color:#5a625d; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
     .session-row { padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
     .session-row:last-child { border-bottom:0; }
@@ -396,7 +396,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 76px; } .session-fit { display:none; } }
+    @media (max-width:1000px) { .hero-top, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
     @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; margin-top:24px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .actions { justify-content:flex-start; } }
   </style>
 </head>
@@ -448,7 +448,7 @@ INDEX_HTML = r"""<!doctype html>
           <span id="sessionCount" class="count-badge">0 found</span>
         </div>
         <div id="sessionList" class="session-list">
-          <div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Compactions</div><div>Fit</div></div>
+          <div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Cmp</div><div>Fit</div></div>
           <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
         </div>
         <div id="pager" class="row" style="display:none; margin-top:18px; justify-content:center">
@@ -739,10 +739,10 @@ function renderSessions(){
   const rows = sessions.slice(start, start + pageSize);
   $('sessionCount').textContent = `${sessions.length} found`;
   if(!rows.length){
-    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Compactions</div><div>Fit</div></div><div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
+    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Cmp</div><div>Fit</div></div><div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
   }
   if(rows.length){
-    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Compactions</div><div>Fit</div></div>';
+    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Cmp</div><div>Fit</div></div>';
   }
   rows.forEach((s,i) => {
     const idx = start + i;
