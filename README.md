@@ -25,13 +25,6 @@ forked branch — without perturbing the main session.
   <img src="images/context_echo_intro.png" alt="ContextEcho framework overview" width="100%" />
 </p>
 
-> **Donor privacy.** ContextEcho analyzes assistant behavior, not donor
-> personality. The default donation mode is **full redacted**, which removes
-> PII, secrets, paths, and custom scrub terms while preserving task flow.
-> Donors can choose **user-minimized** mode to mask donor-authored free text
-> after redaction. See [`DONOR_PRIVACY.md`](DONOR_PRIVACY.md) and
-> [`DATA_USE_POLICY.md`](DATA_USE_POLICY.md).
-
 ## Key findings
 
 Measured across **24 frontier models from 10 organizations** on three
@@ -207,6 +200,13 @@ The wizard discovers local Claude Code/Codex sessions, redacts and verifies
 the selected session on your machine, writes `session.redacted.jsonl`,
 `manifest.json`, and `CONSENT.md`, then submits only those redacted artifacts
 to private maintainer review.
+
+> **Donor privacy.** ContextEcho analyzes **assistant behavior**, not
+> **donor personality**. The default donation mode is **full redacted**, which
+> removes **PII, secrets, paths, and custom scrub terms** while preserving task
+> flow. Donors can choose **user-minimized** mode to mask donor-authored free
+> text after redaction. See [`DONOR_PRIVACY.md`](DONOR_PRIVACY.md) and
+> [`DATA_USE_POLICY.md`](DATA_USE_POLICY.md).
 
 Maintainers convert accepted private staging submissions into the next public
 dataset candidate with:
