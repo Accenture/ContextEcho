@@ -307,6 +307,9 @@ INDEX_HTML = r"""<!doctype html>
     .step-pill.active { color:var(--accent); }
     .step-pill.active .step-num, .step-pill.done .step-num { background:var(--accent); color:white; box-shadow:0 8px 20px rgba(23,113,63,.24); }
     .step-pill.active:after, .step-pill.done:after { background:var(--accent); }
+    .hero-side { display:flex; align-items:flex-start; gap:16px; justify-content:flex-end; max-width:680px; }
+    .privacy-note { color:var(--muted); font-size:14px; line-height:1.35; text-align:right; max-width:440px; padding-top:4px; }
+    .privacy-note strong { color:#13552f; }
     .hero-progress { display:flex; align-items:center; gap:14px; padding-top:4px; min-width:190px; justify-content:flex-end; }
     .progress-label { text-align:right; color:var(--muted); font-size:14px; }
     .progress-label strong { display:block; color:var(--accent); font-size:18px; }
@@ -385,8 +388,6 @@ INDEX_HTML = r"""<!doctype html>
     .progress { width:100%; height:12px; border-radius:999px; overflow:hidden; background:#e5eadc; margin-top:12px; display:none; }
     .progress > div { height:100%; width:0%; background:linear-gradient(90deg,#1f6f43,#89b65b); transition:width .2s ease; }
     .danger { color:#7f241b; font-weight:800; background:#fff1ed; border:1px solid #f2c9c0; padding:10px 12px; border-radius:14px; }
-    .privacy-callout { margin-top:14px; background:#eef8e8; border:1px solid #b8d7ad; border-left:5px solid var(--accent); border-radius:14px; padding:10px 14px; }
-    .privacy-callout strong { color:#13552f; }
     .ok { color:var(--accent); font-weight:800; }
     .hint { font-size:13px; color:var(--muted); margin-top:6px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
@@ -398,7 +399,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .privacy-note { text-align:left; max-width:none; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
     @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; margin-top:24px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .actions { justify-content:flex-start; } }
   </style>
 </head>
@@ -410,12 +411,14 @@ INDEX_HTML = r"""<!doctype html>
         <h1>ContextEcho Donation Wizard</h1>
         <div class="topline">Donate a coding-agent session in a few local-first steps.</div>
       </div>
-      <div class="hero-progress">
-        <div class="progress-label"><strong id="stepLabel">Step 1 of 4</strong><span id="stepPercentText">25% complete</span></div>
-        <div id="progressRing" class="ring" style="--pct:25"><span id="progressRingText">25%</span></div>
+      <div class="hero-side">
+        <div class="privacy-note"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
+        <div class="hero-progress">
+          <div class="progress-label"><strong id="stepLabel">Step 1 of 4</strong><span id="stepPercentText">25% complete</span></div>
+          <div id="progressRing" class="ring" style="--pct:25"><span id="progressRingText">25%</span></div>
+        </div>
       </div>
     </div>
-    <div class="privacy-callout"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
     <div class="steps">
       <span id="pill1" class="step-pill active"><span class="step-num">1</span><span>Pick a Session</span></span>
       <span id="pill2" class="step-pill"><span class="step-num">2</span><span>Redact</span></span>
@@ -472,7 +475,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="danger">Only donate personal, internal tooling, or open-source sessions. Do not donate client-confidential/NDA data.</div>
     <p class="muted"><strong>ContextEcho analyzes assistant behavior, not donor personality.</strong> Choose how much of your own wording to keep.</p>
     <div class="privacy-options">
-      <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><strong>Full redacted</strong><div class="hint">Default. Keeps task flow and semantics after PII/secrets/custom terms are removed. Highest scientific fidelity.</div></label>
+      <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><strong>Full redacted</strong><div class="hint">Default. Keeps task flow after PII/secrets/custom terms are removed. Highest scientific fidelity.</div></label>
       <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><strong>User-minimized</strong><div class="hint">Masks donor free-text after redaction. Assistant/tool behavior remains; lower detail, stronger privacy.</div></label>
     </div>
     <p class="muted">Automatic redaction covers common sensitive data such as paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</p>
