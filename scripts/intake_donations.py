@@ -11,6 +11,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SUBMISSION_FILES = ("session.redacted.jsonl", "manifest.json", "CONSENT.md")
+SESSION_NAME = "session.redacted.jsonl"
 
 
 def run(cmd: list[str]) -> int:
@@ -19,18 +20,22 @@ def run(cmd: list[str]) -> int:
     return proc.returncode
 
 
-def promoted_submission_ids(dataset_root: Path) -> set[str]:
-    ledger = dataset_root / "data" / "donations" / "ledger.jsonl"
-    ids: set[str] = set()
-    if not ledger.exists():
-        return ids
-    for line in ledger.read_text(encoding="utf-8", errors="replace").splitlines():
+def iter_jsonl_records(path: Path):
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if not line.strip():
             continue
         try:
-            record = json.loads(line)
+            yield json.loads(line)
         except json.JSONDecodeError:
             continue
+
+
+def promoted_submission_ids(dataset_root: Path) -> set[str]:
+    ledger = dataset_root / "data" / "donations" / "ledger.jsonl"
+    ids: set[str] = set()
+    for record in iter_jsonl_records(ledger):
         submission_id = record.get("submission_id")
         decision = record.get("decision")
         if isinstance(submission_id, str) and decision == "ACCEPTABLE":
@@ -60,6 +65,11 @@ def submission_fingerprint(submission: Path) -> str:
     return h.hexdigest()
 
 
+def submission_session_hash(submission: Path) -> str:
+    path = submission / SESSION_NAME
+    return sha256_file(path) if path.exists() else ""
+
+
 def review_registry_path(dataset_root: Path) -> Path:
     return dataset_root / "data" / "donations" / "reviewed_submissions.jsonl"
 
@@ -67,19 +77,26 @@ def review_registry_path(dataset_root: Path) -> Path:
 def load_review_registry(dataset_root: Path) -> dict[str, dict]:
     path = review_registry_path(dataset_root)
     records: dict[str, dict] = {}
-    if not path.exists():
-        return records
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not line.strip():
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+    for record in iter_jsonl_records(path):
         submission_id = record.get("submission_id")
         if isinstance(submission_id, str):
             records[submission_id] = record
     return records
+
+
+def known_session_hashes(dataset_root: Path, reviewed: dict[str, dict] | None = None) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    ledger = dataset_root / "data" / "donations" / "ledger.jsonl"
+    for record in iter_jsonl_records(ledger):
+        session_hash = record.get("session_sha256") or record.get("artifact_sha256")
+        submission_id = record.get("submission_id")
+        if isinstance(session_hash, str) and isinstance(submission_id, str):
+            hashes[session_hash] = submission_id
+    for submission_id, record in (reviewed or load_review_registry(dataset_root)).items():
+        session_hash = record.get("session_sha256")
+        if isinstance(session_hash, str) and session_hash:
+            hashes.setdefault(session_hash, submission_id)
+    return hashes
 
 
 def append_review_record(dataset_root: Path, record: dict) -> None:
@@ -105,6 +122,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="re-review submissions already recorded as promoted in the local ledger")
     p.add_argument("--include-reviewed", action="store_true",
                    help="re-review unchanged submissions already recorded in the review registry")
+    p.add_argument("--include-duplicates", action="store_true",
+                   help="review submissions whose redacted session hash matches an already processed submission")
     return p.parse_args(argv)
 
 
@@ -122,15 +141,33 @@ def main(argv: list[str] | None = None) -> int:
 
     already_promoted = promoted_submission_ids(args.dataset_root)
     reviewed = load_review_registry(args.dataset_root)
+    session_hashes = known_session_hashes(args.dataset_root, reviewed)
     failures = 0
-    accepted: list[tuple[Path, str]] = []
+    accepted: list[tuple[Path, str, str]] = []
     skipped_promoted = 0
     skipped_reviewed = 0
+    skipped_duplicates = 0
     for sub in pending:
         fingerprint = submission_fingerprint(sub)
+        session_hash = submission_session_hash(sub)
+        duplicate_of = session_hashes.get(session_hash) if session_hash else ""
         if sub.name in already_promoted and not (args.include_promoted or args.include_reviewed):
             skipped_promoted += 1
             print(f"[intake] skip already promoted: {sub.name}")
+            continue
+        if duplicate_of and duplicate_of != sub.name and not args.include_duplicates:
+            skipped_duplicates += 1
+            print(f"[intake] skip duplicate session: {sub.name} matches {duplicate_of}")
+            append_review_record(args.dataset_root, {
+                "submission_id": sub.name,
+                "fingerprint": fingerprint,
+                "session_sha256": session_hash,
+                "decision": "DUPLICATE",
+                "duplicate_of": duplicate_of,
+                "reviewed_utc": datetime.now(timezone.utc).isoformat(),
+                "quick_validation": False,
+                "promoted": False,
+            })
             continue
         previous = reviewed.get(sub.name)
         if (
@@ -146,11 +183,12 @@ def main(argv: list[str] | None = None) -> int:
             cmd.append("--run-quick")
         rc = run(cmd)
         if rc == 0:
-            accepted.append((sub, fingerprint))
+            accepted.append((sub, fingerprint, session_hash))
             if not args.promote:
                 append_review_record(args.dataset_root, {
                     "submission_id": sub.name,
                     "fingerprint": fingerprint,
+                    "session_sha256": session_hash,
                     "decision": "ACCEPTABLE",
                     "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                     "quick_validation": bool(args.run_quick),
@@ -161,6 +199,7 @@ def main(argv: list[str] | None = None) -> int:
             append_review_record(args.dataset_root, {
                 "submission_id": sub.name,
                 "fingerprint": fingerprint,
+                "session_sha256": session_hash,
                 "decision": "CHECK_REQUIRED",
                 "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                 "quick_validation": bool(args.run_quick),
@@ -168,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
             })
 
     if args.promote:
-        for sub, fingerprint in accepted:
+        for sub, fingerprint, session_hash in accepted:
             cmd = [
                 args.python,
                 "scripts/promote_donation.py",
@@ -185,6 +224,7 @@ def main(argv: list[str] | None = None) -> int:
             append_review_record(args.dataset_root, {
                 "submission_id": sub.name,
                 "fingerprint": fingerprint,
+                "session_sha256": session_hash,
                 "decision": "ACCEPTABLE",
                 "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                 "quick_validation": bool(args.run_quick),
@@ -194,6 +234,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[intake] accepted: {len(accepted)}")
     print(f"[intake] skipped promoted: {skipped_promoted}")
     print(f"[intake] skipped reviewed: {skipped_reviewed}")
+    print(f"[intake] skipped duplicates: {skipped_duplicates}")
     print(f"[intake] needs attention: {failures}")
     return 0 if failures == 0 else 1
 

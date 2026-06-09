@@ -31,6 +31,7 @@ help:
 	@echo "    make intake-donations PROMOTE=1          promote accepted donations into data_archive_release_v2/"
 	@echo "    make intake-donations INCLUDE_PROMOTED=1 re-review already promoted submissions"
 	@echo "    make intake-donations INCLUDE_REVIEWED=1 re-review unchanged processed submissions"
+	@echo "    make intake-donations INCLUDE_DUPLICATES=1 review duplicate session artifacts"
 	@echo "    make review-donation SUBMISSION=...       one-command maintainer technical review"
 	@echo "    make review-donation-quick SUBMISSION=... run review + 30-cell quick validation"
 	@echo "    make promote-donation SUBMISSION=...      promote one accepted donation"
@@ -108,7 +109,8 @@ intake-donations:
 	  $(if $(RUN_QUICK),--run-quick,) \
 	  $(if $(PROMOTE),--promote,) \
 	  $(if $(INCLUDE_PROMOTED),--include-promoted,) \
-	  $(if $(INCLUDE_REVIEWED),--include-reviewed,)
+	  $(if $(INCLUDE_REVIEWED),--include-reviewed,) \
+	  $(if $(INCLUDE_DUPLICATES),--include-duplicates,)
 
 review-donation:
 	@if [ -z "$(SUBMISSION)" ]; then \

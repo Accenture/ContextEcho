@@ -361,6 +361,8 @@ INDEX_HTML = r"""<!doctype html>
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
+    .session-row.donated-row { cursor:not-allowed; opacity:.72; background:#f7f9f4; }
+    .session-row.donated-row:hover { background:#f7f9f4; }
     .session-icon { width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:14px; }
     .session-title { font-weight:900; font-size:14px; }
     .session-date { color:#5f6662; font-size:13px; }
@@ -459,7 +461,7 @@ INDEX_HTML = r"""<!doctype html>
         <div class="row reset-donated">
           <button id="clearDonatedBtn" class="secondary">Clear local donated labels</button>
         </div>
-        <div class="hint" style="text-align:center">Only resets this browser/machine label. It does not delete or retract submitted data.</div>
+        <div class="hint" style="text-align:center">Only resets this browser/machine label. It does not delete or retract submitted data. May allow resubmission; maintainers may reject duplicates.</div>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
       </div>
@@ -780,7 +782,7 @@ function renderSessions(){
     const idx = start + i;
     const row = document.createElement('div');
     const donated = !!s.donated || donatedPaths.has(s.path);
-    row.className = 'session-row';
+    row.className = donated ? 'session-row donated-row' : 'session-row';
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
@@ -791,8 +793,12 @@ function renderSessions(){
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
       <div class="session-fit"><span class="pill ${fit(s)}">${fit(s)}</span></div>
     `;
-    if (selected && selected.path === s.path) row.classList.add('selected');
+    if (selected && selected.path === s.path && !donated) row.classList.add('selected');
     row.onclick = () => {
+      if(donated){
+        status('discoverStatus', 'This session is already marked donated locally. Use Clear local donated labels only if the previous submission failed.');
+        return;
+      }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
       row.classList.add('selected'); selected = s;
       redacted = null; described = null; submitted = !!donated;
@@ -852,7 +858,7 @@ $('discoverBtn').onclick = async () => {
   finally { $('discoverBtn').disabled = false; }
 };
 $('clearDonatedBtn').onclick = async () => {
-  const ok = confirm('Clear local donated labels on this browser and machine? This does not delete or retract any submitted data.');
+  const ok = confirm('Clear local donated labels on this browser and machine? This does not delete or retract submitted data. It may allow resubmission; maintainers may reject duplicates.');
   if(!ok) return;
   try {
     await post('/api/clear_donated_labels', {});
