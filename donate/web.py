@@ -564,7 +564,7 @@ let redacted = null;
 let described = null;
 let submitted = false;
 let page = 0;
-const pageSize = 4;
+const pageSize = 5;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
 let publicStats = {};
