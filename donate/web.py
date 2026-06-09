@@ -411,7 +411,6 @@ INDEX_HTML = r"""<!doctype html>
     </div>
     <div class="row" style="margin-top:12px">
       <button id="redactBtn" disabled>Redact and Verify</button>
-      <button id="addMoreScrub" class="secondary" disabled>Add More Terms and Re-run</button>
     </div>
     <div id="redactProgress" class="progress"><div></div></div>
     <div id="redactResult" class="result"></div>
@@ -489,7 +488,6 @@ function refreshButtons(){
   const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(selected.path)));
   $('pickNext').disabled = !selected;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
-  $('addMoreScrub').disabled = !(selected && $('safeConfirm').checked && redacted);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
   $('describeBtn').disabled = !(redacted && redacted.verify_passed);
@@ -746,12 +744,6 @@ $('redactNext').onclick = () => goStep(3);
 $('describePrev').onclick = () => goStep(2);
 $('describeNext').onclick = () => goStep(4);
 $('submitPrev').onclick = () => goStep(3);
-$('addMoreScrub').onclick = () => {
-  $('scrub').focus();
-  $('reviewConfirm').checked = false;
-  status('redactStatus', 'Add more comma-separated terms above, then click Redact and Verify again.');
-  refreshButtons();
-};
 $('searchBtn').onclick = async () => {
   if(!redacted) return;
   setBusy('searchProgress', true, 55);
