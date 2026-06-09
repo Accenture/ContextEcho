@@ -329,7 +329,9 @@ INDEX_HTML = r"""<!doctype html>
     .folder-icon:before { content:""; width:42px; height:29px; border:3px solid var(--accent); border-radius:6px; box-sizing:border-box; box-shadow:0 -10px 0 -6px var(--accent); }
     .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:22px 0 20px; }
     .stat-card { text-align:center; background:transparent; border:0; padding:0; min-height:0; }
-    .stat-icon { width:52px; height:52px; margin:0 auto 8px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; font-size:20px; }
+    .stat-icon { width:52px; height:52px; margin:0 auto 8px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
+    .stat-icon svg { width:26px; height:26px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+    .stat-icon .icon-fill { fill:currentColor; stroke:none; }
     .stat-card:nth-child(2) .stat-icon { background:#e9f2e5; color:var(--accent); }
     .stat-card:nth-child(3) .stat-icon { background:#f6eadb; color:#dc4b30; }
     .stat-card:nth-child(4) .stat-icon { background:#efedf5; color:#7657a8; }
@@ -433,10 +435,10 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
-          <div class="stat-card"><div class="stat-icon">*</div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
-          <div class="stat-card"><div class="stat-icon">v</div><div class="stat-value">...</div><div class="stat-label">Dataset Downloads</div></div>
-          <div class="stat-card"><div class="stat-icon">&lt;3</div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
-          <div class="stat-card"><div class="stat-icon">+</div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
+          <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
+          <div class="stat-card"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Dataset Downloads</div></div>
+          <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
+          <div class="stat-card"><div class="stat-icon" data-icon="gift"></div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
         </div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
@@ -546,6 +548,13 @@ const pageSize = 4;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
 let publicStats = {};
+const statIcons = {
+  star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 2.4l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.47l-5.9 3.1 1.13-6.57-4.78-4.66 6.6-.96L12 2.4z"/></svg>',
+  download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 17.5V20h14v-2.5"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 21s-7.25-4.45-9.35-8.7C.93 8.82 3.05 5 6.9 5c2.05 0 3.47 1.08 4.1 2.02C11.63 6.08 13.05 5 15.1 5c3.85 0 5.97 3.82 4.25 7.3C19.25 16.55 12 21 12 21z"/></svg>',
+  gift: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v10H4z"/><path d="M3 6h18v4H3z"/><path d="M12 6v14"/><path d="M12 6c-2.8 0-4.7-.85-4.7-2.2C7.3 2.8 8.05 2 9.05 2 10.8 2 12 6 12 6z"/><path d="M12 6c2.8 0 4.7-.85 4.7-2.2 0-1-.75-1.8-1.75-1.8C13.2 2 12 6 12 6z"/></svg>'
+};
+function iconSvg(name){ return statIcons[name] || ''; }
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
 function privacyTier(){ return document.querySelector('input[name="privacyTier"]:checked')?.value || 'full_redacted'; }
 function goStep(n){
@@ -586,14 +595,14 @@ function escapeHtml(s){
 }
 function renderProjectStats(){
   const cards = [
-    ['*', 'GitHub Stars', publicStats.github_stars],
-    ['v', 'Dataset Downloads', publicStats.dataset_downloads],
-    ['<3', 'Dataset Likes', publicStats.dataset_likes],
-    ['+', 'Donated Sessions', publicStats.donated_sessions],
+    ['star', 'GitHub Stars', publicStats.github_stars],
+    ['download', 'Dataset Downloads', publicStats.dataset_downloads],
+    ['heart', 'Dataset Likes', publicStats.dataset_likes],
+    ['gift', 'Donated Sessions', publicStats.donated_sessions],
   ];
   $('projectStats').innerHTML = cards.map(([icon, label, value]) => `
     <div class="stat-card">
-      <div class="stat-icon">${escapeHtml(icon)}</div>
+      <div class="stat-icon" data-icon="${escapeHtml(icon)}">${iconSvg(icon)}</div>
       <div class="stat-value">${escapeHtml(fmtStat(value))}</div>
       <div class="stat-label">${escapeHtml(label)}</div>
     </div>
