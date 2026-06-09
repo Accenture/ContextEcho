@@ -307,8 +307,8 @@ INDEX_HTML = r"""<!doctype html>
     .step-pill.active { color:var(--accent); }
     .step-pill.active .step-num, .step-pill.done .step-num { background:var(--accent); color:white; box-shadow:0 8px 20px rgba(23,113,63,.24); }
     .step-pill.active:after, .step-pill.done:after { background:var(--accent); }
-    .hero-side { display:flex; align-items:flex-start; gap:16px; justify-content:flex-end; max-width:680px; }
-    .privacy-note { color:var(--muted); font-size:14px; line-height:1.35; text-align:right; max-width:440px; padding-top:4px; }
+    .hero-side { display:flex; align-items:flex-start; gap:16px; justify-content:flex-end; max-width:780px; }
+    .privacy-note { color:var(--muted); font-size:13px; line-height:1.35; text-align:right; max-width:560px; padding-top:4px; white-space:nowrap; }
     .privacy-note strong { color:#13552f; }
     .hero-progress { display:flex; align-items:center; gap:14px; padding-top:4px; min-width:190px; justify-content:flex-end; }
     .progress-label { text-align:right; color:var(--muted); font-size:14px; }
@@ -383,6 +383,9 @@ INDEX_HTML = r"""<!doctype html>
     .metric { background:#edf3e8; border:1px solid #d5e4ce; border-radius:999px; padding:6px 10px; font-size:13px; }
     .selected-card { display:none; border:2px solid #7cb67d; background:#eef8e8; border-radius:18px; padding:14px; margin-top:14px; }
     .selected-card.show { display:block; }
+    .selected-card-layout { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
+    .selected-card-main { min-width:0; flex:1; }
+    .selected-card-action { flex:0 0 auto; }
     .search-panel { display:none; border:1px dashed #b8c9ad; border-radius:16px; padding:14px; margin-top:12px; background:#fffef7; }
     .search-panel.show { display:block; }
     .progress { width:100%; height:12px; border-radius:999px; overflow:hidden; background:#e5eadc; margin-top:12px; display:none; }
@@ -399,8 +402,8 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .privacy-note { text-align:left; max-width:none; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; margin-top:24px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; margin-top:24px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -644,18 +647,22 @@ function renderRedactResult(data){
 }
 function renderSelectedCard(s, idx){
   $('selectedCard').innerHTML = `
-    <div class="result-head">
-      <div><strong>Selected #${idx + 1}: ${escapeHtml(s.project || 'unknown project')}</strong></div>
-      <span class="pill ${fit(s)}">${fit(s)}</span>
+    <div class="selected-card-layout">
+      <div class="selected-card-main">
+        <div class="result-head">
+          <div><strong>Selected #${idx + 1}: ${escapeHtml(s.project || 'unknown project')}</strong></div>
+          <span class="pill ${fit(s)}">${fit(s)}</span>
+        </div>
+        <div class="metrics">
+          <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
+          <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
+          <span class="metric">Turns: <strong>${turns(s.turns)}</strong></span>
+          <span class="metric">Compactions: <strong>${s.compactions || 0}</strong></span>
+          <span class="metric">Date: <strong>${escapeHtml(s.modified || '?')}</strong></span>
+        </div>
+      </div>
+      <div class="selected-card-action"><button class="secondary" id="revealSourceFile">Reveal Source File</button></div>
     </div>
-    <div class="metrics">
-      <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
-      <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
-      <span class="metric">Turns: <strong>${turns(s.turns)}</strong></span>
-      <span class="metric">Compactions: <strong>${s.compactions || 0}</strong></span>
-      <span class="metric">Date: <strong>${escapeHtml(s.modified || '?')}</strong></span>
-    </div>
-    <div class="row" style="margin-top:10px"><button class="secondary" id="revealSourceFile">Reveal Source File</button></div>
   `;
   $('selectedCard').classList.add('show');
   $('revealSourceFile').onclick = () => post('/api/open_path', {path:s.path, reveal:true}).catch(e => status('redactStatus','ERROR: '+e.message));
