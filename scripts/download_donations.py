@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 from pathlib import Path
 
 STAGING_REPO = "contextecho2026/persona-drift-staging"
@@ -13,6 +14,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--repo-type", default="dataset")
     p.add_argument("--local-dir", type=Path, default=Path("hf_staging_download"))
     p.add_argument("--token", default=None, help="HF token; defaults to HF_TOKEN/cached login")
+    p.add_argument("--no-clean", action="store_true",
+                   help="do not remove the local staging mirror before download")
     return p.parse_args(argv)
 
 
@@ -23,6 +26,9 @@ def main(argv: list[str] | None = None) -> int:
     except ImportError:
         print("[error] huggingface_hub is not installed. Run `make setup-donate`.")
         return 2
+
+    if args.local_dir.exists() and not args.no_clean:
+        shutil.rmtree(args.local_dir)
 
     out = snapshot_download(
         repo_id=args.repo_id,
