@@ -368,7 +368,7 @@ INDEX_HTML = r"""<!doctype html>
   <section class="hero">
     <h1>ContextEcho Donation Wizard</h1>
     <div class="topline">Donate a coding-agent session in a few local-first steps. Raw logs stay on this machine; only verified redacted artifacts can be submitted.</div>
-    <div class="privacy-callout"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality. Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
+    <div class="privacy-callout"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
     <div class="steps">
       <span id="pill1" class="step-pill active">1 Pick</span>
       <span id="pill2" class="step-pill">2 Redact</span>
