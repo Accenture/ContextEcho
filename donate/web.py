@@ -389,7 +389,6 @@ INDEX_HTML = r"""<!doctype html>
     </div>
     <div class="row">
       <button id="discoverBtn">Discover Sessions</button>
-      <label style="margin:0"><input id="showAll" type="checkbox" style="width:auto"> inspect all candidates</label>
     </div>
     <div id="discoverStatus" class="muted" style="margin-top:10px">Click discover to scan Claude/Codex sessions.</div>
     <div id="discoverProgress" class="progress"><div></div></div>
@@ -699,7 +698,7 @@ $('discoverBtn').onclick = async () => {
   status('discoverStatus','Scanning local session logs. This can take a minute for large histories...');
   setProgress(2);
   try {
-    const max = $('showAll').checked ? 'all' : '50';
+    const max = '50';
     const r = await fetch('/api/discover_stream?max_per_agent=' + max);
     if(!r.ok) throw new Error(await r.text());
     const reader = r.body.getReader();
