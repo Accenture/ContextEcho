@@ -322,7 +322,7 @@ INDEX_HTML = r"""<!doctype html>
     input, textarea { width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:14px; padding:11px 13px; background:white; color:var(--ink); font:inherit; }
     input:focus, textarea:focus { outline:3px solid rgba(31,111,67,.16); border-color:#7cb67d; }
     label { display:block; font-weight:700; margin:12px 0 6px; }
-    .pick-grid { display:grid; grid-template-columns:minmax(400px,.9fr) minmax(520px,1.1fr); gap:22px; margin-top:16px; }
+    .pick-grid { display:grid; grid-template-columns:minmax(300px,.62fr) minmax(620px,1.38fr); gap:22px; margin-top:16px; }
     .pick-intro { min-height:342px; }
     .intro-head { display:flex; gap:22px; align-items:flex-start; padding-bottom:20px; border-bottom:1px solid var(--line); }
     .folder-icon { width:76px; height:76px; border-radius:18px; display:grid; place-items:center; background:linear-gradient(135deg,#eef6d4,#f7faeb); }
@@ -341,16 +341,15 @@ INDEX_HTML = r"""<!doctype html>
     .session-head h2 { font-size:21px; }
     .count-badge { border-radius:10px; padding:6px 12px; color:var(--accent); background:#eaf4e5; font-weight:900; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
-    .session-row { display:grid; grid-template-columns:44px minmax(190px,1fr) 72px 78px 78px 24px; gap:12px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
+    .session-row { display:grid; grid-template-columns:40px minmax(250px,1fr) 80px 88px 86px; gap:12px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
-    .session-icon { width:34px; height:34px; display:grid; place-items:center; border-radius:50%; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:12px; }
+    .session-icon { width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:14px; }
     .session-title { font-weight:900; font-size:14px; }
     .session-sub { color:#5f6662; margin-top:2px; font-size:12px; }
     .session-num { font-weight:900; font-size:15px; }
     .session-cap { color:#4e5551; font-size:11px; }
-    .chev { color:var(--accent); font-size:21px; font-weight:400; }
     .empty-sessions { padding:26px; text-align:center; color:var(--muted); }
     .bottom-nav { margin-top:16px; padding:12px 34px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
     .tip { display:flex; gap:12px; align-items:center; color:#3f4843; }
@@ -396,8 +395,8 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-row { grid-template-columns:44px minmax(180px,1fr) 74px 76px 28px; } .session-duration { display:none; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; margin-top:24px; } .step-pill:after { display:none; } .session-row { grid-template-columns:40px 1fr 28px; } .session-turns,.session-cmp,.session-duration { display:none; } .privacy-options { grid-template-columns:1fr; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-row { grid-template-columns:40px minmax(180px,1fr) 74px 76px; } .session-duration { display:none; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; margin-top:24px; } .step-pill:after { display:none; } .session-row { grid-template-columns:36px 1fr; } .session-turns,.session-cmp,.session-duration { display:none; } .privacy-options { grid-template-columns:1fr; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -746,7 +745,7 @@ function renderSessions(){
     const donated = !!s.donated || donatedPaths.has(s.path);
     row.className = 'session-row';
     row.innerHTML = `
-      <div class="session-icon">&lt;/&gt;</div>
+      <div class="session-icon">${idx + 1}</div>
       <div>
         <div class="session-title">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.project || 'unknown project')} ${donated ? '<span class="pill donated">donated</span>' : ''}</div>
         <div class="session-sub">${escapeHtml(s.modified || '?')}</div>
@@ -754,7 +753,6 @@ function renderSessions(){
       <div class="session-turns"><div class="session-num">${turns(s.turns)}</div><div class="session-cap">turns</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div><div class="session-cap">compactions</div></div>
       <div class="session-duration"><div class="session-num">${fit(s)}</div><div class="session-cap">fit</div></div>
-      <div class="chev">&gt;</div>
     `;
     if (selected && selected.path === s.path) row.classList.add('selected');
     row.onclick = () => {
