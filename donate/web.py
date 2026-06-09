@@ -461,7 +461,6 @@ INDEX_HTML = r"""<!doctype html>
         <div class="row reset-donated">
           <button id="clearDonatedBtn" class="secondary">Clear local donated labels</button>
         </div>
-        <div class="hint" style="text-align:center">Only resets this browser/machine label. It does not delete or retract submitted data. May allow resubmission; maintainers may reject duplicates.</div>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
       </div>
