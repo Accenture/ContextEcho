@@ -52,7 +52,7 @@ def _content_to_text(content: Any) -> str:
         if not isinstance(block, dict):
             continue
         kind = block.get("type")
-        if kind == "text" and block.get("text"):
+        if kind in {"text", "input_text", "output_text"} and block.get("text"):
             parts.append(str(block["text"]))
         elif kind == "tool_use":
             name = block.get("name", "?")
@@ -68,6 +68,29 @@ def _content_to_text(content: Any) -> str:
     return "\n".join(p for p in parts if p.strip())
 
 
+def _extract_role_content(obj: dict[str, Any]) -> tuple[str | None, Any]:
+    role = obj.get("type") or obj.get("role")
+    content: Any = obj.get("content")
+
+    msg = obj.get("message")
+    if isinstance(msg, dict):
+        role = msg.get("role") or role
+        content = msg.get("content", content)
+
+    # Codex CLI stores conversational messages under response_item.payload.
+    payload = obj.get("payload")
+    if isinstance(payload, dict):
+        payload_type = payload.get("type")
+        if payload_type == "message":
+            role = payload.get("role") or role
+            content = payload.get("content", content)
+        elif payload_type in {"user_message", "assistant_message"}:
+            role = str(payload_type).replace("_message", "")
+            content = payload.get("content", payload.get("text", content))
+
+    return str(role) if role is not None else None, content
+
+
 def load_transcript_lines(path: Path) -> list[dict[str, str]]:
     """Parse a redacted Claude/Codex-style JSONL into role/content turns."""
     rows: list[dict[str, str]] = []
@@ -81,12 +104,7 @@ def load_transcript_lines(path: Path) -> list[dict[str, str]]:
             except json.JSONDecodeError:
                 continue
 
-            role = obj.get("type") or obj.get("role")
-            msg = obj.get("message")
-            content: Any = obj.get("content")
-            if isinstance(msg, dict):
-                role = msg.get("role") or role
-                content = msg.get("content", content)
+            role, content = _extract_role_content(obj)
             if role not in {"user", "assistant"}:
                 continue
 
