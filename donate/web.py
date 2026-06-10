@@ -375,6 +375,8 @@ INDEX_HTML = r"""<!doctype html>
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(250px,1fr) 110px 80px 66px 82px; gap:18px; align-items:center; }
     .session-table-head { padding:10px 14px; background:#f2f5ef; color:#5a625d; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
+    .header-help { display:inline-grid; place-items:center; width:15px; height:15px; margin-left:3px; border-radius:50%; background:#dce9d5; color:#1f6f43; font-size:10px; font-weight:950; letter-spacing:0; vertical-align:1px; }
+    .table-note { margin-top:8px; color:var(--muted); font-size:12px; text-align:right; }
     .session-row { padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
@@ -488,9 +490,10 @@ INDEX_HTML = r"""<!doctype html>
           <span id="sessionCount" class="count-badge">0 found</span>
         </div>
         <div id="sessionList" class="session-list">
-          <div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp</div><div>Fit</div></div>
+          <div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp <span class="header-help" title="Context compactions detected in the local agent log.">?</span></div><div>Fit</div></div>
           <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
         </div>
+        <div class="table-note">Ctx cmp = context compactions detected in local logs; Codex may record these internally.</div>
         <div id="pager" class="row" style="display:none; margin-top:18px; justify-content:center">
           <button id="prevPage" class="secondary">Previous</button>
           <span id="pageInfo" class="muted"></span>
@@ -814,10 +817,10 @@ function renderSessions(){
   const rows = sessions.slice(start, start + pageSize);
   $('sessionCount').textContent = `${sessions.length} found`;
   if(!rows.length){
-    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp</div><div>Fit</div></div><div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
+    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp <span class="header-help" title="Context compactions detected in the local agent log.">?</span></div><div>Fit</div></div><div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
   }
   if(rows.length){
-    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp</div><div>Fit</div></div>';
+    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp <span class="header-help" title="Context compactions detected in the local agent log.">?</span></div><div>Fit</div></div>';
   }
   rows.forEach((s,i) => {
     const idx = start + i;
