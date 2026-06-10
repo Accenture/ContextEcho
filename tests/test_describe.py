@@ -23,6 +23,7 @@ class DescribeTests(unittest.TestCase):
                 "model": "gpt-5",
                 "org": "OpenAI",
                 "turns": 42,
+                "records": 123,
                 "compactions": 0,
                 "source_format": "codex-cli-jsonl",
             }), encoding="utf-8")
@@ -45,6 +46,8 @@ class DescribeTests(unittest.TestCase):
         self.assertEqual(manifest["domain"], "agentic-coding")
         self.assertEqual(manifest["language"], "Python")
         self.assertEqual(manifest["contributor"], "donor-handle")
+        self.assertEqual(manifest["turns"], "42")
+        self.assertEqual(manifest["records"], "123")
         self.assertEqual(manifest["source_format"], "codex-cli-jsonl")
         self.assertEqual(manifest["privacy_tier"], "full_redacted")
         self.assertIn("persona_drift_benchmarking", manifest["allowed_uses"])

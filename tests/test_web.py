@@ -69,7 +69,7 @@ class WebTests(unittest.TestCase):
             session.write_text('{"type":"user"}\n')
             manifest.write_text(
                 '{"contributor":"donor","credit_name":"donor","contributor_email":"d@example.com",'
-                '"agent":"Codex CLI","model":"gpt-5","turns":"123","compactions":"1"}'
+                '"agent":"Codex CLI","model":"gpt-5","turns":"42","records":"123","compactions":"1"}'
             )
             output = "\n".join([
                 "[submit] target repo : contextecho2026/persona-drift-staging (private)",
@@ -81,8 +81,12 @@ class WebTests(unittest.TestCase):
             self.assertTrue(receipt_path.exists())
             self.assertEqual(receipt["submission"], "pending/submission-abc12345/")
             self.assertEqual(receipt["contributor_email"], "d@example.com")
+            self.assertEqual(receipt["turns"], "42")
+            self.assertEqual(receipt["records"], "123")
             text = receipt_path.read_text()
             self.assertIn("pending/submission-abc12345/", text)
+            self.assertIn("Estimated turns: 42", text)
+            self.assertIn("Records: 123", text)
             self.assertNotIn("persona-drift-staging", text)
             self.assertNotIn("huggingface.co", text)
 

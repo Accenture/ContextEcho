@@ -135,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
         "agent": manifest.get("agent"),
         "model": manifest.get("model"),
         "org": manifest.get("org"),
+        "records": manifest.get("records"),
         "turns": manifest.get("turns"),
         "compactions": manifest.get("compactions"),
         "privacy_tier": manifest.get("privacy_tier", "full_redacted"),

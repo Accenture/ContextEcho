@@ -198,6 +198,19 @@ def timestamp_values(obj: Any | None) -> Iterable[str]:
     return values
 
 
+def looks_like_message_turn(obj: Any | None) -> bool:
+    if not isinstance(obj, dict):
+        return False
+    message_types = {"user", "assistant"}
+    if obj.get("type") in message_types or obj.get("role") in message_types:
+        return True
+    for key in ("payload", "message"):
+        value = obj.get(key)
+        if isinstance(value, dict) and value.get("role") in message_types:
+            return True
+    return False
+
+
 class GenericJsonlAdapter:
     """Best-effort fallback for unknown JSONL coding-agent logs."""
 
@@ -212,12 +225,15 @@ class GenericJsonlAdapter:
 
     def inspect(self, path: Path) -> dict:
         models: dict[str, int] = {}
+        records = 0
         turns = 0
         compactions = 0
         project_hint: str | None = None
         event_dates: list[str] = []
         for line, obj in iter_jsonl(path):
-            turns += 1
+            records += 1
+            if looks_like_message_turn(obj):
+                turns += 1
             collect_model_counts(line, obj, models)
             if looks_like_compaction(line, obj):
                 compactions += 1
@@ -237,7 +253,8 @@ class GenericJsonlAdapter:
             "modified": last_active,
             "started": started,
             "last_active": last_active,
-            "turns": turns,
+            "records": records,
+            "turns": turns or records,
             "compactions": compactions,
             "model": model_label,
             "org": guess_org(model_label),
@@ -247,7 +264,8 @@ class GenericJsonlAdapter:
             "confidence": {
                 "agent": "low",
                 "model": "medium" if models else "low",
-                "turns": "high",
+                "records": "high",
+                "turns": "medium" if turns else "low",
                 "compactions": "medium",
             },
         }

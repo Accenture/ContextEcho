@@ -18,9 +18,9 @@ class WizardTests(unittest.TestCase):
         self.assertEqual(compact_label("abcdef", 4), "abc…")
         self.assertEqual(format_turns(59482), "59.5k")
         self.assertEqual(format_turns(480), "480")
-        self.assertEqual(quality_tag({"turns": 1000, "compactions": 1}), "best")
-        self.assertEqual(quality_tag({"turns": 1000, "compactions": 0}), "long")
-        self.assertEqual(quality_tag({"turns": 999, "compactions": 5}), "short")
+        self.assertEqual(quality_tag({"turns": 500, "compactions": 1}), "best")
+        self.assertEqual(quality_tag({"turns": 500, "compactions": 0}), "long")
+        self.assertEqual(quality_tag({"turns": 499, "compactions": 5}), "short")
 
     def test_default_output_dir_uses_downloads(self) -> None:
         with mock.patch("pathlib.Path.home", return_value=Path("/home/tester")):

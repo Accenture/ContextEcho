@@ -18,6 +18,7 @@
     "agent": {"type": ["string", "null"]},
     "model": {"type": ["string", "null"]},
     "org": {"type": ["string", "null"]},
+    "records": {"type": ["integer", "string", "null"]},
     "turns": {"type": ["integer", "string", "null"]},
     "compactions": {"type": ["integer", "string", "null"]},
     "privacy_tier": {"type": ["string", "null"]},

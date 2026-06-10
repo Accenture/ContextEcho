@@ -61,16 +61,16 @@ def format_turns(value: object) -> str:
 def quality_tag(session: dict) -> str:
     turns = int(session.get("turns") or 0)
     compactions = int(session.get("compactions") or 0)
-    if turns >= 1000 and compactions > 0:
+    if turns >= 500 and compactions > 0:
         return "best"
-    if turns >= 1000:
+    if turns >= 500:
         return "long"
     return "short"
 
 
 def print_session_table(sessions: list[dict], start: int = 0, limit: int = 15) -> None:
     shown = sessions[start:start + limit]
-    print("  #   Fit    Agent        Recs   Cmp  Last active  Project")
+    print("  #   Fit    Agent        Turns  Cmp  Last active  Project")
     print("  --  -----  -----------  -----  ---  -----------  ------------------------------")
     for i, s in enumerate(shown, start + 1):
         agent = compact_label(s.get("agent", "?").replace("Claude Code", "Claude").replace("Codex CLI", "Codex"), 11)
@@ -83,7 +83,7 @@ def print_session_table(sessions: list[dict], start: int = 0, limit: int = 15) -
         )
     end = min(start + limit, len(sessions))
     print(f"\n  Showing {start + 1}-{end} of {len(sessions)} usable sessions.")
-    print("  Recs = JSONL records. Fit: best = large log with compactions; long = large log without compactions.")
+    print("  Turns are estimated user/assistant message turns. Fit: best = long session with compactions.")
     if end < len(sessions):
         print("  Type 'more' to show more, a number to select, or paste a session path.")
 
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         chosen = discover_mod.inspect_session(src)
 
     # Confidentiality checkpoint — enforce the "no client/NDA work" rule.
-    print(f"\n  Selected: {chosen.get('project', src.name)} · {chosen.get('turns', '?')} turns")
+    print(f"\n  Selected: {chosen.get('project', src.name)} · {chosen.get('turns', '?')} estimated turns")
     print("\n  ⚠️  Only donate sessions from PERSONAL projects, internal tooling, or")
     print("      open-source work. Do NOT donate client-confidential or NDA work,")
     print("      or anything containing another person's data.")
@@ -212,9 +212,9 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print("\n[redact] No extra terms — using auto-detection only.")
 
-    turns = chosen.get("turns", 0) if isinstance(chosen, dict) else 0
-    print(f"[redact] Redacting {turns:,} turns locally — your data never leaves this machine."
-          if turns else "[redact] Redacting locally — your data never leaves this machine.")
+    records = chosen.get("records") or chosen.get("turns", 0) if isinstance(chosen, dict) else 0
+    print(f"[redact] Redacting {int(records):,} records locally — your data never leaves this machine."
+          if records else "[redact] Redacting locally — your data never leaves this machine.")
 
     out_dir = (args.output_dir.expanduser() if args.output_dir else donation_output_dir(chosen))
     out_dir.mkdir(parents=True, exist_ok=True)

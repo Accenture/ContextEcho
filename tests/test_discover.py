@@ -50,7 +50,8 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["source_format"], "codex-cli-jsonl")
         self.assertEqual(info["model"], "gpt-5")
         self.assertEqual(info["org"], "OpenAI")
-        self.assertEqual(info["turns"], 3)
+        self.assertEqual(info["records"], 3)
+        self.assertEqual(info["turns"], 1)
         self.assertEqual(info["compactions"], 0)
         self.assertEqual(info["started"], "2026-01-02")
         self.assertEqual(info["last_active"], "2026-01-04")
@@ -71,6 +72,7 @@ class DiscoverTests(unittest.TestCase):
             info = inspect_session(path)
 
         self.assertEqual(info["agent"], "Codex CLI")
+        self.assertEqual(info["records"], 4)
         self.assertEqual(info["turns"], 4)
         self.assertEqual(info["compactions"], 0)
         self.assertEqual(info["confidence"]["compactions"], "high")
@@ -88,7 +90,8 @@ class DiscoverTests(unittest.TestCase):
             info = inspect_session(path)
 
         self.assertEqual(info["agent"], "Codex CLI")
-        self.assertEqual(info["turns"], 3)
+        self.assertEqual(info["records"], 3)
+        self.assertEqual(info["turns"], 1)
         self.assertEqual(info["compactions"], 1)
         self.assertEqual(info["confidence"]["compactions"], "high")
 
@@ -113,7 +116,8 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["agent"], "Claude Code")
         self.assertEqual(info["source_format"], "claude-code-jsonl")
         self.assertEqual(info["org"], "Anthropic")
-        self.assertEqual(info["turns"], 3)
+        self.assertEqual(info["records"], 3)
+        self.assertEqual(info["turns"], 1)
         self.assertEqual(info["compactions"], 1)
         self.assertEqual(info["project"], "client-safe-repo")
 
@@ -127,6 +131,8 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["agent"], "Unknown agent")
         self.assertEqual(info["source_format"], "generic-jsonl")
         self.assertEqual(info["org"], "Alibaba")
+        self.assertEqual(info["records"], 2)
+        self.assertEqual(info["turns"], 2)
         self.assertEqual(info["compactions"], 1)
 
     def test_discover_progress_can_be_disabled_for_json_callers(self) -> None:

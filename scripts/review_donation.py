@@ -202,6 +202,7 @@ def main(argv: list[str] | None = None) -> int:
             "agent": manifest.get("agent"),
             "model": manifest.get("model"),
             "org": manifest.get("org"),
+            "records": manifest.get("records"),
             "turns": manifest.get("turns"),
             "compactions": manifest.get("compactions"),
             "privacy_tier": manifest.get("privacy_tier", "full_redacted"),
@@ -234,8 +235,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if manifest_path.exists() and session.exists():
         jsonl_lines = report["checks"].get("jsonl", {}).get("lines")
-        turns = report["metadata"].get("turns")
-        report["checks"]["manifest_matches_session"] = str(turns) == str(jsonl_lines)
+        records = report["metadata"].get("records")
+        if records in {None, ""}:
+            records = report["metadata"].get("turns")
+        report["checks"]["manifest_matches_session"] = str(records) == str(jsonl_lines)
     else:
         report["checks"]["manifest_matches_session"] = False
 
@@ -268,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"submission : {sub}")
         print(f"label      : {label}")
         meta = report["metadata"]
-        for key in ("contributor", "institute", "agent", "model", "org", "turns", "compactions", "privacy_tier", "source_format"):
+        for key in ("contributor", "institute", "agent", "model", "org", "turns", "records", "compactions", "privacy_tier", "source_format"):
             if meta.get(key) not in {None, ""}:
                 print(f"{key:11s}: {meta[key]}")
         print("\nChecks:")

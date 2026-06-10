@@ -75,8 +75,8 @@ def discover_iter(max_per_agent: int | None = 50):
                 "path": str(resolved),
             }
             info = adapter.inspect(resolved)
-            # Skip trivial / empty logs.
-            if info.get("turns", 0) < 20:
+            # Skip trivial / empty logs using exact line count, not estimated turns.
+            if info.get("records", info.get("turns", 0)) < 20:
                 continue
             found.append(info)
         yield {
@@ -143,7 +143,10 @@ def main(argv: list[str]) -> int:
     print(f"[discover] Found {len(sessions)} session(s):\n")
     for i, s in enumerate(sessions, 1):
         print(f"  [{i}] {s['project']}  ({s['modified']})")
-        print(f"      {s['agent']} · {s['model']} · {s['turns']:,} turns · {s['compactions']} compactions")
+        print(
+            f"      {s['agent']} · {s['model']} · {s['turns']:,} estimated turns · "
+            f"{s.get('records', '?')} records · {s['compactions']} compactions"
+        )
         print(f"      {s['path']}")
         print()
     return 0

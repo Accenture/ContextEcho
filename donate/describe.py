@@ -79,6 +79,7 @@ def write_manifest_and_consent(
         "org": auto.get("org", "unknown"),
         "domain": domain,
         "language": language,
+        "records": str(auto.get("records", "")),
         "turns": str(auto.get("turns", "")),
         "compactions": str(auto.get("compactions", "")),
         "contributor": contributor or "anonymous",
@@ -163,6 +164,7 @@ def main(argv: list[str]) -> int:
     domain   = field("domain",   "Task domain (e.g. web-frontend, data-science, infra)", "")
     language = field("language", "Primary language (e.g. Python, TypeScript, Rust)",     "")
     turns    = str(auto.get("turns", ""))
+    records  = str(auto.get("records", ""))
     compactions = str(auto.get("compactions", ""))
 
     print("\n--- Credit (optional; a handle/pseudonym is fine) ---")
@@ -173,6 +175,7 @@ def main(argv: list[str]) -> int:
         "agent": agent,
         "model": model,
         "org": org,
+        "records": records,
         "turns": turns,
         "compactions": compactions,
     })
@@ -184,7 +187,7 @@ def main(argv: list[str]) -> int:
     print(f"   {manifest_path}")
     print(f"   {consent_path}")
     print("\n[describe] metadata:")
-    for k in ("agent", "model", "org", "domain", "language", "turns", "compactions", "source_format"):
+    for k in ("agent", "model", "org", "domain", "language", "turns", "records", "compactions", "source_format"):
         print(f"   {k:12s} {manifest[k]}")
     print(f"\n[next] submit:  python -m donate.submit {args.session}")
     return 0

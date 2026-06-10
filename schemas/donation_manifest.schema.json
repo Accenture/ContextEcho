@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ContextEcho donation manifest",
   "type": "object",
-  "required": ["agent", "model", "org", "turns", "compactions", "privacy_tier"],
+  "required": ["agent", "model", "org", "turns", "records", "compactions", "privacy_tier"],
   "properties": {
     "contributor": {"type": ["string", "null"]},
     "credit_name": {"type": ["string", "null"]},
@@ -10,6 +10,7 @@
     "agent": {"type": "string"},
     "model": {"type": "string"},
     "org": {"type": "string"},
+    "records": {"type": ["integer", "string"]},
     "turns": {"type": ["integer", "string"]},
     "compactions": {"type": ["integer", "string"]},
     "privacy_tier": {"type": "string", "enum": ["full_redacted", "user_minimized"]},
