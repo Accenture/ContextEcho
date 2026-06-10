@@ -220,7 +220,8 @@ with consent, manifests, review reports, and a donation ledger under
 `data_archive_release_v2/data/donations/`.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the points scale, the local-first
-redaction pipeline, the confidentiality rules, and exactly what you get.
+redaction pipeline, session scoring rule, confidentiality rules, and exactly
+what you get.
 
 ---
 

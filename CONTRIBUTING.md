@@ -54,12 +54,29 @@ anyone can find a low-effort entry point:
 
 | Contribution type | Points | Notes |
 |-------------------|:------:|-------|
-| **Donate a qualifying session** | 2 (+1 novelty) | A real agentic-coding (or related) session that passes the PII + in-scope review. Declare the **agent, model, org, domain, language, turns, and compactions** (see [`CONTRIBUTORS.md`](CONTRIBUTORS.md)). A session that fills a **coverage gap** (new agent like Codex/Cursor, new model, new org, new language) earns a **+1 novelty bonus**. |
+| **Donate a qualifying session** | 2–5 | A real agentic-coding (or related) session that passes the PII + in-scope review. See the session scoring rule below. |
 | **Build a provider adapter** | 4 | Wire a new chat-completions API target into the harness, with a parity check. |
 | **Annotate an existing session** | 1 | Label drift onset, rank drift severity, or validate the redaction of a donated session. |
 | **Engineering / analysis** | 1–4 | New probes, scorers, figures, or analysis. Counts toward authorship only with meaningful effort (≈15+ hours). |
 
 **Points are awarded only after your contribution is reviewed and merged.**
+
+### Session scoring rule
+
+Accepted donated sessions are scored from the public donation ledger, not from
+private staging uploads:
+
+| Session outcome | Points | Rule |
+|-----------------|:------:|------|
+| **Accepted unique session** | +2 | Passes technical review, redaction verify, consent, manifest/session match, and quick validation. |
+| **High-value bonus** | +1 | Long session or compaction-rich session, e.g. `turns >= 1000` or `compactions >= 1`. |
+| **New coverage bonus** | +1 | Adds a useful new axis: agent, model family, organization, task domain, language, or session type. |
+| **Usability bonus** | +1 | Clean metadata and no maintainer repair required. |
+| **Duplicate / rejected / unsafe** | 0 | Same redacted-session hash, failed privacy checks, missing consent, or out-of-scope/confidential content. |
+
+The normal accepted short session is worth **2 points**. A high-value session
+can earn up to **5 points**. Maintainers may apply judgment for unusual
+high-impact contributions, but the ledger remains the default source of truth.
 
 ---
 
