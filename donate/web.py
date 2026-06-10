@@ -342,9 +342,10 @@ INDEX_HTML = r"""<!doctype html>
     .stat-icon { width:52px; height:52px; margin:0 auto 8px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
     .stat-icon svg { width:26px; height:26px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
     .stat-icon .icon-fill { fill:currentColor; stroke:none; }
-    .stat-card:nth-child(2) .stat-icon { background:#e9f2e5; color:var(--accent); }
-    .stat-card:nth-child(3) .stat-icon { background:#f6eadb; color:#dc4b30; }
-    .stat-card:nth-child(4) .stat-icon { background:#efedf5; color:#7657a8; }
+    .stat-icon[data-icon="star"] { background:#f6edd6; color:#d28b00; }
+    .stat-icon[data-icon="download"] { background:#e9f2e5; color:var(--accent); }
+    .stat-icon[data-icon="heart"] { background:#f6eadb; color:#dc4b30; }
+    .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
@@ -452,8 +453,8 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
-          <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Dataset Downloads</div></div>
+          <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="gift"></div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
         </div>
@@ -606,17 +607,15 @@ function fmtStat(n){
   if(n === null || n === undefined || n === '') return '—';
   n = Number(n);
   if(!Number.isFinite(n)) return '—';
-  if(n >= 1000000) return (n/1000000).toFixed(n >= 10000000 ? 0 : 1) + 'M';
-  if(n >= 1000) return (n/1000).toFixed(n >= 10000 ? 0 : 1) + 'k';
-  return String(n);
+  return Math.trunc(n).toLocaleString();
 }
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function renderProjectStats(){
   const cards = [
-    ['star', 'GitHub Stars', publicStats.github_stars],
     ['download', 'Dataset Downloads', publicStats.dataset_downloads],
+    ['star', 'GitHub Stars', publicStats.github_stars],
     ['heart', 'Dataset Likes', publicStats.dataset_likes],
     ['gift', 'Donated Sessions', publicStats.donated_sessions],
   ];
