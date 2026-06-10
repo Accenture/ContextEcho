@@ -70,20 +70,20 @@ def quality_tag(session: dict) -> str:
 
 def print_session_table(sessions: list[dict], start: int = 0, limit: int = 15) -> None:
     shown = sessions[start:start + limit]
-    print("  #   Fit    Agent        Turns  Cmp  Date        Project")
-    print("  --  -----  -----------  -----  ---  ----------  ------------------------------")
+    print("  #   Fit    Agent        Recs   Cmp  Last active  Project")
+    print("  --  -----  -----------  -----  ---  -----------  ------------------------------")
     for i, s in enumerate(shown, start + 1):
         agent = compact_label(s.get("agent", "?").replace("Claude Code", "Claude").replace("Codex CLI", "Codex"), 11)
-        date = compact_label(s.get("modified", "?"), 10)
+        date = compact_label(s.get("last_active") or s.get("modified", "?"), 11)
         project = compact_label(s.get("project", "?"), 30)
         print(
             f"  {i:>2}  {quality_tag(s):<5}  {agent:<11}  "
             f"{format_turns(s.get('turns')):>5}  {int(s.get('compactions') or 0):>3}  "
-            f"{date:<10}  {project}"
+            f"{date:<11}  {project}"
         )
     end = min(start + limit, len(sessions))
     print(f"\n  Showing {start + 1}-{end} of {len(sessions)} usable sessions.")
-    print("  Fit: best = long session with compactions; long = long but no compactions; short = less useful.")
+    print("  Recs = JSONL records. Fit: best = large log with compactions; long = large log without compactions.")
     if end < len(sessions):
         print("  Type 'more' to show more, a number to select, or paste a session path.")
 

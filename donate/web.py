@@ -189,7 +189,7 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
         f"- Institute: {receipt['institute'] or 'not provided'}",
         f"- Agent/model: {receipt['agent']} / {receipt['model']}",
         f"- Privacy tier: {receipt['privacy_tier']}",
-        f"- Turns: {receipt['turns']}",
+        f"- Records: {receipt['turns']}",
         f"- Compactions: {receipt['compactions']}",
         "",
         "Uploaded artifacts:",
@@ -449,7 +449,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="folder-icon"></div>
           <div>
             <h2>1. Pick a Session</h2>
-            <p class="muted">Choose a real session. Longer sessions with compactions provide the most benchmark value.</p>
+            <p class="muted">Choose a real session. Larger logs with compactions provide the most benchmark value.</p>
           </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
@@ -471,7 +471,7 @@ INDEX_HTML = r"""<!doctype html>
           <span id="sessionCount" class="count-badge">0 found</span>
         </div>
         <div id="sessionList" class="session-list">
-          <div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Cmp</div><div>Fit</div></div>
+          <div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>Records</div><div>Cmp</div><div>Fit</div></div>
           <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
         </div>
         <div id="pager" class="row" style="display:none; margin-top:18px; justify-content:center">
@@ -482,7 +482,7 @@ INDEX_HTML = r"""<!doctype html>
       </div>
     </div>
     <div class="bottom-nav">
-      <div class="tip"><strong>Tip:</strong> Sessions with more turns and compactions are more valuable for the research community.</div>
+      <div class="tip"><strong>Tip:</strong> Sessions with more records and compactions are more valuable for the research community.</div>
       <button id="pickNext" class="next-button" disabled>Next: Redact  -&gt;</button>
     </div>
   </section>
@@ -601,7 +601,7 @@ function refreshButtons(){
   $('submitBtn').disabled = !described || submitted || selectedDonated;
 }
 function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=1000&&c>0?'best':(t>=1000?'long':'short'); }
-function turns(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+function records(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 function status(id, text){ $(id).textContent = text; }
 function fmtStat(n){
   if(n === null || n === undefined || n === '') return '—';
@@ -669,9 +669,9 @@ function renderSelectedCard(s, idx){
         <div class="metrics">
           <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
           <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
-          <span class="metric">Turns: <strong>${turns(s.turns)}</strong></span>
+          <span class="metric">Records: <strong>${records(s.turns)}</strong></span>
           <span class="metric">Compactions: <strong>${s.compactions || 0}</strong></span>
-          <span class="metric">Date: <strong>${escapeHtml(s.modified || '?')}</strong></span>
+          <span class="metric">Last active: <strong>${escapeHtml(s.last_active || s.modified || '?')}</strong></span>
         </div>
       </div>
       <div class="selected-card-action"><button class="secondary" id="revealSourceFile">Reveal Source File</button></div>
@@ -717,7 +717,7 @@ function receiptEmailHref(receipt, receiptPath){
     `Credit name: ${receipt.credit_name || 'anonymous'}`,
     `Agent/model: ${(receipt.agent || '')} / ${(receipt.model || '')}`,
     `Privacy tier: ${receipt.privacy_tier || 'full_redacted'}`,
-    `Turns: ${receipt.turns || ''}`,
+    `Records: ${receipt.turns || ''}`,
     `Compactions: ${receipt.compactions || ''}`,
     `Receipt file: ${receiptPath || ''}`,
     '',
@@ -788,10 +788,10 @@ function renderSessions(){
   const rows = sessions.slice(start, start + pageSize);
   $('sessionCount').textContent = `${sessions.length} found`;
   if(!rows.length){
-    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Cmp</div><div>Fit</div></div><div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
+    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>Records</div><div>Cmp</div><div>Fit</div></div><div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
   }
   if(rows.length){
-    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Date</div><div>Turns</div><div>Cmp</div><div>Fit</div></div>';
+    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>Records</div><div>Cmp</div><div>Fit</div></div>';
   }
   rows.forEach((s,i) => {
     const idx = start + i;
@@ -803,8 +803,8 @@ function renderSessions(){
       <div>
         <div class="session-title">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.project || 'unknown project')} ${donated ? '<span class="pill donated">donated</span>' : ''}</div>
       </div>
-      <div class="session-date">${escapeHtml(s.modified || '?')}</div>
-      <div class="session-turns"><div class="session-num">${turns(s.turns)}</div></div>
+      <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
+      <div class="session-turns"><div class="session-num">${records(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
       <div class="session-fit"><span class="pill ${fit(s)}">${fit(s)}</span></div>
     `;

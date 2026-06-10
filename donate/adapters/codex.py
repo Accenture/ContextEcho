@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
-from donate.adapters.base import GenericJsonlAdapter, is_redacted_artifact
+from donate.adapters.base import GenericJsonlAdapter, is_redacted_artifact, iter_jsonl
 
 
 class CodexCliAdapter(GenericJsonlAdapter):
@@ -30,9 +30,12 @@ class CodexCliAdapter(GenericJsonlAdapter):
         info = super().inspect(path)
         info["agent"] = self.agent
         info["source_format"] = "codex-cli-jsonl"
-        # Codex JSONL currently has no stable, explicit compaction event marker.
-        # Generic "compact" text in messages/summaries is too noisy to count.
-        info["compactions"] = 0
+        # Codex emits explicit top-level `compacted` records. Generic "compact"
+        # text in messages/summaries is too noisy to count.
+        info["compactions"] = sum(
+            1 for _, obj in iter_jsonl(path)
+            if isinstance(obj, dict) and obj.get("type") == "compacted"
+        )
         info["confidence"]["agent"] = "high"
-        info["confidence"]["compactions"] = "low"
+        info["confidence"]["compactions"] = "high"
         return info

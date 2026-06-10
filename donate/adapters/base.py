@@ -102,6 +102,18 @@ def modified_date(path: Path) -> str:
         return "?"
 
 
+def date_from_timestamp(value: str) -> str | None:
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        normalized = text.replace("Z", "+00:00")
+        return dt.datetime.fromisoformat(normalized).date().isoformat()
+    except Exception:
+        match = re.match(r"(\d{4}-\d{2}-\d{2})", text)
+        return match.group(1) if match else None
+
+
 def iter_jsonl(path: Path) -> Iterable[tuple[str, Any | None]]:
     try:
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -175,6 +187,17 @@ def first_path_hint(obj: Any | None) -> str | None:
     return None
 
 
+def timestamp_values(obj: Any | None) -> Iterable[str]:
+    if obj is None:
+        return []
+    keys = {"timestamp", "created_at", "createdat", "time"}
+    values: list[str] = []
+    for key, value in walk_values(obj):
+        if key and key.lower() in keys and isinstance(value, str) and value:
+            values.append(value)
+    return values
+
+
 class GenericJsonlAdapter:
     """Best-effort fallback for unknown JSONL coding-agent logs."""
 
@@ -192,6 +215,7 @@ class GenericJsonlAdapter:
         turns = 0
         compactions = 0
         project_hint: str | None = None
+        event_dates: list[str] = []
         for line, obj in iter_jsonl(path):
             turns += 1
             collect_model_counts(line, obj, models)
@@ -199,12 +223,20 @@ class GenericJsonlAdapter:
                 compactions += 1
             if project_hint is None:
                 project_hint = first_path_hint(obj)
+            for timestamp in timestamp_values(obj):
+                date = date_from_timestamp(timestamp)
+                if date:
+                    event_dates.append(date)
 
         model_label = dominant_model(models)
+        started = min(event_dates) if event_dates else modified_date(path)
+        last_active = max(event_dates) if event_dates else modified_date(path)
         return {
             "path": str(path),
             "project": safe_project_name_from_path(project_hint or path),
-            "modified": modified_date(path),
+            "modified": last_active,
+            "started": started,
+            "last_active": last_active,
             "turns": turns,
             "compactions": compactions,
             "model": model_label,

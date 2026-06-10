@@ -27,14 +27,17 @@ class DiscoverTests(unittest.TestCase):
             path = Path(tmp) / ".codex" / "sessions" / "rollout.jsonl"
             rows = [
                 {
+                    "timestamp": "2026-01-02T03:04:05.000Z",
                     "type": "session_meta",
                     "payload": {"cwd": "/Users/alice/Documents/work/agent-project"},
                 },
                 {
+                    "timestamp": "2026-01-03T03:04:05.000Z",
                     "type": "turn_context",
                     "payload": {"model": "gpt-5", "summary": "ordinary context summary"},
                 },
                 {
+                    "timestamp": "2026-01-04T03:04:05.000Z",
                     "type": "response_item",
                     "payload": {"type": "message", "role": "assistant", "content": []},
                 },
@@ -49,6 +52,9 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["org"], "OpenAI")
         self.assertEqual(info["turns"], 3)
         self.assertEqual(info["compactions"], 0)
+        self.assertEqual(info["started"], "2026-01-02")
+        self.assertEqual(info["last_active"], "2026-01-04")
+        self.assertEqual(info["modified"], "2026-01-04")
         self.assertEqual(info["project"], "work-agent-project")
 
     def test_codex_does_not_count_generic_compact_text_as_compaction(self) -> None:
@@ -67,7 +73,24 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["agent"], "Codex CLI")
         self.assertEqual(info["turns"], 4)
         self.assertEqual(info["compactions"], 0)
-        self.assertEqual(info["confidence"]["compactions"], "low")
+        self.assertEqual(info["confidence"]["compactions"], "high")
+
+    def test_codex_counts_only_explicit_compacted_records(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".codex" / "sessions" / "rollout.jsonl"
+            rows = [
+                {"type": "session_meta", "payload": {"cwd": "/Users/alice/Documents/work/agent-project"}},
+                {"type": "compacted", "payload": {"message": {}, "replacement_history": []}},
+                {"type": "response_item", "payload": {"type": "message", "role": "assistant", "content": []}},
+            ]
+            write_jsonl(path, rows)
+
+            info = inspect_session(path)
+
+        self.assertEqual(info["agent"], "Codex CLI")
+        self.assertEqual(info["turns"], 3)
+        self.assertEqual(info["compactions"], 1)
+        self.assertEqual(info["confidence"]["compactions"], "high")
 
     def test_claude_manual_path_is_classified_and_counts_explicit_compaction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
