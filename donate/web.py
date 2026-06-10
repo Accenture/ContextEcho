@@ -998,10 +998,9 @@ document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
 $('scrub').oninput = () => {
   if(redacted){
     $('reviewConfirm').checked = false;
-    $('redactResult').classList.remove('show');
     $('searchPanel').classList.remove('show');
     $('searchResult').classList.remove('show');
-    status('redactStatus', 'Scrub terms changed. Click Redact and Verify again before moving on.');
+    status('redactStatus', redacted.verify_passed ? 'Scrub terms changed. Click Redact and Verify again before moving on.' : 'Scrub terms changed. Click Redact and Verify to quickly repair the existing redacted file.');
   }
   refreshButtons();
 };
@@ -1030,10 +1029,22 @@ $('redactBtn').onclick = async () => {
   status('redactStatus','Starting local redaction...');
   try {
     let finalData = null;
-    await postStream('/api/redact_stream', {path:selected.path, scrub:$('scrub').value, auto:selected, confirm_safe:$('safeConfirm').checked, privacy_tier:privacyTier()}, ev => {
+    const canRepair = !!(redacted && !redacted.verify_passed && redacted.redacted_file && redacted.privacy_tier === privacyTier());
+    await postStream('/api/redact_stream', {
+      path:selected.path,
+      scrub:$('scrub').value,
+      auto:selected,
+      confirm_safe:$('safeConfirm').checked,
+      privacy_tier:privacyTier(),
+      repair_allowed: canRepair,
+      previous_redacted_file: canRepair ? redacted.redacted_file : ''
+    }, ev => {
       if(ev.event === 'start'){
         setBusy('redactProgress', true, 5);
         status('redactStatus', `Preparing to redact ${ev.total || '?'} records locally...`);
+      } else if(ev.event === 'repair'){
+        setBusy('redactProgress', true, 55);
+        status('redactStatus', 'Applying new scrub terms to the existing redacted file...');
       } else if(ev.event === 'engine'){
         setBusy('redactProgress', true, 8);
         status('redactStatus', 'Loading local redaction engine...');
@@ -1201,16 +1212,36 @@ class Handler(BaseHTTPRequestHandler):
     def _redact_payload(self, data: dict, emit=None) -> dict:
         if not data.get("confirm_safe"):
             raise ValueError("safety confirmation is required")
+        scrub_terms = {t.strip() for t in str(data.get("scrub", "")).split(",") if t.strip()}
+        privacy_tier = str(data.get("privacy_tier") or "full_redacted")
+        if privacy_tier not in {"full_redacted", "user_minimized"}:
+            raise ValueError("invalid privacy tier")
+        previous = Path(data.get("previous_redacted_file", "")).expanduser()
+        if data.get("repair_allowed") and scrub_terms and previous.exists() and is_redacted_artifact(previous):
+            if not previous.resolve().is_relative_to(DONATION_ROOT.resolve()):
+                raise ValueError("repair is only allowed for local donation output files")
+            if emit:
+                emit({"event": "repair"})
+            stats = redact_mod.apply_scrub_terms_to_file(previous, previous, scrub_terms)
+            if emit:
+                emit({"event": "verify"})
+            verify_report = verify_mod.verify_session(previous)
+            return {
+                "redacted_file": str(previous),
+                "output_dir": str(previous.parent),
+                "stats": stats,
+                "privacy_tier": privacy_tier,
+                "verify_passed": bool(verify_report.get("passed")),
+                "verify_report": verify_report,
+                "repair_used": True,
+            }
+
         src = Path(data.get("path", "")).expanduser()
         if not src.exists():
             raise ValueError(f"not found: {src}")
         if is_redacted_artifact(src):
             raise ValueError("selected file already looks redacted; choose the original session log")
         auto = data.get("auto") or discover_mod.inspect_session(src)
-        scrub_terms = {t.strip() for t in str(data.get("scrub", "")).split(",") if t.strip()}
-        privacy_tier = str(data.get("privacy_tier") or "full_redacted")
-        if privacy_tier not in {"full_redacted", "user_minimized"}:
-            raise ValueError("invalid privacy tier")
         out_dir = donation_output_dir(auto)
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / redacted_output_name(src)

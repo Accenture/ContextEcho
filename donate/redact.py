@@ -203,6 +203,41 @@ def redact_json_value(value: Any, analyzer, scrub_terms: set[str], stats: dict, 
     return value
 
 
+def expanded_scrub_terms(scrub_terms: set[str]) -> set[str]:
+    """Expand donor-entered path fragments into common log variants."""
+    terms = {t for t in scrub_terms if t}
+    for term in list(terms):
+        for rx in (HOME_PATH_RE, SLUG_PATH_RE):
+            for match in rx.finditer(term):
+                user = match.group("user")
+                if user and user.lower() not in {"<user>", "user", "shared", "public", "root"}:
+                    terms.add(user)
+                    terms.add(f"-Users-{user}")
+    return terms
+
+
+def apply_scrub_terms_to_file(src: Path, dst: Path, scrub_terms: set[str]) -> dict:
+    """Fast repair pass for already-redacted files after a failed verify."""
+    stats: dict = {}
+    terms = expanded_scrub_terms(scrub_terms)
+    text = src.read_text(encoding="utf-8", errors="replace")
+    for term in sorted(terms, key=len, reverse=True):
+        n = text.count(term)
+        if n:
+            text = text.replace(term, "<REDACTED>")
+            stats["scrub_term"] = stats.get("scrub_term", 0) + n
+    # Re-apply deterministic path cleanup in case the added term exposed a
+    # path-shaped residue without paying the full Presidio/NER cost again.
+    text, n = HOME_PATH_RE.subn(lambda m: m.group("prefix") + "<USER>", text)
+    if n:
+        stats["home_path"] = stats.get("home_path", 0) + n
+    text, n = SLUG_PATH_RE.subn(lambda m: m.group("prefix") + "<USER>", text)
+    if n:
+        stats["home_path"] = stats.get("home_path", 0) + n
+    dst.write_text(text, encoding="utf-8")
+    return stats
+
+
 def _progress_iter(items, total, show):
     """Yield items with a progress bar. Uses tqdm if present, else a plain bar."""
     if not show:

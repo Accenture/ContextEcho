@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from donate.redact import redact_file, redact_file_with_progress
+from donate.redact import apply_scrub_terms_to_file, redact_file, redact_file_with_progress
 
 
 HAS_LOCAL_PRESIDIO = (
@@ -58,6 +58,23 @@ class RedactTests(unittest.TestCase):
                     )
 
         self.assertEqual(events, [(1, 3), (2, 3), (3, 3)])
+
+    def test_fast_scrub_repair_expands_home_path_terms(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "session.redacted.jsonl"
+            path.write_text(
+                '{"text":"/Users/alice/project -Users-alice-Library alice"}\n',
+                encoding="utf-8",
+            )
+
+            stats = apply_scrub_terms_to_file(path, path, {"/Users/alice"})
+            text = path.read_text(encoding="utf-8")
+
+        self.assertGreaterEqual(stats.get("scrub_term", 0), 3)
+        self.assertNotIn("alice", text)
+        self.assertNotIn("/Users/alice", text)
+        self.assertNotIn("-Users-alice", text)
 
 
 if __name__ == "__main__":
