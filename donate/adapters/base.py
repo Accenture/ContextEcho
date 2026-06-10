@@ -198,16 +198,45 @@ def timestamp_values(obj: Any | None) -> Iterable[str]:
     return values
 
 
-def looks_like_message_turn(obj: Any | None) -> bool:
+def content_has_human_input(content: Any) -> bool:
+    if isinstance(content, str):
+        return bool(content.strip())
+    if isinstance(content, dict):
+        item_type = str(content.get("type") or "").lower()
+        if item_type in {"text", "input_text", "image", "image_url"}:
+            return True
+        text = content.get("text")
+        return isinstance(text, str) and bool(text.strip())
+    if isinstance(content, list):
+        return any(content_has_human_input(item) for item in content)
+    return False
+
+
+def looks_like_human_turn(obj: Any | None) -> bool:
+    """Whether a JSONL record is a human/user prompt turn.
+
+    A turn here follows the multi-turn-conversation convention: user input that
+    can elicit an assistant response. Tool results, assistant messages, system
+    prompts, function calls, and bookkeeping events are not counted.
+    """
     if not isinstance(obj, dict):
         return False
-    message_types = {"user", "assistant"}
-    if obj.get("type") in message_types or obj.get("role") in message_types:
-        return True
-    for key in ("payload", "message"):
-        value = obj.get(key)
-        if isinstance(value, dict) and value.get("role") in message_types:
+
+    payload = obj.get("payload")
+    if isinstance(payload, dict):
+        payload_type = str(payload.get("type") or "").lower()
+        if payload_type == "user_message":
             return True
+        if payload_type == "message" and payload.get("role") == "user":
+            return content_has_human_input(payload.get("content"))
+
+    message = obj.get("message")
+    if isinstance(message, dict) and message.get("role") == "user":
+        return content_has_human_input(message.get("content"))
+
+    if obj.get("role") == "user":
+        return content_has_human_input(obj.get("content") or obj.get("text"))
+
     return False
 
 
@@ -232,7 +261,7 @@ class GenericJsonlAdapter:
         event_dates: list[str] = []
         for line, obj in iter_jsonl(path):
             records += 1
-            if looks_like_message_turn(obj):
+            if looks_like_human_turn(obj):
                 turns += 1
             collect_model_counts(line, obj, models)
             if looks_like_compaction(line, obj):
@@ -254,7 +283,7 @@ class GenericJsonlAdapter:
             "started": started,
             "last_active": last_active,
             "records": records,
-            "turns": turns or records,
+            "turns": turns,
             "compactions": compactions,
             "model": model_label,
             "org": guess_org(model_label),
@@ -265,7 +294,7 @@ class GenericJsonlAdapter:
                 "agent": "low",
                 "model": "medium" if models else "low",
                 "records": "high",
-                "turns": "medium" if turns else "low",
+                "turns": "high" if turns else "low",
                 "compactions": "medium",
             },
         }

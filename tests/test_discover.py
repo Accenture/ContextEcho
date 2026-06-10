@@ -33,6 +33,11 @@ class DiscoverTests(unittest.TestCase):
                 },
                 {
                     "timestamp": "2026-01-03T03:04:05.000Z",
+                    "type": "event_msg",
+                    "payload": {"type": "user_message", "message": "please help with the bug"},
+                },
+                {
+                    "timestamp": "2026-01-03T03:04:06.000Z",
                     "type": "turn_context",
                     "payload": {"model": "gpt-5", "summary": "ordinary context summary"},
                 },
@@ -50,7 +55,7 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["source_format"], "codex-cli-jsonl")
         self.assertEqual(info["model"], "gpt-5")
         self.assertEqual(info["org"], "OpenAI")
-        self.assertEqual(info["records"], 3)
+        self.assertEqual(info["records"], 4)
         self.assertEqual(info["turns"], 1)
         self.assertEqual(info["compactions"], 0)
         self.assertEqual(info["started"], "2026-01-02")
@@ -73,7 +78,7 @@ class DiscoverTests(unittest.TestCase):
 
         self.assertEqual(info["agent"], "Codex CLI")
         self.assertEqual(info["records"], 4)
-        self.assertEqual(info["turns"], 4)
+        self.assertEqual(info["turns"], 0)
         self.assertEqual(info["compactions"], 0)
         self.assertEqual(info["confidence"]["compactions"], "high")
 
@@ -82,6 +87,7 @@ class DiscoverTests(unittest.TestCase):
             path = Path(tmp) / ".codex" / "sessions" / "rollout.jsonl"
             rows = [
                 {"type": "session_meta", "payload": {"cwd": "/Users/alice/Documents/work/agent-project"}},
+                {"type": "event_msg", "payload": {"type": "user_message", "message": "fix failing tests"}},
                 {"type": "compacted", "payload": {"message": {}, "replacement_history": []}},
                 {"type": "response_item", "payload": {"type": "message", "role": "assistant", "content": []}},
             ]
@@ -90,7 +96,7 @@ class DiscoverTests(unittest.TestCase):
             info = inspect_session(path)
 
         self.assertEqual(info["agent"], "Codex CLI")
-        self.assertEqual(info["records"], 3)
+        self.assertEqual(info["records"], 4)
         self.assertEqual(info["turns"], 1)
         self.assertEqual(info["compactions"], 1)
         self.assertEqual(info["confidence"]["compactions"], "high")
@@ -105,7 +111,7 @@ class DiscoverTests(unittest.TestCase):
                 / "session.jsonl"
             )
             rows = [
-                {"model": "claude-opus-4-7", "message": {"role": "user"}},
+                {"model": "claude-opus-4-7", "message": {"role": "user", "content": [{"type": "text", "text": "fix failing tests"}]}},
                 {"model": "claude-opus-4-8", "isCompactSummary": True},
                 {"type": "compact_file_reference"},
             ]
@@ -121,6 +127,27 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["compactions"], 1)
         self.assertEqual(info["project"], "client-safe-repo")
 
+    def test_claude_tool_result_user_records_are_not_turns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = (
+                Path(tmp)
+                / ".claude"
+                / "projects"
+                / "-Users-alice-Documents-client-safe-repo"
+                / "session.jsonl"
+            )
+            rows = [
+                {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "content": "ok"}]}},
+                {"type": "user", "message": {"role": "user", "content": [{"type": "text", "text": "now fix it"}]}},
+                {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "done"}]}},
+            ]
+            write_jsonl(path, rows)
+
+            info = inspect_session(path)
+
+        self.assertEqual(info["records"], 3)
+        self.assertEqual(info["turns"], 1)
+
     def test_unknown_jsonl_falls_back_to_generic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "custom-agent.jsonl"
@@ -132,7 +159,7 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["source_format"], "generic-jsonl")
         self.assertEqual(info["org"], "Alibaba")
         self.assertEqual(info["records"], 2)
-        self.assertEqual(info["turns"], 2)
+        self.assertEqual(info["turns"], 0)
         self.assertEqual(info["compactions"], 1)
 
     def test_discover_progress_can_be_disabled_for_json_callers(self) -> None:

@@ -99,7 +99,7 @@ class WebTests(unittest.TestCase):
             self.assertEqual(receipt["records"], "123")
             text = receipt_path.read_text()
             self.assertIn("pending/submission-abc12345/", text)
-            self.assertIn("Estimated turns: 42", text)
+            self.assertIn("User turns: 42", text)
             self.assertIn("Records: 123", text)
             self.assertNotIn("persona-drift-staging", text)
             self.assertNotIn("huggingface.co", text)

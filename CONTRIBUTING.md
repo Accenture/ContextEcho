@@ -69,7 +69,7 @@ private staging uploads:
 | Session outcome | Points | Rule |
 |-----------------|:------:|------|
 | **Accepted unique session** | +2 | Passes technical review, redaction verify, consent, manifest/session match, and quick validation. |
-| **High-value bonus** | +1 | Long session or compaction-rich session, e.g. `turns >= 1000` or `compactions >= 1`. |
+| **High-value bonus** | +1 | Long session or compaction-rich session, e.g. `turns >= 100` user prompts or `compactions >= 1`. |
 | **New coverage bonus** | +1 | Adds a useful new axis: agent, model family, organization, task domain, language, or session type. |
 | **Usability bonus** | +1 | Clean metadata and no maintainer repair required. |
 | **Duplicate / rejected / unsafe** | 0 | Same redacted-session hash, failed privacy checks, missing consent, or out-of-scope/confidential content. |
