@@ -156,6 +156,24 @@ def run_detect_secrets(path: Path) -> list[str]:
         return []
 
 
+def verify_session(path: Path) -> dict:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    findings = verify_text(text)
+    findings["high_entropy"] = sorted(set(find_high_entropy(text)))[:10]
+    ds = run_detect_secrets(path)
+    if ds:
+        findings["detect_secrets"] = sorted(set(ds))
+
+    blocking = {k: v for k, v in findings.items() if k in BLOCKING and v}
+    advisory = {k: v for k, v in findings.items() if k not in BLOCKING and v}
+    return {
+        "passed": not blocking,
+        "findings": findings,
+        "blocking": blocking,
+        "advisory": advisory,
+    }
+
+
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description="Fail-closed PII verifier for a redacted session.")
     p.add_argument("session", type=Path, help="Path to the redacted .jsonl")
@@ -165,15 +183,9 @@ def main(argv: list[str]) -> int:
         print(f"[error] not found: {args.session}", file=sys.stderr)
         return 2
 
-    text = args.session.read_text(encoding="utf-8", errors="replace")
-    findings = verify_text(text)
-    findings["high_entropy"] = sorted(set(find_high_entropy(text)))[:10]
-    ds = run_detect_secrets(args.session)
-    if ds:
-        findings["detect_secrets"] = sorted(set(ds))
-
-    blocking = {k: v for k, v in findings.items() if k in BLOCKING and v}
-    advisory = {k: v for k, v in findings.items() if k not in BLOCKING and v}
+    report = verify_session(args.session)
+    blocking = report["blocking"]
+    advisory = report["advisory"]
 
     print(f"[verify] {args.session}")
 

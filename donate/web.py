@@ -27,6 +27,7 @@ from donate import discover as discover_mod
 from donate import minimize as minimize_mod
 from donate import redact as redact_mod
 from donate import submit as submit_mod
+from donate import verify as verify_mod
 from donate.adapters.base import is_redacted_artifact
 
 
@@ -410,6 +411,10 @@ INDEX_HTML = r"""<!doctype html>
     .field { margin-top:10px; }
     .field-label { font-size:12px; color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
     .pathbox { margin-top:4px; padding:9px 10px; border-radius:10px; background:white; border:1px solid var(--line); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; overflow:auto; }
+    .verify-fail-box { margin-top:12px; border:1px solid #efb7ad; background:#fff1ed; color:#7f241b; border-radius:14px; padding:12px 14px; }
+    .verify-fail-box ul { margin:8px 0 0 18px; padding:0; }
+    .verify-fail-box li { margin:4px 0; }
+    .verify-fail-box code { background:#fff9f6; border:1px solid #f2c9c0; border-radius:6px; padding:1px 4px; color:#5f1610; }
     .metrics { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .metric { background:#edf3e8; border:1px solid #d5e4ce; border-radius:999px; padding:6px 10px; font-size:13px; }
     .selected-card { display:none; border:2px solid #7cb67d; background:#eef8e8; border-radius:18px; padding:14px; margin-top:14px; }
@@ -653,6 +658,13 @@ function renderProjectStats(){
     </div>
   `).join('');
 }
+function verifyFailureSummary(data){
+  const blocking = ((data || {}).verify_report || {}).blocking || {};
+  const entries = Object.entries(blocking);
+  if(!entries.length) return 'Verify failed. Re-run redaction; if it repeats, inspect the redacted file with Test search.';
+  const labels = entries.map(([k,v]) => `${k} (${(v || []).length})`).join(', ');
+  return `Verify failed: residual ${labels}. Add the shown term(s) to Extra terms to scrub, then click Redact and Verify again.`;
+}
 async function loadProjectStats(){
   renderProjectStats();
   try {
@@ -670,11 +682,28 @@ function renderRedactResult(data){
   const metrics = entries.length
     ? entries.map(([k,v]) => `<span class="metric">${escapeHtml(k)}: <strong>${v}</strong></span>`).join('')
     : '<span class="metric">No detector matches</span>';
+  const verify = data.verify_report || {};
+  const blocking = verify.blocking || {};
+  const blockingEntries = Object.entries(blocking);
+  const failDetails = blockingEntries.length
+    ? blockingEntries.map(([k,v]) => {
+        const samples = (v || []).slice(0, 3).map(x => `<code>${escapeHtml(String(x))}</code>`).join(', ');
+        return `<li><strong>${escapeHtml(k)}</strong>${samples ? ': ' + samples : ''}</li>`;
+      }).join('')
+    : '<li>Verifier returned a non-clean result. Re-run redaction; if it repeats, use Test search to inspect the redacted file.</li>';
+  const failureBox = data.verify_passed ? '' : `
+    <div class="verify-fail-box">
+      <strong>Why it failed</strong>
+      <ul>${failDetails}</ul>
+      <div class="hint"><strong>Next:</strong> add the remaining private word(s) above in Extra terms to scrub, then click Redact and Verify again. For paths, add the username/project part, not the full path.</div>
+    </div>
+  `;
   $('redactResult').innerHTML = `
     <div class="result-head">
       <div><span class="badge ${data.verify_passed ? 'pass' : 'fail'}">${data.verify_passed ? 'Verified clean' : 'Verify failed'}</span></div>
       <div class="muted">${data.privacy_tier === 'user_minimized' ? 'Redaction + user minimization complete' : 'Redaction complete'}</div>
     </div>
+    ${failureBox}
     <div class="field"><div class="field-label">Redacted file</div><div class="pathbox">${escapeHtml(data.redacted_file)}</div></div>
     <div class="row" style="margin-top:8px"><button class="secondary" id="revealRedactedFile">Reveal File</button></div>
     <div class="field"><div class="field-label">Removed</div><div class="metrics">${metrics}</div></div>
@@ -1029,7 +1058,7 @@ $('redactBtn').onclick = async () => {
     submitted = false;
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
-    status('redactStatus', redacted.verify_passed ? 'Review the result above. Add more scrub terms if needed, then check the review box to continue.' : 'Verify failed. Add more scrub terms and re-run.');
+    status('redactStatus', redacted.verify_passed ? 'Review the result above. Add more scrub terms if needed, then check the review box to continue.' : verifyFailureSummary(redacted));
     refreshButtons();
   } catch(e) { status('redactStatus','ERROR: '+e.message); }
   finally { setBusy('redactProgress', false); refreshButtons(); }
@@ -1223,13 +1252,15 @@ class Handler(BaseHTTPRequestHandler):
             stats.update({f"minimize_{k}": v for k, v in min_stats.items()})
         if emit:
             emit({"event": "verify"})
-        verify_ok = submit_mod.verify_passed(out)
+        verify_report = verify_mod.verify_session(out)
+        verify_ok = bool(verify_report.get("passed"))
         return {
             "redacted_file": str(out),
             "output_dir": str(out_dir),
             "stats": stats,
             "privacy_tier": privacy_tier,
             "verify_passed": verify_ok,
+            "verify_report": verify_report,
         }
 
     def _handle_redact_stream(self) -> None:
