@@ -229,13 +229,26 @@ def _progress_iter(items, total, show):
 
 
 def redact_file(src: Path, dst: Path, scrub_terms: set[str], progress: bool = False) -> dict:
+    return redact_file_with_progress(src, dst, scrub_terms, progress=progress)
+
+
+def redact_file_with_progress(
+    src: Path,
+    dst: Path,
+    scrub_terms: set[str],
+    progress: bool = False,
+    progress_callback=None,
+) -> dict:
     analyzer = build_analyzer()
     stats: dict = {}
     lines = src.read_text(encoding="utf-8", errors="replace").splitlines()
     lines_out = []
-    for line in _progress_iter(lines, len(lines), progress):
+    total = len(lines)
+    for i, line in enumerate(_progress_iter(lines, total, progress), 1):
         if not line.strip():
             lines_out.append(line)
+            if progress_callback:
+                progress_callback(i, total)
             continue
         usernames = discover_usernames(line)
         try:
@@ -243,9 +256,13 @@ def redact_file(src: Path, dst: Path, scrub_terms: set[str], progress: bool = Fa
         except Exception:
             # Unknown/non-JSON logs are still handled as raw text.
             lines_out.append(redact_text(line, analyzer, scrub_terms, stats, known_usernames=usernames))
+            if progress_callback:
+                progress_callback(i, total)
             continue
         redacted_obj = redact_json_value(obj, analyzer, scrub_terms, stats, usernames)
         lines_out.append(json.dumps(redacted_obj, ensure_ascii=False, separators=(",", ":")))
+        if progress_callback:
+            progress_callback(i, total)
     dst.write_text("\n".join(lines_out) + "\n", encoding="utf-8")
     return stats
 

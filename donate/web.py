@@ -810,6 +810,35 @@ async function post(url, body){
   if(!r.ok) throw new Error(data.error || r.statusText);
   return data;
 }
+async function postStream(url, body, onEvent){
+  const r = await fetch(url, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
+  if(!r.ok){
+    let data = {};
+    try { data = await r.json(); } catch(e) {}
+    throw new Error(data.error || r.statusText);
+  }
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  while(true){
+    const {value, done} = await reader.read();
+    if(done) break;
+    buf += decoder.decode(value, {stream:true});
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for(const line of lines){
+      if(!line.trim()) continue;
+      const ev = JSON.parse(line);
+      onEvent(ev);
+      if(ev.event === 'error') throw new Error(ev.error || 'redaction failed');
+    }
+  }
+  if(buf.trim()){
+    const ev = JSON.parse(buf);
+    onEvent(ev);
+    if(ev.event === 'error') throw new Error(ev.error || 'redaction failed');
+  }
+}
 function renderSessions(){
   const list = $('sessionList');
   list.innerHTML = '';
@@ -969,9 +998,32 @@ $('redactBtn').onclick = async () => {
   $('searchPanel').classList.remove('show');
   $('searchResult').classList.remove('show');
   setBusy('redactProgress', true, 30);
-  status('redactStatus','Redacting locally, then running verify. This may take several minutes...');
+  status('redactStatus','Starting local redaction...');
   try {
-    redacted = await post('/api/redact', {path:selected.path, scrub:$('scrub').value, auto:selected, confirm_safe:$('safeConfirm').checked, privacy_tier:privacyTier()});
+    let finalData = null;
+    await postStream('/api/redact_stream', {path:selected.path, scrub:$('scrub').value, auto:selected, confirm_safe:$('safeConfirm').checked, privacy_tier:privacyTier()}, ev => {
+      if(ev.event === 'start'){
+        setBusy('redactProgress', true, 5);
+        status('redactStatus', `Preparing to redact ${ev.total || '?'} records locally...`);
+      } else if(ev.event === 'engine'){
+        setBusy('redactProgress', true, 8);
+        status('redactStatus', 'Loading local redaction engine...');
+      } else if(ev.event === 'progress'){
+        const pct = Math.max(5, Math.min(92, ev.percent || 5));
+        setBusy('redactProgress', true, pct);
+        status('redactStatus', `Redacting locally: ${ev.current}/${ev.total} records (${Math.round(ev.percent || 0)}%).`);
+      } else if(ev.event === 'minimize'){
+        setBusy('redactProgress', true, 94);
+        status('redactStatus', 'Applying user-minimized privacy mode...');
+      } else if(ev.event === 'verify'){
+        setBusy('redactProgress', true, 96);
+        status('redactStatus', 'Running verify gate on the redacted file...');
+      } else if(ev.event === 'done'){
+        finalData = ev.result;
+      }
+    });
+    redacted = finalData;
+    if(!redacted) throw new Error('redaction did not return a result');
     setBusy('redactProgress', true, 100);
     described = null;
     submitted = false;
@@ -1045,6 +1097,16 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("content-length", "0"))
         return json.loads(self.rfile.read(n).decode() or "{}")
 
+    def _start_ndjson(self) -> None:
+        self.send_response(200)
+        self.send_header("content-type", "application/x-ndjson")
+        self.send_header("cache-control", "no-store")
+        self.end_headers()
+
+    def _event(self, payload: dict) -> None:
+        self.wfile.write((json.dumps(payload) + "\n").encode())
+        self.wfile.flush()
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/":
@@ -1086,6 +1148,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if self.path == "/api/redact":
                 self._handle_redact()
+            elif self.path == "/api/redact_stream":
+                self._handle_redact_stream()
             elif self.path == "/api/describe":
                 self._handle_describe()
             elif self.path == "/api/submit":
@@ -1103,6 +1167,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def _handle_redact(self) -> None:
         data = self._read_json()
+        self._json(self._redact_payload(data))
+
+    def _redact_payload(self, data: dict, emit=None) -> dict:
         if not data.get("confirm_safe"):
             raise ValueError("safety confirmation is required")
         src = Path(data.get("path", "")).expanduser()
@@ -1118,18 +1185,61 @@ class Handler(BaseHTTPRequestHandler):
         out_dir = donation_output_dir(auto)
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / redacted_output_name(src)
-        stats = redact_mod.redact_file(src, out, scrub_terms, progress=False)
+        try:
+            total = len(src.read_text(encoding="utf-8", errors="replace").splitlines())
+        except Exception:
+            total = 0
+        if emit:
+            emit({"event": "start", "total": total})
+        last_pct = -1
+
+        def on_progress(current: int, total_records: int) -> None:
+            nonlocal last_pct
+            if not emit:
+                return
+            pct = int((current / total_records) * 90) if total_records else 90
+            if pct != last_pct or current == total_records:
+                last_pct = pct
+                emit({
+                    "event": "progress",
+                    "current": current,
+                    "total": total_records,
+                    "percent": pct,
+                })
+
+        if emit:
+            emit({"event": "engine"})
+        stats = redact_mod.redact_file_with_progress(
+            src,
+            out,
+            scrub_terms,
+            progress=False,
+            progress_callback=on_progress if emit else None,
+        )
         if privacy_tier == "user_minimized":
+            if emit:
+                emit({"event": "minimize"})
             min_stats = minimize_mod.minimize_file(out, out)
             stats.update({f"minimize_{k}": v for k, v in min_stats.items()})
+        if emit:
+            emit({"event": "verify"})
         verify_ok = submit_mod.verify_passed(out)
-        self._json({
+        return {
             "redacted_file": str(out),
             "output_dir": str(out_dir),
             "stats": stats,
             "privacy_tier": privacy_tier,
             "verify_passed": verify_ok,
-        })
+        }
+
+    def _handle_redact_stream(self) -> None:
+        data = self._read_json()
+        self._start_ndjson()
+        try:
+            result = self._redact_payload(data, emit=self._event)
+            self._event({"event": "done", "result": result})
+        except Exception as exc:
+            self._event({"event": "error", "error": str(exc)})
 
     def _handle_describe(self) -> None:
         data = self._read_json()
