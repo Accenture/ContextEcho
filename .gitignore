@@ -11,6 +11,7 @@ data_archive_release
 data_archive_release_v2
 hf_staging_download/
 results_v2_candidate/
+.donation_test_state_backups/
 
 # Maintainer-local redaction terms. Keep real donor surface forms out of git.
 scripts/.redaction_patterns.json

@@ -149,6 +149,18 @@ make intake-donations RUN_QUICK=1 PROMOTE=1
 This writes release-ready files under `data_archive_release_v2/`, including the
 redacted session, manifest, consent, review report, and public donation ledger.
 
+Before opening a real collection round after testing, maintainers can reset
+local test intake state:
+
+```bash
+make reset-donation-test-state
+```
+
+The reset command archives local test artifacts first, then clears
+`data_archive_release_v2/`, `hf_staging_download/`, and
+`results_v2_candidate/`. It does not delete private Hugging Face staging
+submissions.
+
 ### ⚠️ Confidentiality — read before donating
 
 **Only donate sessions from personal projects, internal tooling, or

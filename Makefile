@@ -7,7 +7,7 @@
         fig1 fig2-taxonomy fig2-forest fig4 fig5 fig6 \
         fig-app-anchor-decay fig-app-anchor-size fig-app-crossjudge \
         fig-app-crosssession fig-app-full25 fig-app-onset \
-        download-donations intake-donations promote-donation \
+        download-donations intake-donations promote-donation reset-donation-test-state \
         review-donation review-donation-quick \
         fig-session-validation session-validation-dry-run session-validation-quick \
         session-validation-quick-summary session-validation-summary \
@@ -35,6 +35,7 @@ help:
 	@echo "    make review-donation SUBMISSION=...       one-command maintainer technical review"
 	@echo "    make review-donation-quick SUBMISSION=... run review + 30-cell quick validation"
 	@echo "    make promote-donation SUBMISSION=...      promote one accepted donation"
+	@echo "    make reset-donation-test-state            archive + clear local test intake state"
 	@echo "    make session-validation-dry-run SESSION=... LABEL=...  plan a new donor validation"
 	@echo "    make session-validation-quick SESSION=... LABEL=...    run 30-cell donor intake check"
 	@echo "    make session-validation-quick-summary LABEL=...        summarize quick validation"
@@ -133,6 +134,10 @@ promote-donation:
 	fi
 	$(PYTHON) scripts/promote_donation.py "$(SUBMISSION)" \
 	  $(if $(RUN_QUICK),--run-quick,)
+
+reset-donation-test-state:
+	$(PYTHON) scripts/reset_donation_test_state.py \
+	  $(if $(YES),--yes,)
 
 session-validation-dry-run:
 	@if [ -z "$(SESSION)" ] || [ -z "$(LABEL)" ]; then \
