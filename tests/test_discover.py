@@ -51,6 +51,24 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["compactions"], 0)
         self.assertEqual(info["project"], "work-agent-project")
 
+    def test_codex_does_not_count_generic_compact_text_as_compaction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".codex" / "sessions" / "rollout.jsonl"
+            rows = [
+                {"type": "session_meta", "payload": {"cwd": "/Users/alice/Documents/work/agent-project"}},
+                {"type": "turn_context", "payload": {"model": "gpt-5", "summary": "compact prior context"}},
+                {"type": "response_item", "payload": {"type": "context_compaction", "content": []}},
+                {"isCompactSummary": True, "model": "gpt-5"},
+            ]
+            write_jsonl(path, rows)
+
+            info = inspect_session(path)
+
+        self.assertEqual(info["agent"], "Codex CLI")
+        self.assertEqual(info["turns"], 4)
+        self.assertEqual(info["compactions"], 0)
+        self.assertEqual(info["confidence"]["compactions"], "low")
+
     def test_claude_manual_path_is_classified_and_counts_explicit_compaction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = (

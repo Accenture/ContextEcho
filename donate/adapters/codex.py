@@ -30,5 +30,9 @@ class CodexCliAdapter(GenericJsonlAdapter):
         info = super().inspect(path)
         info["agent"] = self.agent
         info["source_format"] = "codex-cli-jsonl"
+        # Codex JSONL currently has no stable, explicit compaction event marker.
+        # Generic "compact" text in messages/summaries is too noisy to count.
+        info["compactions"] = 0
         info["confidence"]["agent"] = "high"
+        info["confidence"]["compactions"] = "low"
         return info
