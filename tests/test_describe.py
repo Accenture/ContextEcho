@@ -46,11 +46,39 @@ class DescribeTests(unittest.TestCase):
         self.assertEqual(manifest["domain"], "agentic-coding")
         self.assertEqual(manifest["language"], "Python")
         self.assertEqual(manifest["contributor"], "donor-handle")
-        self.assertEqual(manifest["turns"], "42")
-        self.assertEqual(manifest["records"], "123")
+        self.assertTrue(manifest["session_id"].startswith("donation-"))
+        self.assertEqual(manifest["turns"], 42)
+        self.assertEqual(manifest["records"], 123)
         self.assertEqual(manifest["source_format"], "codex-cli-jsonl")
         self.assertEqual(manifest["privacy_tier"], "full_redacted")
         self.assertIn("persona_drift_benchmarking", manifest["allowed_uses"])
+
+    def test_write_manifest_normalizes_unknown_language_and_count_types(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            session = root / "session.redacted.jsonl"
+            session.write_text("{}\n", encoding="utf-8")
+
+            _, _, manifest = describe.write_manifest_and_consent(
+                session,
+                {
+                    "agent": "Codex CLI",
+                    "model": "gpt-5",
+                    "org": "OpenAI",
+                    "records": "12",
+                    "turns": "3",
+                    "compactions": "1",
+                },
+                domain="agentic-coding",
+                language="unknown",
+                contributor="donor",
+            )
+
+        self.assertEqual(manifest["language"], "mixed")
+        self.assertEqual(manifest["records"], 12)
+        self.assertEqual(manifest["turns"], 3)
+        self.assertEqual(manifest["compactions"], 1)
+        self.assertNotEqual(manifest["session_id"], "S?")
 
 
 if __name__ == "__main__":

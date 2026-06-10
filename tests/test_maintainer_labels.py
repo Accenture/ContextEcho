@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from scripts.promote_donation import default_label as promote_default_label
+from scripts.promote_donation import normalize_manifest
 from scripts.promote_donation import sha256_file
 from scripts.review_donation import default_label as review_default_label
 
@@ -24,6 +25,36 @@ class MaintainerLabelTests(unittest.TestCase):
                 sha256_file(path),
                 "edeaaff3f1774ad2888673770c6d64097e391bc362d7d6fb34982ddf0efd18cb",
             )
+
+    def test_promote_normalizes_legacy_manifest_metadata(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            session = root / "session.redacted.jsonl"
+            session.write_text("{}\n", encoding="utf-8")
+            submission = root / "pending" / "submission-abc12345"
+
+            manifest = normalize_manifest(
+                {
+                    "session_id": "S?",
+                    "domain": "agentic-coding",
+                    "language": "unknown",
+                    "records": "6088",
+                    "turns": "449",
+                    "compactions": "5",
+                },
+                submission,
+                session,
+            )
+
+        self.assertEqual(manifest["session_id"], "submission-abc12345")
+        self.assertEqual(manifest["language"], "mixed")
+        self.assertEqual(manifest["records"], 6088)
+        self.assertEqual(manifest["turns"], 449)
+        self.assertEqual(manifest["compactions"], 5)
+        self.assertEqual(manifest["donor_domain"], "agentic-coding")
+        self.assertEqual(manifest["reviewed_domain"], "agentic-coding")
+        self.assertEqual(manifest["reviewed_submission_id"], "submission-abc12345")
+        self.assertIn("session_sha256", manifest)
 
 
 if __name__ == "__main__":

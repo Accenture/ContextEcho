@@ -196,17 +196,21 @@ def main(argv: list[str] | None = None) -> int:
         manifest = load_json(manifest_path)
         report["metadata"] = {
             "label": safe_label(args.label) if args.label else default_label(manifest, sub),
+            "session_id": manifest.get("session_id"),
             "contributor": manifest.get("contributor"),
             "credit_name": manifest.get("credit_name"),
             "institute": manifest.get("contributor_institute"),
             "agent": manifest.get("agent"),
             "model": manifest.get("model"),
             "org": manifest.get("org"),
+            "domain": manifest.get("domain"),
+            "language": manifest.get("language"),
             "records": manifest.get("records"),
             "turns": manifest.get("turns"),
             "compactions": manifest.get("compactions"),
             "privacy_tier": manifest.get("privacy_tier", "full_redacted"),
             "source_format": manifest.get("source_format"),
+            "metadata_confidence": manifest.get("metadata_confidence", {}),
             "submitted_utc": manifest.get("submitted_utc"),
         }
     else:
@@ -271,7 +275,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"submission : {sub}")
         print(f"label      : {label}")
         meta = report["metadata"]
-        for key in ("contributor", "institute", "agent", "model", "org", "turns", "records", "compactions", "privacy_tier", "source_format"):
+        for key in ("session_id", "contributor", "institute", "agent", "model", "org", "domain", "language", "turns", "records", "compactions", "privacy_tier", "source_format"):
             if meta.get(key) not in {None, ""}:
                 print(f"{key:11s}: {meta[key]}")
         print("\nChecks:")

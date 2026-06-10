@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -51,6 +52,34 @@ I attest that:
 TOOL_VERSION = "contextecho-donate 0.3 (multi-agent-discovery)"
 
 
+def session_fingerprint(session: Path) -> str:
+    h = hashlib.sha256()
+    with session.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()[:12]
+
+
+def stable_session_id(session: Path) -> str:
+    return f"donation-{session_fingerprint(session)}"
+
+
+def count_value(value: object) -> int | str:
+    if value in {None, ""}:
+        return ""
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return ""
+
+
+def normalize_language(language: str) -> str:
+    value = (language or "").strip()
+    if not value or value.lower() == "unknown":
+        return "mixed"
+    return value
+
+
 def ask(prompt: str, default: str = "") -> str:
     suffix = f" [{default}]" if default else ""
     try:
@@ -71,17 +100,17 @@ def write_manifest_and_consent(
     privacy_tier: str = "full_redacted",
 ) -> tuple[Path, Path, dict]:
     """Write the donation manifest and consent file next to a redacted session."""
-    session_id = "S?"  # assigned by maintainer on merge
+    session_id = stable_session_id(session)
     manifest = {
         "session_id": session_id,
         "agent": auto.get("agent", "unknown"),
         "model": auto.get("model", "unknown"),
         "org": auto.get("org", "unknown"),
         "domain": domain,
-        "language": language,
-        "records": str(auto.get("records", "")),
-        "turns": str(auto.get("turns", "")),
-        "compactions": str(auto.get("compactions", "")),
+        "language": normalize_language(language),
+        "records": count_value(auto.get("records", "")),
+        "turns": count_value(auto.get("turns", "")),
+        "compactions": count_value(auto.get("compactions", "")),
         "contributor": contributor or "anonymous",
         "credit_name": contributor or "anonymous",
         "contributor_email": email,

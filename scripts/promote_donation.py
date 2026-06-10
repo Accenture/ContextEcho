@@ -39,6 +39,37 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def count_value(value: object) -> int | str:
+    if value in {None, ""}:
+        return ""
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return ""
+
+
+def normalize_language(value: object) -> str:
+    language = str(value or "").strip()
+    if not language or language.lower() == "unknown":
+        return "mixed"
+    return language
+
+
+def normalize_manifest(manifest: dict, submission: Path, session: Path) -> dict:
+    out = dict(manifest)
+    if not out.get("session_id") or out.get("session_id") == "S?":
+        out["session_id"] = submission.name
+    out["language"] = normalize_language(out.get("language"))
+    for key in ("records", "turns", "compactions"):
+        out[key] = count_value(out.get(key))
+    out["session_sha256"] = sha256_file(session)
+    out["reviewed_submission_id"] = submission.name
+    if out.get("domain"):
+        out.setdefault("donor_domain", out.get("domain"))
+        out.setdefault("reviewed_domain", out.get("domain"))
+    return out
+
+
 def run_review(submission: Path, python: str, run_quick: bool) -> dict:
     cmd = [python, "scripts/review_donation.py", str(submission), "--json"]
     if run_quick:
@@ -105,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
         print("[promote] fix the submission or pass --force for an explicit override.")
         return 1
 
-    manifest = load_json(manifest_path)
+    manifest = normalize_manifest(load_json(manifest_path), sub, session)
     label = safe_label(args.label) if args.label else default_label(manifest, sub)
     dataset = args.dataset_root
     public_session = dataset / "data" / "sessions" / f"session_{label}.jsonl"
@@ -115,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     public_session.parent.mkdir(parents=True, exist_ok=True)
     donation_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(session, public_session)
-    shutil.copy2(manifest_path, donation_dir / MANIFEST_NAME)
+    (donation_dir / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     shutil.copy2(consent_path, donation_dir / CONSENT_NAME)
     (donation_dir / "review_report.json").write_text(json.dumps(review, indent=2), encoding="utf-8")
 
@@ -138,6 +169,9 @@ def main(argv: list[str] | None = None) -> int:
         "records": manifest.get("records"),
         "turns": manifest.get("turns"),
         "compactions": manifest.get("compactions"),
+        "domain": manifest.get("domain"),
+        "language": manifest.get("language"),
+        "metadata_confidence": manifest.get("metadata_confidence", {}),
         "privacy_tier": manifest.get("privacy_tier", "full_redacted"),
         "source_format": manifest.get("source_format"),
     }

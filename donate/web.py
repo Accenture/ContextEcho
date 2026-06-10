@@ -250,7 +250,7 @@ def infer_language(info: dict) -> str:
     project = str(info.get("project", "")).lower()
     if any(x in project for x in ("paper", "doc", "slide", "deck")):
         return "Markdown/docs"
-    return "unknown"
+    return "mixed"
 
 
 def _fetch_json(url: str) -> dict:
@@ -1078,16 +1078,28 @@ $('describeBtn').onclick = async () => {
   if(!redacted) return;
   $('describeBtn').disabled = true;
   $('describeResult').classList.remove('show');
-  setBusy('describeProgress', true, 60);
+  setBusy('describeProgress', true, 10);
+  status('describeStatus', 'Preparing session metadata...');
   try {
-    described = await post('/api/describe', {
+    let finalData = null;
+    await postStream('/api/describe_stream', {
       redacted_file:redacted.redacted_file,
       auto:selected,
       privacy_tier:redacted.privacy_tier || privacyTier(),
       contributor:$('contributorName').value,
       email:$('contributorEmail').value,
       institute:$('contributorInstitute').value
+    }, ev => {
+      if(ev.event === 'progress'){
+        setBusy('describeProgress', true, ev.percent || 35);
+        status('describeStatus', ev.message || 'Writing manifest and consent...');
+      } else if(ev.event === 'done'){
+        finalData = ev.result;
+      }
     });
+    described = finalData;
+    if(!described) throw new Error('describe did not return a result');
+    setBusy('describeProgress', true, 100);
     renderDescribeResult(described);
     status('describeStatus', 'Review the generated files, then continue to submit.');
     status('submitStatus', submitted ? 'This session is already marked donated locally.' : 'Ready to submit.');
@@ -1099,10 +1111,20 @@ $('submitBtn').onclick = async () => {
   if(!redacted || !confirm('Upload verified redacted artifacts as a PR?')) return;
   $('submitBtn').disabled = true;
   $('submitResult').classList.remove('show');
-  setBusy('submitProgress', true, 45);
-  status('submitStatus','Submitting PR...');
+  setBusy('submitProgress', true, 10);
+  status('submitStatus','Preparing upload...');
   try {
-    const data = await post('/api/submit', {redacted_file:redacted.redacted_file, source_path:selected ? selected.path : ''});
+    let data = null;
+    await postStream('/api/submit_stream', {redacted_file:redacted.redacted_file, source_path:selected ? selected.path : ''}, ev => {
+      if(ev.event === 'progress'){
+        setBusy('submitProgress', true, ev.percent || 45);
+        status('submitStatus', ev.message || 'Submitting donation...');
+      } else if(ev.event === 'done'){
+        data = ev.result;
+      }
+    });
+    if(!data) throw new Error('submit did not return a result');
+    setBusy('submitProgress', true, 100);
     submitted = true;
     if(selected && selected.path){ selected.donated = true; donatedPaths.add(selected.path); saveDonatedPaths(); renderSessions(); }
     renderSubmitResult(data);
@@ -1192,8 +1214,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_redact_stream()
             elif self.path == "/api/describe":
                 self._handle_describe()
+            elif self.path == "/api/describe_stream":
+                self._handle_describe_stream()
             elif self.path == "/api/submit":
                 self._handle_submit()
+            elif self.path == "/api/submit_stream":
+                self._handle_submit_stream()
             elif self.path == "/api/open_path":
                 self._handle_open_path()
             elif self.path == "/api/search_redacted":
@@ -1334,50 +1360,87 @@ class Handler(BaseHTTPRequestHandler):
 
     def _handle_describe(self) -> None:
         data = self._read_json()
+        self._json(self._describe_payload(data))
+
+    def _describe_payload(self, data: dict, emit=None) -> dict:
         session = Path(data.get("redacted_file", "")).expanduser()
         if not session.exists():
             raise ValueError(f"not found: {session}")
+        if emit:
+            emit({"event": "progress", "percent": 20, "message": "Checking verified redacted file..."})
+        auto = data.get("auto") or {}
+        if emit:
+            emit({"event": "progress", "percent": 45, "message": "Inferring manifest metadata..."})
         manifest, consent, _ = describe_mod.write_manifest_and_consent(
             session=session,
-            auto=data.get("auto") or {},
-            domain=infer_domain(data.get("auto") or {}),
-            language=infer_language(data.get("auto") or {}),
+            auto=auto,
+            domain=infer_domain(auto),
+            language=infer_language(auto),
             contributor=str(data.get("contributor", "") or "anonymous"),
             email=str(data.get("email", "") or ""),
             institute=str(data.get("institute", "") or ""),
             privacy_tier=str(data.get("privacy_tier") or "full_redacted"),
         )
-        self._json({"manifest": str(manifest), "consent": str(consent)})
+        if emit:
+            emit({"event": "progress", "percent": 80, "message": "Writing manifest and consent files..."})
+        return {"manifest": str(manifest), "consent": str(consent)}
+
+    def _handle_describe_stream(self) -> None:
+        data = self._read_json()
+        self._start_ndjson()
+        try:
+            result = self._describe_payload(data, emit=self._event)
+            self._event({"event": "progress", "percent": 100, "message": "Manifest and consent ready."})
+            self._event({"event": "done", "result": result})
+        except Exception as exc:
+            self._event({"event": "error", "error": str(exc)})
 
     def _handle_submit(self) -> None:
         data = self._read_json()
+        self._json(self._submit_payload(data))
+
+    def _submit_payload(self, data: dict, emit=None) -> dict:
         session = Path(data.get("redacted_file", "")).expanduser()
         if not session.exists():
             raise ValueError(f"not found: {session}")
+        if emit:
+            emit({"event": "progress", "percent": 15, "message": "Checking local submission files..."})
         source_path = data.get("source_path")
         if already_submitted(source_path, session):
-            self._json({
-                "error": (
-                    "This session or redacted artifact is already marked submitted locally. "
-                    "Pick another session, or use Clear local donated labels only if the previous "
-                    "submission truly failed."
-                )
-            }, 409)
-            return
+            raise ValueError(
+                "This session or redacted artifact is already marked submitted locally. "
+                "Pick another session, or use Clear local donated labels only if the previous "
+                "submission truly failed."
+            )
         # Capture submit's terminal-style output for the browser.
         import contextlib
         import io
 
         buf = io.StringIO()
+        if emit:
+            emit({"event": "progress", "percent": 35, "message": "Running final verify gate before upload..."})
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             rc = submit_mod.main([str(session)])
         output = buf.getvalue()
         if rc != 0:
-            self._json({"error": output or f"submit failed with code {rc}"}, 400)
-            return
+            raise ValueError(output or f"submit failed with code {rc}")
+        if emit:
+            emit({"event": "progress", "percent": 85, "message": "Upload accepted. Saving local receipt..."})
         save_donation_record(source_path=source_path or "", artifact_path=session, output=output)
         receipt_path, receipt = write_receipt(session, source_path or "", output)
-        self._json({"output": output, "receipt_path": str(receipt_path), "receipt": receipt})
+        if emit:
+            emit({"event": "progress", "percent": 95, "message": "Local receipt saved."})
+        return {"output": output, "receipt_path": str(receipt_path), "receipt": receipt}
+
+    def _handle_submit_stream(self) -> None:
+        data = self._read_json()
+        self._start_ndjson()
+        try:
+            result = self._submit_payload(data, emit=self._event)
+            self._event({"event": "progress", "percent": 100, "message": "Submission complete."})
+            self._event({"event": "done", "result": result})
+        except Exception as exc:
+            self._event({"event": "error", "error": str(exc)})
 
     def _handle_clear_donated_labels(self) -> None:
         existed = clear_donation_registry()
