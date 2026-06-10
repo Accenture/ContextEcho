@@ -1043,8 +1043,8 @@ $('redactBtn').onclick = async () => {
         setBusy('redactProgress', true, 5);
         status('redactStatus', `Preparing to redact ${ev.total || '?'} records locally...`);
       } else if(ev.event === 'repair'){
-        setBusy('redactProgress', true, 55);
-        status('redactStatus', 'Applying new scrub terms to the existing redacted file...');
+        setBusy('redactProgress', true, ev.percent || 55);
+        status('redactStatus', ev.message || 'Re-redacting the existing redacted file with new scrub terms...');
       } else if(ev.event === 'engine'){
         setBusy('redactProgress', true, 8);
         status('redactStatus', 'Loading local redaction engine...');
@@ -1056,8 +1056,8 @@ $('redactBtn').onclick = async () => {
         setBusy('redactProgress', true, 94);
         status('redactStatus', 'Applying user-minimized privacy mode...');
       } else if(ev.event === 'verify'){
-        setBusy('redactProgress', true, 96);
-        status('redactStatus', 'Running verify gate on the redacted file...');
+        setBusy('redactProgress', true, ev.percent || 96);
+        status('redactStatus', ev.message || 'Running verify gate on the redacted file...');
       } else if(ev.event === 'done'){
         finalData = ev.result;
       }
@@ -1221,11 +1221,30 @@ class Handler(BaseHTTPRequestHandler):
             if not previous.resolve().is_relative_to(DONATION_ROOT.resolve()):
                 raise ValueError("repair is only allowed for local donation output files")
             if emit:
-                emit({"event": "repair"})
+                emit({
+                    "event": "repair",
+                    "percent": 45,
+                    "message": "Re-redacting the existing redacted file with new scrub terms...",
+                })
             stats = redact_mod.apply_scrub_terms_to_file(previous, previous, scrub_terms)
             if emit:
-                emit({"event": "verify"})
+                emit({
+                    "event": "repair",
+                    "percent": 82,
+                    "message": "Re-redaction complete. Preparing verify gate...",
+                })
+                emit({
+                    "event": "verify",
+                    "percent": 90,
+                    "message": "Verify 1/2: scanning for residual emails, paths, API keys, and secrets...",
+                })
             verify_report = verify_mod.verify_session(previous)
+            if emit:
+                emit({
+                    "event": "verify",
+                    "percent": 99,
+                    "message": "Verify 2/2: checking final result...",
+                })
             return {
                 "redacted_file": str(previous),
                 "output_dir": str(previous.parent),
@@ -1282,8 +1301,18 @@ class Handler(BaseHTTPRequestHandler):
             min_stats = minimize_mod.minimize_file(out, out)
             stats.update({f"minimize_{k}": v for k, v in min_stats.items()})
         if emit:
-            emit({"event": "verify"})
+            emit({
+                "event": "verify",
+                "percent": 96,
+                "message": "Verify 1/2: scanning for residual emails, paths, API keys, and secrets...",
+            })
         verify_report = verify_mod.verify_session(out)
+        if emit:
+            emit({
+                "event": "verify",
+                "percent": 99,
+                "message": "Verify 2/2: checking final result...",
+            })
         verify_ok = bool(verify_report.get("passed"))
         return {
             "redacted_file": str(out),
