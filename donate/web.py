@@ -324,7 +324,7 @@ INDEX_HTML = r"""<!doctype html>
     .card.step { margin-top:16px; }
     .step { display:none; }
     .step.active { display:block; }
-    .steps { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:14px; margin-top:30px; align-items:center; }
+    .steps { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:30px; align-items:center; }
     .step-pill { position:relative; display:flex; align-items:center; gap:11px; color:#6a6f6b; font-size:15px; font-weight:850; }
     .step-pill:after { content:""; height:3px; flex:1; border-radius:999px; background:#e2e4df; margin-left:6px; }
     .step-pill:last-child:after { display:none; }
@@ -453,16 +453,15 @@ INDEX_HTML = r"""<!doctype html>
       <div class="hero-side">
         <div class="privacy-note"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
         <div class="hero-progress">
-          <div class="progress-label"><strong id="stepLabel">Step 1 of 4</strong><span id="stepPercentText">25% complete</span></div>
-          <div id="progressRing" class="ring" style="--pct:25"><span id="progressRingText">25%</span></div>
+          <div class="progress-label"><strong id="stepLabel">Step 1 of 3</strong><span id="stepPercentText">33% complete</span></div>
+          <div id="progressRing" class="ring" style="--pct:33"><span id="progressRingText">33%</span></div>
         </div>
       </div>
     </div>
     <div class="steps">
       <span id="pill1" class="step-pill active"><span class="step-num">1</span><span>Pick a Session</span></span>
       <span id="pill2" class="step-pill"><span class="step-num">2</span><span>Redact</span></span>
-      <span id="pill3" class="step-pill"><span class="step-num">3</span><span>Describe</span></span>
-      <span id="pill4" class="step-pill"><span class="step-num">4</span><span>Submit</span></span>
+      <span id="pill3" class="step-pill"><span class="step-num">3</span><span>Submit</span></span>
     </div>
   </section>
 
@@ -542,41 +541,26 @@ INDEX_HTML = r"""<!doctype html>
       <div id="searchResult" class="result"></div>
     </div>
     <div class="inline-status" id="redactStatus"></div>
-    <label style="margin-top:14px"><input id="reviewConfirm" type="checkbox" style="width:auto" disabled> I reviewed the verify output and redacted file path; it is ready to describe.</label>
+    <label style="margin-top:14px"><input id="reviewConfirm" type="checkbox" style="width:auto" disabled> I reviewed the verify output and redacted file path; it is ready to submit.</label>
     <div class="row actions">
       <button id="redactPrev" class="secondary">Previous</button>
-      <button id="redactNext" disabled>Next: Describe</button>
+      <button id="redactNext" disabled>Next: Submit</button>
     </div>
   </section>
 
   <section id="step3" class="card step">
-    <h2>3. Describe + Consent</h2>
+    <h2>3. Submit</h2>
     <p class="muted">Contributor info is used for credit, leaderboard accounting, and release acknowledgments. Leave blank to stay anonymous.</p>
-    <p class="muted"><strong>Manifest</strong> records session metadata for the ledger. <strong>Consent</strong> records permission to donate the redacted session.</p>
+    <p class="muted">The tool writes manifest + consent, runs a final verify gate, uploads the verified redacted session, and saves a local receipt.</p>
     <div class="grid">
       <div><label>Name or GitHub/HF handle <span class="muted">(for credit, optional)</span></label><input id="contributorName" placeholder="anonymous" /></div>
       <div><label>Email <span class="muted">(optional)</span></label><input id="contributorEmail" placeholder="you@example.com" /></div>
     </div>
     <label>Institute <span class="muted">(optional)</span></label>
     <input id="contributorInstitute" placeholder="University / company / independent" />
-    <div class="row" style="margin-top:12px">
-      <button id="describeBtn" disabled>Write Manifest + Consent</button>
-    </div>
-    <div id="describeProgress" class="progress"><div></div></div>
-    <div id="describeResult" class="result"></div>
-    <div class="inline-status" id="describeStatus"></div>
-    <div class="row actions">
-      <button id="describePrev" class="secondary">Previous</button>
-      <button id="describeNext" disabled>Next: Submit</button>
-    </div>
-  </section>
-
-  <section id="step4" class="card step">
-    <h2>4. Submit</h2>
-    <p class="muted">Upload only the verified redacted session, manifest, and consent as a pull request for maintainer review.</p>
     <div class="row actions">
       <button id="submitPrev" class="secondary">Previous</button>
-      <button id="submitBtn" disabled>Submit PR</button>
+      <button id="submitBtn" disabled>Submit Donation</button>
     </div>
     <div id="submitProgress" class="progress"><div></div></div>
     <div id="submitResult" class="result"></div>
@@ -587,7 +571,6 @@ INDEX_HTML = r"""<!doctype html>
 let sessions = [];
 let selected = null;
 let redacted = null;
-let described = null;
 let submitted = false;
 let page = 0;
 const pageSize = 5;
@@ -604,13 +587,13 @@ function iconSvg(name){ return statIcons[name] || ''; }
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
 function privacyTier(){ return document.querySelector('input[name="privacyTier"]:checked')?.value || 'full_redacted'; }
 function goStep(n){
-  const pct = n * 25;
-  for(let i=1;i<=4;i++){
+  const pct = Math.round((n / 3) * 100);
+  for(let i=1;i<=3;i++){
     $('step'+i).classList.toggle('active', i===n);
     $('pill'+i).classList.toggle('active', i===n);
     $('pill'+i).classList.toggle('done', i<n);
   }
-  $('stepLabel').textContent = `Step ${n} of 4`;
+  $('stepLabel').textContent = `Step ${n} of 3`;
   $('stepPercentText').textContent = `${pct}% complete`;
   $('progressRing').style.setProperty('--pct', pct);
   $('progressRingText').textContent = `${pct}%`;
@@ -621,9 +604,7 @@ function refreshButtons(){
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
-  $('describeBtn').disabled = !(redacted && redacted.verify_passed);
-  $('describeNext').disabled = !described;
-  $('submitBtn').disabled = !described || submitted || selectedDonated;
+  $('submitBtn').disabled = !(redacted && redacted.verify_passed) || submitted || selectedDonated;
 }
 function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>0?'best':(t>=100?'long':'short'); }
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
@@ -752,17 +733,6 @@ function renderSearchResult(data){
   `;
   $('searchResult').classList.add('show');
 }
-function renderDescribeResult(data){
-  $('describeResult').innerHTML = `
-    <div class="result-head">
-      <div><span class="badge pass">Files written</span></div>
-      <div class="muted">Manifest and consent are ready.</div>
-    </div>
-    <div class="field"><div class="field-label">Manifest</div><div class="pathbox">${escapeHtml(data.manifest)}</div></div>
-    <div class="field"><div class="field-label">Consent</div><div class="pathbox">${escapeHtml(data.consent)}</div></div>
-  `;
-  $('describeResult').classList.add('show');
-}
 function receiptEmailHref(receipt, receiptPath){
   const email = receipt.contributor_email || '';
   const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'unknown';
@@ -810,18 +780,17 @@ function renderSubmitResult(data){
 function resetSessionArtifacts(){
   selected = null;
   redacted = null;
-  described = null;
   submitted = false;
   document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
-  ['selectedCard','redactResult','describeResult','submitResult','searchResult'].forEach(id => {
+  ['selectedCard','redactResult','submitResult','searchResult'].forEach(id => {
     $(id).innerHTML = '';
     $(id).classList.remove('show', 'success-panel');
   });
   $('searchPanel').classList.remove('show');
   $('reviewConfirm').checked = false;
   $('safeConfirm').checked = false;
-  ['redactStatus','describeStatus','submitStatus','discoverStatus'].forEach(id => status(id, ''));
-  ['redactProgress','describeProgress','submitProgress','searchProgress'].forEach(id => setBusy(id, false));
+  ['redactStatus','submitStatus','discoverStatus'].forEach(id => status(id, ''));
+  ['redactProgress','submitProgress','searchProgress'].forEach(id => setBusy(id, false));
   refreshButtons();
 }
 function setProgress(pct){
@@ -903,7 +872,7 @@ function renderSessions(){
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
       row.classList.add('selected'); selected = s;
-      redacted = null; described = null; submitted = !!donated;
+      redacted = null; submitted = !!donated;
       renderSelectedCard(s, idx);
       status('redactStatus', donated ? 'This session is already marked donated locally. Pick a different session to avoid duplicate submissions.' : '');
       status('discoverStatus', '');
@@ -985,7 +954,6 @@ document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
   el.onchange = () => {
     if(redacted){
       redacted = null;
-      described = null;
       $('reviewConfirm').checked = false;
       $('redactResult').classList.remove('show');
       $('searchPanel').classList.remove('show');
@@ -1007,9 +975,7 @@ $('scrub').oninput = () => {
 $('pickNext').onclick = () => goStep(2);
 $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
-$('describePrev').onclick = () => goStep(2);
-$('describeNext').onclick = () => goStep(4);
-$('submitPrev').onclick = () => goStep(3);
+$('submitPrev').onclick = () => goStep(2);
 $('searchBtn').onclick = async () => {
   if(!redacted) return;
   setBusy('searchProgress', true, 55);
@@ -1065,7 +1031,6 @@ $('redactBtn').onclick = async () => {
     redacted = finalData;
     if(!redacted) throw new Error('redaction did not return a result');
     setBusy('redactProgress', true, 100);
-    described = null;
     submitted = false;
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
@@ -1073,39 +1038,6 @@ $('redactBtn').onclick = async () => {
     refreshButtons();
   } catch(e) { status('redactStatus','ERROR: '+e.message); }
   finally { setBusy('redactProgress', false); refreshButtons(); }
-};
-$('describeBtn').onclick = async () => {
-  if(!redacted) return;
-  $('describeBtn').disabled = true;
-  $('describeResult').classList.remove('show');
-  setBusy('describeProgress', true, 10);
-  status('describeStatus', 'Preparing session metadata...');
-  try {
-    let finalData = null;
-    await postStream('/api/describe_stream', {
-      redacted_file:redacted.redacted_file,
-      auto:selected,
-      privacy_tier:redacted.privacy_tier || privacyTier(),
-      contributor:$('contributorName').value,
-      email:$('contributorEmail').value,
-      institute:$('contributorInstitute').value
-    }, ev => {
-      if(ev.event === 'progress'){
-        setBusy('describeProgress', true, ev.percent || 35);
-        status('describeStatus', ev.message || 'Writing manifest and consent...');
-      } else if(ev.event === 'done'){
-        finalData = ev.result;
-      }
-    });
-    described = finalData;
-    if(!described) throw new Error('describe did not return a result');
-    setBusy('describeProgress', true, 100);
-    renderDescribeResult(described);
-    status('describeStatus', 'Review the generated files, then continue to submit.');
-    status('submitStatus', submitted ? 'This session is already marked donated locally.' : 'Ready to submit.');
-    refreshButtons();
-  } catch(e) { status('describeStatus','ERROR: '+e.message); }
-  finally { setBusy('describeProgress', false); refreshButtons(); }
 };
 $('submitBtn').onclick = async () => {
   if(!redacted || !confirm('Upload verified redacted artifacts as a PR?')) return;
@@ -1115,7 +1047,15 @@ $('submitBtn').onclick = async () => {
   status('submitStatus','Preparing upload...');
   try {
     let data = null;
-    await postStream('/api/submit_stream', {redacted_file:redacted.redacted_file, source_path:selected ? selected.path : ''}, ev => {
+    await postStream('/api/submit_stream', {
+      redacted_file:redacted.redacted_file,
+      source_path:selected ? selected.path : '',
+      auto:selected,
+      privacy_tier:redacted.privacy_tier || privacyTier(),
+      contributor:$('contributorName').value,
+      email:$('contributorEmail').value,
+      institute:$('contributorInstitute').value
+    }, ev => {
       if(ev.event === 'progress'){
         setBusy('submitProgress', true, ev.percent || 45);
         status('submitStatus', ev.message || 'Submitting donation...');
@@ -1412,13 +1352,18 @@ class Handler(BaseHTTPRequestHandler):
                 "Pick another session, or use Clear local donated labels only if the previous "
                 "submission truly failed."
             )
+        if emit:
+            emit({"event": "progress", "percent": 30, "message": "Writing manifest and consent files..."})
+        describe_result = self._describe_payload(data)
+        if emit:
+            emit({"event": "progress", "percent": 50, "message": "Manifest and consent ready."})
         # Capture submit's terminal-style output for the browser.
         import contextlib
         import io
 
         buf = io.StringIO()
         if emit:
-            emit({"event": "progress", "percent": 35, "message": "Running final verify gate before upload..."})
+            emit({"event": "progress", "percent": 65, "message": "Running final verify gate, then uploading donation..."})
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             rc = submit_mod.main([str(session)])
         output = buf.getvalue()
@@ -1430,7 +1375,13 @@ class Handler(BaseHTTPRequestHandler):
         receipt_path, receipt = write_receipt(session, source_path or "", output)
         if emit:
             emit({"event": "progress", "percent": 95, "message": "Local receipt saved."})
-        return {"output": output, "receipt_path": str(receipt_path), "receipt": receipt}
+        return {
+            "output": output,
+            "receipt_path": str(receipt_path),
+            "receipt": receipt,
+            "manifest": describe_result.get("manifest"),
+            "consent": describe_result.get("consent"),
+        }
 
     def _handle_submit_stream(self) -> None:
         data = self._read_json()
