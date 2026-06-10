@@ -70,7 +70,7 @@ def quality_tag(session: dict) -> str:
 
 def print_session_table(sessions: list[dict], start: int = 0, limit: int = 15) -> None:
     shown = sessions[start:start + limit]
-    print("  #   Fit    Agent        UserT  Cmp  Last active  Project")
+    print("  #   Fit    Agent        UserT  CCmp Last active  Project")
     print("  --  -----  -----------  -----  ---  -----------  ------------------------------")
     for i, s in enumerate(shown, start + 1):
         agent = compact_label(s.get("agent", "?").replace("Claude Code", "Claude").replace("Codex CLI", "Codex"), 11)
@@ -83,7 +83,8 @@ def print_session_table(sessions: list[dict], start: int = 0, limit: int = 15) -
         )
     end = min(start + limit, len(sessions))
     print(f"\n  Showing {start + 1}-{end} of {len(sessions)} usable sessions.")
-    print("  UserT = human/user prompt turns. Fit: best = 100+ user turns with compactions.")
+    print("  UserT = human/user prompt turns. CCmp = context compactions detected in local logs.")
+    print("  Fit: best = 100+ user turns with context compactions.")
     if end < len(sessions):
         print("  Type 'more' to show more, a number to select, or paste a session path.")
 

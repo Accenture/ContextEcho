@@ -101,6 +101,7 @@ class WebTests(unittest.TestCase):
             self.assertIn("pending/submission-abc12345/", text)
             self.assertIn("User turns: 42", text)
             self.assertIn("Records: 123", text)
+            self.assertIn("Context compactions: 1", text)
             self.assertNotIn("persona-drift-staging", text)
             self.assertNotIn("huggingface.co", text)
 

@@ -144,8 +144,8 @@ def main(argv: list[str]) -> int:
     for i, s in enumerate(sessions, 1):
         print(f"  [{i}] {s['project']}  ({s['modified']})")
         print(
-            f"      {s['agent']} · {s['model']} · {s['turns']:,} estimated turns · "
-            f"{s.get('records', '?')} records · {s['compactions']} compactions"
+            f"      {s['agent']} · {s['model']} · {s['turns']:,} user turns · "
+            f"{s.get('records', '?')} records · {s['compactions']} context compactions"
         )
         print(f"      {s['path']}")
         print()
