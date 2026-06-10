@@ -1,4 +1,5 @@
 import unittest
+import errno
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
@@ -9,6 +10,7 @@ from donate.web import (
     annotate_donated,
     artifact_key,
     clear_donation_registry,
+    create_server,
     load_donated_artifact_keys,
     parse_submit_output,
     save_donation_record,
@@ -22,6 +24,18 @@ class WebTests(unittest.TestCase):
         self.assertEqual(_parse_donated_sessions("3 redacted donor sessions"), 3)
         self.assertEqual(_parse_donated_sessions("1,234 donated sessions"), 1234)
         self.assertIsNone(_parse_donated_sessions("no donation count here"))
+
+    def test_create_server_falls_back_when_port_is_busy(self):
+        fake_server = mock.Mock()
+        fake_server.server_address = ("127.0.0.1", 8767)
+        busy = OSError(errno.EADDRINUSE, "address in use")
+        with mock.patch("donate.web.ThreadingHTTPServer", side_effect=[busy, fake_server]) as server_cls:
+            server, actual_port = create_server("127.0.0.1", 8766, attempts=3)
+
+        self.assertIs(server, fake_server)
+        self.assertEqual(actual_port, 8767)
+        self.assertEqual(server_cls.call_args_list[0].args[0], ("127.0.0.1", 8766))
+        self.assertEqual(server_cls.call_args_list[1].args[0], ("127.0.0.1", 8767))
 
     def test_annotate_donated_marks_known_source_key(self):
         path = "/tmp/example-session.jsonl"

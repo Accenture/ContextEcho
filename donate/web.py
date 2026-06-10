@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import errno
 import hashlib
 import json
 import re
@@ -31,6 +32,20 @@ from donate.adapters.base import is_redacted_artifact
 
 DONATION_ROOT = Path.home() / "Downloads" / "ContextEcho_donations"
 DONATION_REGISTRY = DONATION_ROOT / ".donated_sessions.json"
+
+
+def create_server(host: str, port: int, attempts: int = 20) -> tuple[ThreadingHTTPServer, int]:
+    """Bind the local wizard, trying nearby ports if the default is busy."""
+    for offset in range(max(1, attempts)):
+        candidate = port + offset if port else 0
+        try:
+            server = ThreadingHTTPServer((host, candidate), Handler)
+            actual_port = int(server.server_address[1])
+            return server, actual_port
+        except OSError as exc:
+            if exc.errno != errno.EADDRINUSE or not port or offset == attempts - 1:
+                raise
+    raise OSError(errno.EADDRINUSE, f"no free port found near {port}")
 
 
 def safe_slug(text: str, default: str = "session") -> str:
@@ -1197,8 +1212,18 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-open", action="store_true", help="do not open a browser")
     args = p.parse_args(argv)
 
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
-    url = f"http://{args.host}:{args.port}/"
+    try:
+        server, actual_port = create_server(args.host, args.port)
+    except OSError as exc:
+        if exc.errno == errno.EADDRINUSE:
+            print(f"[web] ERROR: port {args.port} is already in use.")
+            print(f"[web] Try: python3 -m donate --web --web-port {args.port + 1}")
+            return 2
+        raise
+
+    if actual_port != args.port:
+        print(f"[web] port {args.port} is already in use; using {actual_port} instead.")
+    url = f"http://{args.host}:{actual_port}/"
     print(f"[web] ContextEcho donation wizard: {url}")
     print("[web] Raw sessions stay local. Press Ctrl-C to stop.")
     if not args.no_open:
