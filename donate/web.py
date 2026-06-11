@@ -437,6 +437,9 @@ INDEX_HTML = r"""<!doctype html>
     .verify-fail-box ul { margin:8px 0 0 18px; padding:0; }
     .verify-fail-box li { margin:4px 0; }
     .verify-fail-box code { background:#fff9f6; border:1px solid #f2c9c0; border-radius:6px; padding:1px 4px; color:#5f1610; }
+    .scrub-suggestion { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .scrub-suggestion code { flex:1; min-width:220px; overflow:auto; white-space:nowrap; }
+    .scrub-suggestion button { padding:7px 10px; font-size:12px; box-shadow:none; }
     .metrics { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .metric { background:#edf3e8; border:1px solid #d5e4ce; border-radius:999px; padding:6px 10px; font-size:13px; }
     .selected-card { display:none; border:2px solid #7cb67d; background:#eef8e8; border-radius:18px; padding:14px; margin-top:14px; }
@@ -679,6 +682,17 @@ function verifyFailureSummary(data){
   const labels = entries.map(([k,v]) => `${k} (${(v || []).length})`).join(', ');
   return `Verify failed: residual ${labels}. Add the shown term(s) to Extra terms to scrub, then click Redact and Verify again.`;
 }
+function suggestedScrubTerms(data){
+  const blocking = ((data || {}).verify_report || {}).blocking || {};
+  const terms = [];
+  Object.values(blocking).forEach(values => {
+    (values || []).forEach(v => {
+      const term = String(v || '').trim();
+      if(term) terms.push(term);
+    });
+  });
+  return [...new Set(terms)];
+}
 async function loadProjectStats(){
   renderProjectStats();
   try {
@@ -699,6 +713,8 @@ function renderRedactResult(data){
   const verify = data.verify_report || {};
   const blocking = verify.blocking || {};
   const blockingEntries = Object.entries(blocking);
+  const suggestedTerms = suggestedScrubTerms(data);
+  const suggestedText = suggestedTerms.join(', ');
   const failDetails = blockingEntries.length
     ? blockingEntries.map(([k,v]) => {
         const samples = (v || []).slice(0, 3).map(x => `<code>${escapeHtml(String(x))}</code>`).join(', ');
@@ -709,6 +725,12 @@ function renderRedactResult(data){
     <div class="verify-fail-box">
       <strong>Why it failed</strong>
       <ul>${failDetails}</ul>
+      ${suggestedTerms.length ? `
+        <div class="scrub-suggestion">
+          <code>${escapeHtml(suggestedText)}</code>
+          <button class="secondary" type="button" id="useSuggestedScrub">Use these terms</button>
+        </div>
+      ` : ''}
       <div class="hint"><strong>Next:</strong> add the remaining private word(s) above in Extra terms to scrub, then click Redact and Verify again. For paths, add the username/project part, not the full path.</div>
     </div>
   `;
@@ -726,6 +748,17 @@ function renderRedactResult(data){
   $('searchPanel').classList.add('show');
   $('searchResult').classList.remove('show');
   $('revealRedactedFile').onclick = () => post('/api/open_path', {path:data.redacted_file, reveal:true}).catch(e => status('redactStatus','ERROR: '+e.message));
+  const suggestedBtn = $('useSuggestedScrub');
+  if(suggestedBtn){
+    suggestedBtn.onclick = () => {
+      const existing = $('scrub').value.split(',').map(x => x.trim()).filter(Boolean);
+      const merged = [...new Set([...existing, ...suggestedTerms])];
+      $('scrub').value = merged.join(', ');
+      $('reviewConfirm').checked = false;
+      status('redactStatus', 'Suggested terms added. Click Redact and Verify to re-redact.');
+      refreshButtons();
+    };
+  }
 }
 function renderSelectedCard(s, idx){
   $('selectedCard').innerHTML = `
