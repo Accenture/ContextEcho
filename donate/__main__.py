@@ -21,17 +21,17 @@ from pathlib import Path
 def reexec_repo_venv_if_available() -> None:
     """Let `python3 -m donate --web` use the venv created by `make setup-donate`."""
     repo_root = Path(__file__).resolve().parent.parent
-    venv_python = repo_root / ".venv" / "bin" / "python"
+    venv_dir = repo_root / ".venv"
+    venv_python = venv_dir / "bin" / "python"
     if not venv_python.exists():
         return
     try:
-        current = Path(sys.executable).resolve()
-        target = venv_python.resolve()
+        in_repo_venv = Path(sys.prefix).resolve() == venv_dir.resolve()
     except OSError:
         return
-    if current == target or os.environ.get("CONTEXTECHO_DONATE_NO_REEXEC"):
+    if in_repo_venv or os.environ.get("CONTEXTECHO_DONATE_NO_REEXEC"):
         return
-    os.execv(str(target), [str(target), "-m", "donate", *sys.argv[1:]])
+    os.execv(str(venv_python), [str(venv_python), "-m", "donate", *sys.argv[1:]])
 
 
 reexec_repo_venv_if_available()
