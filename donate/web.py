@@ -467,19 +467,47 @@ INDEX_HTML = r"""<!doctype html>
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
     .result { display:none; border:1px solid var(--line); border-radius:18px; padding:16px; background:#fbfff4; margin-top:12px; }
     .result.show { display:block; }
-    .success-panel { border:2px solid #1f6f43; background:linear-gradient(135deg,#e6f7df,#fffdf5); box-shadow:0 20px 70px rgba(31,111,67,.2); }
-    .success-title { font-size:32px; font-weight:950; letter-spacing:-.04em; color:#13552f; }
-    .success-subtitle { font-size:17px; color:#3e5d3d; margin-top:4px; }
-    .credit-scoreboard { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:18px 0 6px; }
-    .credit-card { border:1px solid #cfe2c5; border-radius:18px; padding:14px; background:#fffef7; box-shadow:0 10px 26px rgba(31,111,67,.1); }
-    .credit-card strong { display:block; color:#12332a; font-size:22px; line-height:1; }
-    .credit-card span { display:block; margin-top:6px; color:#59625d; font-size:13px; font-weight:800; }
-    .leader-note { margin-top:12px; padding:12px 14px; border-radius:16px; background:#eef8e8; color:#244b31; font-weight:750; }
-    .leaderboard-preview { margin-top:16px; border:1px solid #d5e4ce; border-radius:18px; overflow:hidden; background:#fffef7; }
-    .leaderboard-title { padding:12px 14px; display:flex; justify-content:space-between; gap:10px; color:#12332a; font-weight:950; }
-    .leaderboard-row { display:grid; grid-template-columns:72px minmax(0,1fr) 90px 90px; gap:10px; padding:10px 14px; border-top:1px solid #e4ecd9; align-items:center; }
-    .leaderboard-row.pending { background:#eef8e8; color:#13552f; font-weight:900; }
+    .success-panel { border:1px solid rgba(127,138,119,.24); background:rgba(255,255,250,.96); box-shadow:0 18px 60px rgba(43,59,37,.12); padding:26px; }
+    .success-layout { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:28px; align-items:start; }
+    .success-hero { display:flex; gap:24px; align-items:flex-start; margin-bottom:28px; }
+    .success-check { flex:0 0 72px; width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:#e5f9df; color:#14703d; border:2px solid #9ddd9e; box-shadow:0 12px 26px rgba(31,111,67,.12); font-size:48px; line-height:1; }
+    .success-title { font-size:clamp(30px,4vw,48px); font-weight:950; letter-spacing:-.06em; color:#13552f; line-height:1.02; }
+    .success-subtitle { font-size:17px; color:#4b5650; margin-top:12px; }
+    .credit-scoreboard { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:0 0 22px; }
+    .credit-card { display:flex; gap:18px; align-items:center; border:1px solid #e2e7dd; border-radius:18px; padding:20px; background:#fffefb; box-shadow:0 10px 28px rgba(43,59,37,.08); min-height:78px; }
+    .credit-icon { flex:0 0 58px; width:58px; height:58px; display:grid; place-items:center; border-radius:50%; background:#eaf7e8; color:#17713f; font-size:28px; }
+    .credit-card strong { display:block; color:#087339; font-size:28px; line-height:1; letter-spacing:-.04em; }
+    .credit-card span { display:block; margin-top:8px; color:#59625d; font-size:14px; font-weight:750; }
+    .leader-note { display:flex; gap:14px; align-items:center; margin:0 0 22px; padding:16px 18px; border-radius:16px; background:linear-gradient(90deg,#e8f8e5,#f6fbf1); color:#4a554f; font-weight:650; }
+    .leader-note strong { color:#13552f; }
+    .leader-note:before { content:"i"; flex:0 0 26px; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; border:2px solid #238551; color:#238551; font-weight:950; font-family:ui-serif, Georgia, serif; }
+    .leaderboard-preview { border:1px solid #e0e6dc; border-radius:18px; overflow:hidden; background:#fffefb; box-shadow:0 12px 34px rgba(43,59,37,.07); }
+    .leaderboard-title { padding:18px 20px; display:flex; justify-content:space-between; align-items:center; gap:10px; color:#12332a; font-size:20px; font-weight:950; border-bottom:1px solid #e6eadf; }
+    .leaderboard-title-main { display:flex; gap:12px; align-items:center; }
+    .leaderboard-rank-badge { border-radius:12px; padding:8px 14px; background:#eaf7e8; color:#13552f; font-size:13px; font-weight:950; white-space:nowrap; }
+    .leaderboard-head, .leaderboard-row { display:grid; grid-template-columns:72px minmax(0,1fr) 110px 90px; gap:14px; align-items:center; }
+    .leaderboard-head { padding:14px 20px; color:#5f6662; font-weight:900; border-bottom:1px solid #eef1e8; }
+    .leaderboard-row { padding:18px 20px; border-top:1px solid #eef1e8; }
+    .leaderboard-row.pending { margin:0 10px 10px; border:1px solid #d8ecce; border-radius:14px; background:#f1fbeb; color:#13552f; font-weight:900; }
     .leaderboard-row span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .leader-person { display:flex; flex-direction:column; gap:4px; }
+    .leader-sub { color:#7a837d; font-size:12px; font-weight:650; }
+    .success-detail-card { border:1px solid #e0e6dc; border-radius:20px; padding:22px; background:#fffefb; box-shadow:0 12px 34px rgba(43,59,37,.07); position:sticky; top:16px; }
+    .detail-section { padding:0 0 20px; margin-bottom:20px; border-bottom:1px dashed #dfe5da; }
+    .detail-section:last-child { margin-bottom:0; padding-bottom:0; border-bottom:0; }
+    .detail-heading { display:flex; gap:12px; align-items:center; color:#28332e; font-size:18px; font-weight:950; margin-bottom:12px; }
+    .detail-icon { flex:0 0 26px; color:#178047; font-size:22px; text-align:center; }
+    .detail-value { color:#4d5852; font-size:15px; }
+    .detail-chip { display:inline-block; border-radius:999px; padding:9px 14px; background:#e6f5e4; color:#13552f; font-weight:900; }
+    .copybox { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:12px; background:#fbfbf8; padding:10px 12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; overflow:hidden; }
+    .copybox span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .copy-mini { flex:0 0 auto; border:1px solid #d9dfd4; background:white; color:#5f6662; box-shadow:none; padding:4px 7px; border-radius:8px; font-size:12px; }
+    .receipt-card { margin-top:28px; border:1px solid #e0e6dc; border-radius:18px; padding:22px; background:#fffefb; box-shadow:0 12px 34px rgba(43,59,37,.07); }
+    .receipt-head { display:flex; align-items:center; gap:14px; font-size:20px; font-weight:950; color:#24312b; margin-bottom:16px; }
+    .receipt-head:before { content:"▧"; display:grid; place-items:center; width:42px; height:42px; border-radius:50%; background:#eaf7e8; color:#17713f; }
+    .file-list { display:grid; gap:8px; }
+    .file-pill { display:flex; gap:10px; align-items:center; border:1px solid var(--line); border-radius:12px; background:#fbfbf8; padding:10px 12px; color:#3d4440; font-size:13px; }
+    .file-pill:before { content:"▱"; color:#5c6660; }
     .result-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .badge { display:inline-block; border-radius:999px; padding:5px 10px; font-weight:900; font-size:13px; }
     .badge.pass { background:#dff1d9; color:#13552f; }
@@ -518,8 +546,8 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .compact-input-row input { flex-basis:100%; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -966,45 +994,71 @@ function renderSubmitResult(data){
   const totalDonorsEstimate = simulatedLeaders.length;
   const estimatedRank = Math.max(1, simulatedLeaders.findIndex(row => row.name === creditName) + 1);
   const rankLabel = `${estimatedRank}/${totalDonorsEstimate}`;
-  const leaderboardRows = acceptedLeaders.map(row => `
+  const leaderboardRows = acceptedLeaders.slice(0, 4).map(row => `
     <div class="leaderboard-row">
       <span>${escapeHtml(row.rank || '')}</span>
-      <span>${escapeHtml(row.contributor || '')}</span>
+      <span class="leader-person"><strong>${escapeHtml(row.contributor || '')}</strong><span class="leader-sub">${escapeHtml(row.agents || 'Accepted donor')}</span></span>
       <span>${escapeHtml(row.sessions || '')} sessions</span>
       <span>${escapeHtml(row.points || '—')} pts</span>
     </div>
   `).join('');
   const uploads = (receipt.uploads || [])
-    .map(m => `<span class="metric">${escapeHtml(m.source)}</span>`)
+    .map(m => `<div class="file-pill">${escapeHtml(m.source)}</div>`)
     .join('');
   const emailHref = receipt.contributor_email ? receiptEmailHref(receipt, data.receipt_path) : '';
   $('submitResult').innerHTML = `
-    <div class="success-title">Thank you, ${escapeHtml(firstName)}.</div>
-    <div class="success-subtitle">Your verified redacted session is submitted for maintainer review and release credit.</div>
-    <div class="credit-scoreboard">
-      <div class="credit-card"><strong>+2</strong><span>base points if accepted</span></div>
-      <div class="credit-card"><strong>${highValue ? '+1' : '+0'}</strong><span>${highValue ? 'high-value session bonus' : 'high-value bonus pending'}</span></div>
-      <div class="credit-card"><strong>+1</strong><span>possible coverage / usability bonus</span></div>
-    </div>
-    <div class="leader-note">Pending score: <strong>${pendingRange} points</strong>. Accepted donations appear on the contributor leaderboard and release acknowledgments.</div>
-    <div class="leaderboard-preview">
-      <div class="leaderboard-title"><span>Leaderboard preview</span><span>Estimated rank: ${escapeHtml(rankLabel)}</span></div>
-      <div class="leaderboard-row pending">
-        <span>#${escapeHtml(String(estimatedRank))}</span>
-        <span>${escapeHtml(creditName)}</span>
-        <span>+1 session</span>
-        <span>${pendingRange} pts</span>
+    <div class="success-layout">
+      <div class="success-main">
+        <div class="success-hero">
+          <div class="success-check">✓</div>
+          <div>
+            <div class="success-title">Thank you, ${escapeHtml(firstName)}.</div>
+            <div class="success-subtitle">Your verified redacted session is submitted for maintainer review and release credit.</div>
+          </div>
+        </div>
+        <div class="credit-scoreboard">
+          <div class="credit-card"><div class="credit-icon">☆</div><div><strong>+2</strong><span>Base points if accepted</span></div></div>
+          <div class="credit-card"><div class="credit-icon">◇</div><div><strong>${highValue ? '+1' : '+0'}</strong><span>${highValue ? 'High-value session bonus' : 'High-value bonus pending'}</span></div></div>
+          <div class="credit-card"><div class="credit-icon">▣</div><div><strong>+1</strong><span>Possible coverage / usability bonus</span></div></div>
+        </div>
+        <div class="leader-note"><span><strong>Pending score: ${pendingRange} points.</strong> Accepted donations appear on the contributor leaderboard and release acknowledgments.</span></div>
+        <div class="leaderboard-preview">
+          <div class="leaderboard-title"><span class="leaderboard-title-main">♙ <span>Leaderboard preview</span></span><span class="leaderboard-rank-badge">Estimated rank: ${escapeHtml(rankLabel)}</span></div>
+          <div class="leaderboard-head"><span>#</span><span>Contributor</span><span>+1 session</span><span>${escapeHtml(pendingRange)} pts</span></div>
+          <div class="leaderboard-row pending">
+            <span>${escapeHtml(String(estimatedRank))}</span>
+            <span class="leader-person"><strong>${escapeHtml(creditName)}</strong><span class="leader-sub">Pending donation</span></span>
+            <span>+1 session</span>
+            <span>${pendingRange} pts</span>
+          </div>
+          ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span class="leader-person"><strong>Accepted leaderboard loads after release</strong><span class="leader-sub">No accepted rows loaded</span></span><span>—</span><span>—</span></div>'}
+        </div>
+        ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">Email opens your mail app with the receipt details; no email is sent by the local tool.</div></div>` : ''}
       </div>
-      ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span>Accepted leaderboard loads after release</span><span>—</span><span>—</span></div>'}
+      <aside class="success-detail-card">
+        <div class="detail-section">
+          <div class="detail-heading"><span class="detail-icon">◷</span><span>Status</span></div>
+          <div class="detail-chip">Pending maintainer review</div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-heading"><span class="detail-icon">♙</span><span>Credit name</span></div>
+          <div class="detail-value">${escapeHtml(creditName)}</div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-heading"><span class="detail-icon">▧</span><span>Submission ID</span></div>
+          <div class="copybox"><span>${escapeHtml(publicId)}</span><button class="copy-mini" type="button" id="copySubmissionId">Copy</button></div>
+          <div class="hint">${escapeHtml(idHint)}</div>
+        </div>
+        ${data.receipt_path ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▤</span><span>Receipt</span></div><div class="row"><button id="revealReceipt" type="button">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary" type="button">Email Receipt</button></a>` : ''}</div><div class="hint">${emailHref ? 'Email opens your mail app with receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
+        ${uploads ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▱</span><span>Submitted files</span></div><div class="file-list">${uploads}</div></div>` : ''}
+        <button id="submitAnother" class="secondary" style="width:100%">＋ Submit another session</button>
+      </aside>
     </div>
-    <div class="metrics"><span class="metric">Status: <strong>pending maintainer review</strong></span><span class="metric">Credit name: <strong>${escapeHtml(creditName)}</strong></span></div>
-    <div class="field"><div class="field-label">Submission ID</div><div class="pathbox">${escapeHtml(publicId)}</div><div class="hint">${escapeHtml(idHint)}</div></div>
-    ${data.receipt_path ? `<div class="field"><div class="field-label">Receipt</div><div class="row"><button id="revealReceipt" class="secondary">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary">Email Receipt</button></a>` : ''}</div><div class="pathbox">${escapeHtml(data.receipt_path)}</div><div class="hint">${emailHref ? 'Email opens your mail app with the receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
-    ${uploads ? `<div class="field"><div class="field-label">Submitted files</div><div class="metrics">${uploads}</div></div>` : ''}
-    <div class="row" style="margin-top:14px"><button id="submitAnother" class="secondary">Submit another session</button></div>
   `;
   $('submitResult').classList.add('show', 'success-panel');
   if(data.receipt_path) $('revealReceipt').onclick = () => post('/api/open_path', {path:data.receipt_path, reveal:true}).catch(e => status('submitStatus','ERROR: '+e.message));
+  if($('copySubmissionId')) $('copySubmissionId').onclick = () => navigator.clipboard?.writeText(publicId).catch(()=>{});
+  if($('copyReceiptPath') && data.receipt_path) $('copyReceiptPath').onclick = () => navigator.clipboard?.writeText(data.receipt_path).catch(()=>{});
   $('submitAnother').onclick = () => { resetSessionArtifacts(); goStep(1); };
 }
 function resetSessionArtifacts(){
