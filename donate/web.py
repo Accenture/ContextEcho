@@ -803,7 +803,8 @@ function verifyFailureSummary(data){
 function suggestedScrubTerms(data){
   const blocking = ((data || {}).verify_report || {}).blocking || {};
   const terms = [];
-  Object.values(blocking).forEach(values => {
+  Object.entries(blocking).forEach(([category, values]) => {
+    if(category === 'detect_secrets') return;
     (values || []).forEach(v => {
       const term = String(v || '').trim();
       if(term) terms.push(term);
@@ -849,7 +850,7 @@ function renderRedactResult(data){
           <button class="secondary" type="button" id="useSuggestedScrub">Add to extra terms</button>
         </div>
       ` : ''}
-      <div class="hint"><strong>Next:</strong> add the remaining private word(s) above in Extra terms to scrub, then click Redact and Verify again. For paths, add the username/project part, not the full path.</div>
+      <div class="hint"><strong>Next:</strong> ${blocking.detect_secrets ? 'Click Redact and Verify again to run the credential-pattern redactor. If it still fails, reveal the redacted file and remove the credential-shaped line manually.' : 'add the remaining private word(s) above in Extra terms to scrub, then click Redact and Verify again. For paths, add the username/project part, not the full path.'}</div>
     </div>
   `;
   $('redactResult').innerHTML = `
@@ -1286,7 +1287,7 @@ $('redactBtn').onclick = async () => {
     const pendingScrubTerms = newScrubTerms();
     const canRepair = !!(redacted && redacted.redacted_file && redacted.privacy_tier === privacyTier() && pendingScrubTerms.length);
     const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : $('scrub').value;
-    if(redacted && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
+    if(redacted && redacted.verify_passed && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
       status('redactStatus', 'No new extra terms to apply. Review the current redacted file or add another term.');
       renderRedactResult(redacted);
       refreshButtons();
@@ -1328,9 +1329,11 @@ $('redactBtn').onclick = async () => {
     if(!redacted) throw new Error('redaction did not return a result');
     setBusy('redactProgress', true, 100);
     submitted = false;
-    appliedScrubTerms = canRepair
-      ? [...new Set([...appliedScrubTerms, ...pendingScrubTerms])]
-      : parseScrubTerms($('scrub').value);
+    if(redacted.verify_passed){
+      appliedScrubTerms = canRepair
+        ? [...new Set([...appliedScrubTerms, ...pendingScrubTerms])]
+        : parseScrubTerms($('scrub').value);
+    }
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
     status('redactStatus', redacted.verify_passed ? 'Review the result above. Add more scrub terms if needed, then check the review box to continue.' : verifyFailureSummary(redacted));

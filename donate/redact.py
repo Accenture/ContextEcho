@@ -60,6 +60,8 @@ API_KEY_RES = [
     re.compile(r"xox[baprs]-[0-9A-Za-z\-]{10,}"),   # Slack
     re.compile(r"Bearer\s+[A-Za-z0-9._\-]{20,}"),   # bearer tokens
     re.compile(r"hf_[A-Za-z0-9]{20,}"),             # HuggingFace
+    re.compile(r"[A-Za-z][A-Za-z0-9+.\-]*://[^/\s:@]+:[^/\s:@]+@"),  # basic-auth URL
+    re.compile(r"(?i)\bAuthorization:\s*Basic\s+[A-Za-z0-9+/=]{16,}"),  # HTTP basic auth
 ]
 
 

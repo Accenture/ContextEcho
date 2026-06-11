@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from donate.redact import apply_scrub_terms_to_file, redact_file, redact_file_with_progress
+from donate.redact import apply_scrub_terms_to_file, redact_file, redact_file_with_progress, redact_text
 
 
 HAS_LOCAL_PRESIDIO = (
@@ -75,6 +75,32 @@ class RedactTests(unittest.TestCase):
         self.assertNotIn("alice", text)
         self.assertNotIn("/Users/alice", text)
         self.assertNotIn("-Users-alice", text)
+
+    def test_redact_text_removes_basic_auth_credentials(self) -> None:
+        class NoopAnonymizer:
+            @property
+            def text(self):
+                return self._text
+
+        class NoopEngine:
+            def analyze(self, text, language, entities):
+                return []
+
+        with mock.patch("presidio_anonymizer.AnonymizerEngine") as anonymizer_cls:
+            anonymizer = mock.Mock()
+            anonymizer.anonymize.side_effect = lambda text, analyzer_results, operators: type("Result", (), {"text": text})()
+            anonymizer_cls.return_value = anonymizer
+            stats = {}
+            text = (
+                "curl https://user:pass@example.com/private "
+                "Authorization: Basic dXNlcjpwYXNzd29yZA=="
+            )
+
+            redacted = redact_text(text, NoopEngine(), set(), stats)
+
+        self.assertNotIn("user:pass", redacted)
+        self.assertNotIn("dXNlcjpwYXNzd29yZA", redacted)
+        self.assertGreaterEqual(stats.get("api_key", 0), 2)
 
 
 if __name__ == "__main__":
