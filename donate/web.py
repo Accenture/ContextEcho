@@ -816,6 +816,11 @@ function renderSelectedCard(s, idx){
 function renderSearchResult(data){
   const hits = data.results || [];
   const anyHit = hits.some(x => x.count > 0);
+  const matchedTerms = [...new Set(hits
+    .filter(x => x.count > 0)
+    .map(x => String(x.term || '').trim())
+    .filter(Boolean))];
+  const matchedText = matchedTerms.join(', ');
   const metrics = hits.length
     ? hits.map(x => `<span class="metric">${escapeHtml(x.term)}: <strong>${x.count}</strong></span>`).join('')
     : '<span class="metric">No terms entered</span>';
@@ -825,8 +830,25 @@ function renderSearchResult(data){
       <div class="muted">${anyHit ? 'Add matched terms to scrub and re-run redaction.' : 'Manual search passed for these terms.'}</div>
     </div>
     <div class="metrics">${metrics}</div>
+    ${matchedTerms.length ? `
+      <div class="scrub-suggestion">
+        <code>${escapeHtml(matchedText)}</code>
+        <button class="secondary" type="button" id="useSearchScrub">Use matched terms</button>
+      </div>
+    ` : ''}
   `;
   $('searchResult').classList.add('show');
+  const searchScrubBtn = $('useSearchScrub');
+  if(searchScrubBtn){
+    searchScrubBtn.onclick = () => {
+      const existing = $('scrub').value.split(',').map(x => x.trim()).filter(Boolean);
+      const merged = [...new Set([...existing, ...matchedTerms])];
+      $('scrub').value = merged.join(', ');
+      $('reviewConfirm').checked = false;
+      status('redactStatus', 'Matched search terms added. Click Redact and Verify to re-redact.');
+      refreshButtons();
+    };
+  }
 }
 function receiptEmailHref(receipt, receiptPath){
   const email = receipt.contributor_email || '';
