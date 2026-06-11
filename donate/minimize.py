@@ -1,7 +1,7 @@
 """Optional donor-privacy minimization for redacted session JSONL files.
 
 This pass runs after normal PII/secret redaction. It keeps assistant/tool
-behavior available for ContextEcho while masking donor-authored free text.
+behavior available for ContextEcho while masking sensitive donor-authored text.
 """
 from __future__ import annotations
 
@@ -14,33 +14,65 @@ PERSONAL_RE = re.compile(
     r"\b("
     r"feel|felt|feeling|stressed|stress|anxious|anxiety|sad|angry|upset|"
     r"worried|scared|afraid|personal|private|family|relationship|health|"
-    r"depressed|depression|overwhelmed|burned out|burnt out"
+    r"depressed|depression|overwhelmed|burned out|burnt out|panic|lonely|"
+    r"grief|trauma|therapy|therapist|suicide|self-harm"
     r")\b",
     re.IGNORECASE,
 )
-CODE_HINT_RE = re.compile(r"(```|def |class |function |const |let |var |import |from |SELECT |<[^>]+>)")
+PRIVATE_LIFE_RE = re.compile(
+    r"\b("
+    r"medical|doctor|diagnosis|medication|hospital|illness|disability|"
+    r"salary|debt|bankruptcy|mortgage|rent|visa|immigration|lawsuit|"
+    r"divorce|pregnant|pregnancy|child|children|parent|spouse|partner"
+    r")\b",
+    re.IGNORECASE,
+)
+IDENTITY_RE = re.compile(
+    r"\b("
+    r"my age is|i am \d{1,3}|i'm \d{1,3}|my gender|my race|my religion|"
+    r"my nationality|my disability|my political"
+    r")\b",
+    re.IGNORECASE,
+)
+TOXIC_RE = re.compile(
+    r"\b("
+    r"fuck|shit|bitch|asshole|bastard|idiot|stupid|hate|kill myself|"
+    r"slur"
+    r")\b",
+    re.IGNORECASE,
+)
+CONFIDENTIAL_RE = re.compile(
+    r"\b("
+    r"nda|confidential|client[- ]confidential|do not share|internal only|"
+    r"secret project|codename|password|token|api key|credential"
+    r")\b",
+    re.IGNORECASE,
+)
 TEXT_KEYS = {"content", "message", "text", "prompt", "input", "text_elements"}
+SENSITIVE_PATTERNS = [
+    ("personal_feeling", PERSONAL_RE, "<USER_PRIVATE_FEELING_REDACTED>"),
+    ("private_life", PRIVATE_LIFE_RE, "<USER_PRIVATE_DETAIL_REDACTED>"),
+    ("identity_disclosure", IDENTITY_RE, "<USER_IDENTITY_DISCLOSURE_REDACTED>"),
+    ("toxic_language", TOXIC_RE, "<USER_TOXIC_LANGUAGE_REDACTED>"),
+    ("confidential", CONFIDENTIAL_RE, "<USER_CONFIDENTIAL_DETAIL_REDACTED>"),
+]
 
 
 def approx_tokens(text: str) -> int:
     return max(1, len(text.split()))
 
 
-def classify_user_text(text: str) -> dict[str, Any]:
-    tags: list[str] = []
-    if PERSONAL_RE.search(text):
-        tags.append("personal")
-    if CODE_HINT_RE.search(text):
-        tags.append("contains_code")
-    if not tags:
-        tags.append("task_or_instruction")
-    summary = "personal non-task statement" if "personal" in tags else "user task or instruction"
-    return {
-        "content": "<USER_PERSONAL_TEXT_REDACTED>" if "personal" in tags else "<USER_TEXT_REDACTED>",
-        "summary": summary,
-        "tags": tags,
-        "approx_tokens": approx_tokens(text),
-    }
+def minimize_user_text(text: str, stats: dict[str, int]) -> str:
+    """Mask sensitive spans while keeping task/code semantics."""
+    out = text
+    for tag, pattern, replacement in SENSITIVE_PATTERNS:
+        out, n = pattern.subn(replacement, out)
+        if n:
+            stats["user_sensitive_spans_minimized"] = stats.get("user_sensitive_spans_minimized", 0) + n
+            stats[f"user_{tag}_spans_minimized"] = stats.get(f"user_{tag}_spans_minimized", 0) + n
+    if out != text:
+        stats["user_strings_minimized"] = stats.get("user_strings_minimized", 0) + 1
+    return out
 
 
 def is_user_turn(obj: dict[str, Any]) -> bool:
@@ -59,10 +91,7 @@ def is_user_turn(obj: dict[str, Any]) -> bool:
 
 def minimize_value(value: Any, stats: dict[str, int]) -> Any:
     if isinstance(value, str):
-        stats["user_strings_minimized"] = stats.get("user_strings_minimized", 0) + 1
-        if PERSONAL_RE.search(value):
-            stats["personal_user_strings_minimized"] = stats.get("personal_user_strings_minimized", 0) + 1
-        return classify_user_text(value)
+        return minimize_user_text(value, stats)
     if isinstance(value, list):
         return [minimize_value(v, stats) for v in value]
     if isinstance(value, dict):
@@ -109,7 +138,7 @@ def minimize_file(src: Path, dst: Path) -> dict[str, int]:
             obj = json.loads(line)
         except Exception:
             stats["raw_lines_minimized"] = stats.get("raw_lines_minimized", 0) + 1
-            lines_out.append(json.dumps(classify_user_text(line), ensure_ascii=False, separators=(",", ":")))
+            lines_out.append(json.dumps(minimize_user_text(line, stats), ensure_ascii=False, separators=(",", ":")))
             continue
         if isinstance(obj, dict) and is_user_turn(obj):
             obj = minimize_user_turn(obj, stats)

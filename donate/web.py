@@ -557,7 +557,7 @@ INDEX_HTML = r"""<!doctype html>
     <p class="muted"><strong>ContextEcho analyzes assistant behavior, not donor personality.</strong> Choose how much of your own wording to keep.</p>
     <div class="privacy-options">
       <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><strong>Full redacted</strong><div class="hint">Default. Keeps task flow after PII/secrets/custom terms are removed. Highest scientific fidelity.</div></label>
-      <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><strong>User-minimized</strong><div class="hint">Masks donor free-text after redaction. Assistant/tool behavior remains; lower detail, stronger privacy.</div></label>
+      <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><strong>User-minimized</strong><div class="hint">Selectively masks sensitive donor text after redaction. Coding task context remains; stronger privacy.</div></label>
     </div>
     <p class="muted">Automatic redaction covers common sensitive data such as paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</p>
     <label><input id="safeConfirm" type="checkbox" style="width:auto"> I confirm this session is safe to donate.</label>

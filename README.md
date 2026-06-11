@@ -204,8 +204,8 @@ to private maintainer review.
 > **Donor privacy.** ContextEcho analyzes **assistant behavior**, not
 > **donor personality**. The default donation mode is **full redacted**, which
 > removes **PII, secrets, paths, and custom scrub terms** while preserving task
-> flow. Donors can choose **user-minimized** mode to mask donor-authored free
-> text after redaction. See [`DONOR_PRIVACY.md`](DONOR_PRIVACY.md) and
+> flow. Donors can choose **user-minimized** mode to selectively mask sensitive
+> donor-authored spans after redaction. See [`DONOR_PRIVACY.md`](DONOR_PRIVACY.md) and
 > [`DATA_USE_POLICY.md`](DATA_USE_POLICY.md).
 
 Maintainers convert accepted private staging submissions into the next public
