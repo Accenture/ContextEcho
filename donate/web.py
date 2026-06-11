@@ -366,7 +366,7 @@ INDEX_HTML = r"""<!doctype html>
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
-    .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:12px; margin:-6px 0 16px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
+    .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; margin-top:12px; max-width:520px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
     .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
     .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
     .bow-head:before, .bow-head:after { content:""; position:absolute; top:9px; width:3px; height:3px; border-radius:50%; background:#17201c; }
@@ -383,9 +383,9 @@ INDEX_HTML = r"""<!doctype html>
     .support-main { min-width:0; flex:1; }
     .support-title { font-weight:950; color:#13552f; }
     .support-copy { color:var(--muted); font-size:12px; margin-top:2px; }
-    .support-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .support-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
     .support-actions a { text-decoration:none; }
-    .support-actions button { padding:9px 11px; font-size:12px; box-shadow:none; }
+    .support-actions button { padding:8px 10px; font-size:12px; box-shadow:none; }
     .support-actions button.github { background:#111b18; color:#fffef8; }
     .support-actions button.dataset { background:#e8eddc; color:var(--ink); }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
@@ -474,6 +474,17 @@ INDEX_HTML = r"""<!doctype html>
       <div>
         <h1>ContextEcho Donation Wizard</h1>
         <div class="topline">Donate a coding-agent session in a few local-first steps.</div>
+        <div class="support-card">
+          <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
+          <div class="support-main">
+            <div class="support-title">Help more donors find ContextEcho</div>
+            <div class="support-copy">A star or like improves visibility for this benchmark.</div>
+            <div class="support-actions">
+              <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
+              <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="hero-side">
         <div class="privacy-note"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
@@ -505,17 +516,6 @@ INDEX_HTML = r"""<!doctype html>
           <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="gift"></div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
-        </div>
-        <div class="support-card">
-          <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
-          <div class="support-main">
-            <div class="support-title">Help more donors find ContextEcho</div>
-            <div class="support-copy">A star or like improves visibility for this benchmark.</div>
-            <div class="support-actions">
-              <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
-              <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
-            </div>
-          </div>
         </div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
         <div class="row reset-donated">
