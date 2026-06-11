@@ -509,13 +509,13 @@ INDEX_HTML = r"""<!doctype html>
     .topline { color:var(--muted); max-width:760px; font-size:18px; }
     .actions { justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
     .compact-input-row label { margin:0; white-space:nowrap; }
-    .compact-input-row input { flex:0 1 300px; min-width:220px; }
+    .compact-input-row input { flex:1 1 520px; min-width:260px; }
     .privacy-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
     .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .actions { justify-content:flex-start; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .compact-input-row input { flex-basis:100%; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
