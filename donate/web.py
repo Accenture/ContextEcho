@@ -469,29 +469,28 @@ INDEX_HTML = r"""<!doctype html>
     .result.show { display:block; }
     .success-panel { border:1px solid rgba(127,138,119,.24); background:rgba(255,255,250,.96); box-shadow:0 18px 60px rgba(43,59,37,.12); padding:26px; }
     .success-layout { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:28px; align-items:start; }
-    .success-hero { display:flex; gap:24px; align-items:flex-start; margin-bottom:28px; }
-    .success-check { flex:0 0 72px; width:72px; height:72px; border-radius:50%; display:grid; place-items:center; background:#e5f9df; color:#14703d; border:2px solid #9ddd9e; box-shadow:0 12px 26px rgba(31,111,67,.12); font-size:48px; line-height:1; }
-    .success-title { font-size:clamp(30px,4vw,48px); font-weight:950; letter-spacing:-.06em; color:#13552f; line-height:1.02; }
-    .success-subtitle { font-size:17px; color:#4b5650; margin-top:12px; }
-    .credit-scoreboard { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:0 0 22px; }
-    .credit-card { display:flex; gap:18px; align-items:center; border:1px solid #e2e7dd; border-radius:18px; padding:20px; background:#fffefb; box-shadow:0 10px 28px rgba(43,59,37,.08); min-height:78px; }
-    .credit-icon { flex:0 0 58px; width:58px; height:58px; display:grid; place-items:center; border-radius:50%; background:#eaf7e8; color:#17713f; font-size:28px; }
-    .credit-card strong { display:block; color:#087339; font-size:28px; line-height:1; letter-spacing:-.04em; }
-    .credit-card span { display:block; margin-top:8px; color:#59625d; font-size:14px; font-weight:750; }
-    .leader-note { display:flex; gap:14px; align-items:center; margin:0 0 22px; padding:16px 18px; border-radius:16px; background:linear-gradient(90deg,#e8f8e5,#f6fbf1); color:#4a554f; font-weight:650; }
+    .success-hero { display:flex; gap:18px; align-items:flex-start; margin-bottom:20px; }
+    .success-check { flex:0 0 58px; width:58px; height:58px; border-radius:50%; display:grid; place-items:center; background:#e5f9df; color:#14703d; border:2px solid #9ddd9e; box-shadow:0 10px 22px rgba(31,111,67,.12); font-size:38px; line-height:1; }
+    .success-title { font-size:clamp(28px,3vw,38px); font-weight:950; letter-spacing:-.05em; color:#13552f; line-height:1.02; }
+    .success-subtitle { font-size:15px; color:#4b5650; margin-top:8px; }
+    .credit-scoreboard { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0 0 16px; }
+    .credit-card { display:flex; gap:12px; align-items:center; border:1px solid #e2e7dd; border-radius:16px; padding:14px; background:#fffefb; box-shadow:0 8px 20px rgba(43,59,37,.07); min-height:62px; }
+    .credit-icon { flex:0 0 44px; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; background:#eaf7e8; color:#17713f; font-size:22px; }
+    .credit-card strong { display:block; color:#087339; font-size:24px; line-height:1; letter-spacing:-.04em; }
+    .credit-card span { display:block; margin-top:5px; color:#59625d; font-size:12px; font-weight:750; }
+    .leader-note { display:flex; gap:12px; align-items:center; margin:0 0 16px; padding:12px 14px; border-radius:14px; background:linear-gradient(90deg,#e8f8e5,#f6fbf1); color:#4a554f; font-size:13px; font-weight:650; }
     .leader-note strong { color:#13552f; }
     .leader-note:before { content:"i"; flex:0 0 26px; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; border:2px solid #238551; color:#238551; font-weight:950; font-family:ui-serif, Georgia, serif; }
     .leaderboard-preview { border:1px solid #e0e6dc; border-radius:18px; overflow:hidden; background:#fffefb; box-shadow:0 12px 34px rgba(43,59,37,.07); }
-    .leaderboard-title { padding:18px 20px; display:flex; justify-content:space-between; align-items:center; gap:10px; color:#12332a; font-size:20px; font-weight:950; border-bottom:1px solid #e6eadf; }
-    .leaderboard-title-main { display:flex; gap:12px; align-items:center; }
-    .leaderboard-rank-badge { border-radius:12px; padding:8px 14px; background:#eaf7e8; color:#13552f; font-size:13px; font-weight:950; white-space:nowrap; }
-    .leaderboard-head, .leaderboard-row { display:grid; grid-template-columns:72px minmax(0,1fr) 110px 90px; gap:14px; align-items:center; }
-    .leaderboard-head { padding:14px 20px; color:#5f6662; font-weight:900; border-bottom:1px solid #eef1e8; }
-    .leaderboard-row { padding:18px 20px; border-top:1px solid #eef1e8; }
-    .leaderboard-row.pending { margin:0 10px 10px; border:1px solid #d8ecce; border-radius:14px; background:#f1fbeb; color:#13552f; font-weight:900; }
+    .leaderboard-title { padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:10px; color:#12332a; font-size:16px; font-weight:950; border-bottom:1px solid #e6eadf; }
+    .leaderboard-title-main { display:flex; gap:8px; align-items:center; }
+    .leaderboard-rank-badge { border-radius:10px; padding:6px 10px; background:#eaf7e8; color:#13552f; font-size:12px; font-weight:950; white-space:nowrap; }
+    .leaderboard-head, .leaderboard-row { display:grid; grid-template-columns:48px minmax(0,1fr) 92px 64px; gap:10px; align-items:center; }
+    .leaderboard-head { padding:9px 16px; color:#5f6662; font-size:12px; font-weight:900; border-bottom:1px solid #eef1e8; }
+    .leaderboard-row { padding:10px 16px; border-top:1px solid #eef1e8; font-size:13px; }
+    .leaderboard-row.pending { margin:0 8px 8px; border:1px solid #d8ecce; border-radius:12px; background:#f1fbeb; color:#13552f; font-weight:900; }
     .leaderboard-row span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .leader-person { display:flex; flex-direction:column; gap:4px; }
-    .leader-sub { color:#7a837d; font-size:12px; font-weight:650; }
+    .leader-person { font-weight:850; }
     .success-detail-card { border:1px solid #e0e6dc; border-radius:20px; padding:22px; background:#fffefb; box-shadow:0 12px 34px rgba(43,59,37,.07); position:sticky; top:16px; }
     .detail-section { padding:0 0 20px; margin-bottom:20px; border-bottom:1px dashed #dfe5da; }
     .detail-section:last-child { margin-bottom:0; padding-bottom:0; border-bottom:0; }
@@ -998,7 +997,7 @@ function renderSubmitResult(data){
   const leaderboardRows = acceptedLeaders.slice(0, 4).map(row => `
     <div class="leaderboard-row">
       <span>${escapeHtml(row.rank || '')}</span>
-      <span class="leader-person"><strong>${escapeHtml(row.contributor || '')}</strong><span class="leader-sub">${escapeHtml(row.agents || 'Accepted donor')}</span></span>
+      <span class="leader-person">${escapeHtml(row.contributor || '')}</span>
       <span>${escapeHtml(row.sessions || '')} sessions</span>
       <span>${escapeHtml(row.points || '—')} pts</span>
     </div>
@@ -1028,11 +1027,11 @@ function renderSubmitResult(data){
           <div class="leaderboard-head"><span>#</span><span>Contributor</span><span>+1 session</span><span>${escapeHtml(pendingRange)} pts</span></div>
           <div class="leaderboard-row pending">
             <span>${escapeHtml(String(estimatedRank))}</span>
-            <span class="leader-person"><strong>${escapeHtml(creditName)}</strong><span class="leader-sub">Pending donation</span></span>
+            <span class="leader-person">${escapeHtml(creditName)}</span>
             <span>+1 session</span>
             <span>${pendingRange} pts</span>
           </div>
-          ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span class="leader-person"><strong>Accepted leaderboard loads after release</strong><span class="leader-sub">No accepted rows loaded</span></span><span>—</span><span>—</span></div>'}
+          ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span class="leader-person">Accepted leaderboard loads after release</span><span>—</span><span>—</span></div>'}
         </div>
         ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">Email opens your mail app with the receipt details; no email is sent by the local tool.</div></div>` : ''}
       </div>
