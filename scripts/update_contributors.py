@@ -239,6 +239,20 @@ def title_case_axis(value: str) -> str:
     return value.replace("-", " ").title() if value else "—"
 
 
+def compact_model(value: str) -> str:
+    return value.replace("Opus 4.x (mixed)", "Opus 4.x") if value else "—"
+
+
+def compact_domain(value: str) -> str:
+    return value or "—"
+
+
+def compact_status(session: SessionEntry) -> str:
+    if not session.counted:
+        return "v2 dup"
+    return session.status.replace(" candidate", "") or "—"
+
+
 def render_contributors(contributors: list[Contributor], sessions: list[SessionEntry]) -> str:
     counted = [s for s in sessions if s.counted]
     total_sessions = len(counted)
@@ -297,26 +311,23 @@ def render_contributors(contributors: list[Contributor], sessions: list[SessionE
         "variants can be accepted for analysis, but only the first unique source session",
         "per contributor counts toward points.",
         "",
-        "| ID | Contributor | Agent / Harness | Model | Org | Domain | Language | Turns | Compactions | Points | Status |",
-        "|----|-------------|-----------------|-------|-----|--------|----------|------:|:-----------:|:------:|--------|",
+        "| ID | Donor | Agent | Model | Org | Domain | Lang | Turns | Cmp | Pts | Status |",
+        "|----|-------|-------|-------|-----|--------|------|------:|:---:|:---:|--------|",
     ])
     for session in sessions:
-        status = session.status
-        if not session.counted:
-            status += " · duplicate variant"
         lines.append(
             "| {sid} | {contributor} | {agent} | {model} | {org} | {domain} | {language} | {turns:,} | {compactions} | {points} | {status} |".format(
                 sid=session.sid,
                 contributor=md_escape(session.contributor),
                 agent=md_escape(session.agent or "—"),
-                model=md_escape(session.model or "—"),
+                model=md_escape(compact_model(session.model)),
                 org=md_escape(session.org or "—"),
-                domain=md_escape(title_case_axis(session.domain)),
+                domain=md_escape(compact_domain(session.domain)),
                 language=md_escape(session.language or "—"),
                 turns=session.turns,
                 compactions=session.compactions,
                 points=session.points if session.counted else 0,
-                status=md_escape(status),
+                status=md_escape(compact_status(session)),
             )
         )
     axes = {

@@ -40,14 +40,14 @@ Each donated session declares the **agent/harness** it was driven by, the
 variants can be accepted for analysis, but only the first unique source session
 per contributor counts toward points.
 
-| ID | Contributor | Agent / Harness | Model | Org | Domain | Language | Turns | Compactions | Points | Status |
-|----|-------------|-----------------|-------|-----|--------|----------|------:|:-----------:|:------:|--------|
-| S1 | Anonymous donor S1 | Claude Code | Opus 4.x (mixed) | Anthropic | Agentic Coding | Python | 9,716 | 6 | 5 | v1.0 |
-| S2 | Anonymous donor S2 | Claude Code | Opus 4.x (mixed) | Anthropic | Manuscript Writing | mixed | 3,746 | 3 | 5 | v1.0 |
-| S3 | Anonymous donor S3 | Claude Code | Opus 4.x (mixed) | Anthropic | Non Coding Docs | mixed | 4,918 | 4 | 5 | v1.0 |
-| S4 | Xianzhong Ding | Codex CLI | gpt-5.4 | OpenAI | Agentic Coding | mixed | 449 | 5 | 5 | v2 candidate |
-| S5 | Xianzhong Ding | Codex CLI | gpt-5.4 | OpenAI | Agentic Coding | mixed | 449 | 5 | 0 | v2 candidate · duplicate variant |
-| S6 | Xianzhong Ding | Codex CLI | gpt-5.4 | OpenAI | Agentic Coding | mixed | 449 | 5 | 0 | v2 candidate · duplicate variant |
+| ID | Donor | Agent | Model | Org | Domain | Lang | Turns | Cmp | Pts | Status |
+|----|-------|-------|-------|-----|--------|------|------:|:---:|:---:|--------|
+| S1 | Anonymous donor S1 | Claude Code | Opus 4.x | Anthropic | agentic-coding | Python | 9,716 | 6 | 5 | v1.0 |
+| S2 | Anonymous donor S2 | Claude Code | Opus 4.x | Anthropic | manuscript-writing | mixed | 3,746 | 3 | 5 | v1.0 |
+| S3 | Anonymous donor S3 | Claude Code | Opus 4.x | Anthropic | non-coding-docs | mixed | 4,918 | 4 | 5 | v1.0 |
+| S4 | Xianzhong Ding | Codex CLI | gpt-5.4 | OpenAI | agentic-coding | mixed | 449 | 5 | 5 | v2 |
+| S5 | Xianzhong Ding | Codex CLI | gpt-5.4 | OpenAI | agentic-coding | mixed | 449 | 5 | 0 | v2 dup |
+| S6 | Xianzhong Ding | Codex CLI | gpt-5.4 | OpenAI | agentic-coding | mixed | 449 | 5 | 0 | v2 dup |
 
 ---
 
