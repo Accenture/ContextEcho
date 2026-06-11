@@ -134,6 +134,17 @@ class WebTests(unittest.TestCase):
         self.assertEqual(parsed["url"], "https://example.com/pr")
         self.assertEqual(parsed["uploads"][0]["source"], "a")
 
+    def test_parse_relay_submit_output(self):
+        parsed = parse_submit_output(
+            "[submit] upload mode  : relay\n"
+            "[submit] relay       : http://127.0.0.1:8088\n"
+            "[submit]   session.redacted.jsonl     -> session.redacted.jsonl\n"
+            "[submit] Submitted for maintainer review.\n"
+            "[submit] Submission ID: submission-abc12345\n"
+        )
+        self.assertEqual(parsed["submission"], "submission-abc12345")
+        self.assertEqual(parsed["uploads"][0]["source"], "session.redacted.jsonl")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -117,6 +117,8 @@ def save_donation_record(source_path: str | Path = "", artifact_path: str | Path
     if akey:
         artifact_keys.add(akey)
     m = re.search(r"\[submit\] submission\s*:\s*(pending/submission-[^/\s]+/)", output)
+    if not m:
+        m = re.search(r"\[submit\]\s*Submission ID:\s*(submission-[A-Za-z0-9_-]+)", output)
     submissions.append({
         "submitted_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "source_key": skey,
@@ -157,6 +159,8 @@ def parse_submit_output(output: str) -> dict:
     url = (re.search(r"https?://\S+", output) or [None])[0] or ""
     repo = (re.search(r"\[submit\] target repo\s*:\s*(.+)", output) or [None, ""])[1].strip()
     submission = (re.search(r"\[submit\] submission\s*:\s*(pending/submission-[^/\s]+/)", output) or [None, ""])[1].strip()
+    if not submission:
+        submission = (re.search(r"\[submit\]\s*Submission ID:\s*(submission-[A-Za-z0-9_-]+)", output) or [None, ""])[1].strip()
     uploads = [
         {"source": m.group(1).strip(), "target": m.group(2).strip()}
         for m in re.finditer(r"\[submit\]\s+(.+?)\s+->\s+(.+)", output)
@@ -909,7 +913,7 @@ function renderSearchResult(data){
 }
 function receiptEmailHref(receipt, receiptPath){
   const email = receipt.contributor_email || '';
-  const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'unknown';
+  const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'not available';
   const subject = `ContextEcho donation receipt ${publicId}`.trim();
   const body = [
     'ContextEcho donation receipt',
@@ -929,7 +933,10 @@ function receiptEmailHref(receipt, receiptPath){
 }
 function renderSubmitResult(data){
   const receipt = data.receipt || {};
-  const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'recorded locally';
+  const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'not available';
+  const idHint = receipt.submission
+    ? 'Save this ID for support. Maintainers can use it to find your private staging submission.'
+    : 'The receipt was saved locally, but no staging submission ID was returned.';
   const creditName = (receipt.credit_name || receipt.contributor || $('contributorName').value || 'Contributor').trim();
   const firstName = creditName.split(/\s+/)[0] || 'Contributor';
   const turns = Number(receipt.turns || 0);
@@ -991,7 +998,7 @@ function renderSubmitResult(data){
       ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span>Accepted leaderboard loads after release</span><span>—</span><span>—</span></div>'}
     </div>
     <div class="metrics"><span class="metric">Status: <strong>pending maintainer review</strong></span><span class="metric">Credit name: <strong>${escapeHtml(creditName)}</strong></span></div>
-    <div class="field"><div class="field-label">Submission ID</div><div class="pathbox">${escapeHtml(publicId)}</div><div class="hint">Save this ID for support. Maintainers can use it to find your private staging submission.</div></div>
+    <div class="field"><div class="field-label">Submission ID</div><div class="pathbox">${escapeHtml(publicId)}</div><div class="hint">${escapeHtml(idHint)}</div></div>
     ${data.receipt_path ? `<div class="field"><div class="field-label">Receipt</div><div class="row"><button id="revealReceipt" class="secondary">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary">Email Receipt</button></a>` : ''}</div><div class="pathbox">${escapeHtml(data.receipt_path)}</div><div class="hint">${emailHref ? 'Email opens your mail app with the receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
     ${uploads ? `<div class="field"><div class="field-label">Submitted files</div><div class="metrics">${uploads}</div></div>` : ''}
     <div class="row" style="margin-top:14px"><button id="submitAnother" class="secondary">Submit another session</button></div>
