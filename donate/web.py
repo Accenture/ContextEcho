@@ -427,6 +427,11 @@ INDEX_HTML = r"""<!doctype html>
     .success-panel { border:2px solid #1f6f43; background:linear-gradient(135deg,#e6f7df,#fffdf5); box-shadow:0 20px 70px rgba(31,111,67,.2); }
     .success-title { font-size:32px; font-weight:950; letter-spacing:-.04em; color:#13552f; }
     .success-subtitle { font-size:17px; color:#3e5d3d; margin-top:4px; }
+    .credit-scoreboard { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:18px 0 6px; }
+    .credit-card { border:1px solid #cfe2c5; border-radius:18px; padding:14px; background:#fffef7; box-shadow:0 10px 26px rgba(31,111,67,.1); }
+    .credit-card strong { display:block; color:#12332a; font-size:22px; line-height:1; }
+    .credit-card span { display:block; margin-top:6px; color:#59625d; font-size:13px; font-weight:800; }
+    .leader-note { margin-top:12px; padding:12px 14px; border-radius:16px; background:#eef8e8; color:#244b31; font-weight:750; }
     .result-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .badge { display:inline-block; border-radius:999px; padding:5px 10px; font-weight:900; font-size:13px; }
     .badge.pass { background:#dff1d9; color:#13552f; }
@@ -556,7 +561,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="danger">Only donate personal, internal tooling, or open-source sessions. Do not donate client-confidential/NDA data.</div>
     <p class="muted"><strong>ContextEcho analyzes assistant behavior, not donor personality.</strong> Choose how much of your own wording to keep.</p>
     <div class="privacy-options">
-      <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><strong>Full redacted</strong><div class="hint">Default. Keeps task flow after PII/secrets/custom terms are removed. Highest scientific fidelity.</div></label>
+      <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><strong>Full redacted <span class="pill best">recommended</span></strong><div class="hint">Default. Keeps task flow after PII/secrets/custom terms are removed. Highest scientific fidelity.</div></label>
       <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><strong>User-minimized</strong><div class="hint">Selectively masks sensitive donor text after redaction. Coding task context remains; stronger privacy.</div></label>
     </div>
     <p class="muted">Automatic redaction covers common sensitive data such as paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</p>
@@ -881,18 +886,25 @@ function receiptEmailHref(receipt, receiptPath){
 function renderSubmitResult(data){
   const receipt = data.receipt || {};
   const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'recorded locally';
+  const creditName = (receipt.credit_name || receipt.contributor || $('contributorName').value || 'Contributor').trim();
+  const firstName = creditName.split(/\s+/)[0] || 'Contributor';
+  const turns = Number(receipt.turns || 0);
+  const compactions = Number(receipt.compactions || 0);
+  const highValue = turns >= 100 || compactions >= 1;
   const uploads = (receipt.uploads || [])
     .map(m => `<span class="metric">${escapeHtml(m.source)}</span>`)
     .join('');
   const emailHref = receipt.contributor_email ? receiptEmailHref(receipt, data.receipt_path) : '';
   $('submitResult').innerHTML = `
-    <div class="success-title">Submission received</div>
-    <div class="success-subtitle">Your verified redacted session was uploaded for private maintainer review.</div>
-    <div class="metrics">
-      <span class="metric">Status: <strong>pending review</strong></span>
-      <span class="metric">Credit: <strong>+2 pending</strong></span>
-      <span class="metric">Novelty: <strong>+1 possible bonus</strong></span>
+    <div class="success-title">Thank you, ${escapeHtml(firstName)}.</div>
+    <div class="success-subtitle">Your verified redacted session is submitted for maintainer review and release credit.</div>
+    <div class="credit-scoreboard">
+      <div class="credit-card"><strong>+2</strong><span>base points if accepted</span></div>
+      <div class="credit-card"><strong>${highValue ? '+1' : '+0'}</strong><span>${highValue ? 'high-value session bonus' : 'high-value bonus pending'}</span></div>
+      <div class="credit-card"><strong>+1</strong><span>possible coverage / usability bonus</span></div>
     </div>
+    <div class="leader-note">Pending score: <strong>${highValue ? '3–5' : '2–4'} points</strong>. Accepted donations appear on the contributor leaderboard and release acknowledgments.</div>
+    <div class="metrics"><span class="metric">Status: <strong>pending maintainer review</strong></span><span class="metric">Credit name: <strong>${escapeHtml(creditName)}</strong></span></div>
     <div class="field"><div class="field-label">Submission ID</div><div class="pathbox">${escapeHtml(publicId)}</div><div class="hint">Save this ID for support. Maintainers can use it to find your private staging submission.</div></div>
     ${data.receipt_path ? `<div class="field"><div class="field-label">Receipt</div><div class="row"><button id="revealReceipt" class="secondary">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary">Email Receipt</button></a>` : ''}</div><div class="pathbox">${escapeHtml(data.receipt_path)}</div><div class="hint">${emailHref ? 'Email opens your mail app with the receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
     ${uploads ? `<div class="field"><div class="field-label">Submitted files</div><div class="metrics">${uploads}</div></div>` : ''}
