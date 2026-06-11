@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 from donate.web import (
+    _parse_contributor_leaderboard,
     _parse_donated_sessions,
     already_submitted,
     annotate_donated,
@@ -24,6 +25,21 @@ class WebTests(unittest.TestCase):
         self.assertEqual(_parse_donated_sessions("3 redacted donor sessions"), 3)
         self.assertEqual(_parse_donated_sessions("1,234 donated sessions"), 1234)
         self.assertIsNone(_parse_donated_sessions("no donation count here"))
+
+    def test_parse_contributor_leaderboard_stops_before_session_ledger(self):
+        rows = _parse_contributor_leaderboard(
+            "\n".join([
+                "| Rank | Contributor | Sessions | Turns | Agents | Models | Points |",
+                "|:----:|-------------|:--------:|------:|--------|--------|:------:|",
+                "| 🥇 | Founding donors | 3 | 18,380 | Claude Code | Opus 4.x | — |",
+                "",
+                "| ID | Agent / Harness | Model | Org | Domain | Language | Turns |",
+                "|----|-----------------|-------|-----|--------|----------|------:|",
+                "| S1 | Claude Code | Opus | Anthropic | coding | Python | 9,716 |",
+            ])
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["contributor"], "Founding donors")
 
     def test_create_server_falls_back_when_port_is_busy(self):
         fake_server = mock.Mock()

@@ -278,6 +278,35 @@ def _parse_donated_sessions(readme: str) -> int | None:
     return None
 
 
+def _parse_contributor_leaderboard(markdown: str) -> list[dict]:
+    rows: list[dict] = []
+    in_table = False
+    for line in markdown.splitlines():
+        if line.startswith("| Rank | Contributor | Sessions | Turns |"):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if rows and not line.startswith("|"):
+            break
+        if line.startswith("|:") or not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 7:
+            break
+        rank, contributor, sessions, turns, agents, models, points = cells[:7]
+        rows.append({
+            "rank": rank,
+            "contributor": re.sub(r"\*\*", "", contributor),
+            "sessions": sessions,
+            "turns": turns,
+            "agents": agents,
+            "models": models,
+            "points": points,
+        })
+    return rows[:5]
+
+
 def project_stats() -> dict:
     """Best-effort public project stats. Never block the donation flow."""
     stats = {
@@ -285,6 +314,7 @@ def project_stats() -> dict:
         "donated_sessions": None,
         "dataset_downloads": None,
         "dataset_likes": None,
+        "leaderboard": [],
     }
     try:
         gh = _fetch_json("https://api.github.com/repos/Accenture/ContextEcho")
@@ -300,6 +330,12 @@ def project_stats() -> dict:
         hf = _fetch_json("https://huggingface.co/api/datasets/contextecho2026/persona-drift-contextecho")
         stats["dataset_downloads"] = hf.get("downloads") or hf.get("downloadsAllTime")
         stats["dataset_likes"] = hf.get("likes")
+    except Exception:
+        pass
+    try:
+        local_contributors = Path(__file__).resolve().parents[1] / "CONTRIBUTORS.md"
+        text = local_contributors.read_text(encoding="utf-8")
+        stats["leaderboard"] = _parse_contributor_leaderboard(text)
     except Exception:
         pass
     return stats
@@ -432,6 +468,11 @@ INDEX_HTML = r"""<!doctype html>
     .credit-card strong { display:block; color:#12332a; font-size:22px; line-height:1; }
     .credit-card span { display:block; margin-top:6px; color:#59625d; font-size:13px; font-weight:800; }
     .leader-note { margin-top:12px; padding:12px 14px; border-radius:16px; background:#eef8e8; color:#244b31; font-weight:750; }
+    .leaderboard-preview { margin-top:16px; border:1px solid #d5e4ce; border-radius:18px; overflow:hidden; background:#fffef7; }
+    .leaderboard-title { padding:12px 14px; display:flex; justify-content:space-between; gap:10px; color:#12332a; font-weight:950; }
+    .leaderboard-row { display:grid; grid-template-columns:72px minmax(0,1fr) 90px 90px; gap:10px; padding:10px 14px; border-top:1px solid #e4ecd9; align-items:center; }
+    .leaderboard-row.pending { background:#eef8e8; color:#13552f; font-weight:900; }
+    .leaderboard-row span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .result-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .badge { display:inline-block; border-radius:999px; padding:5px 10px; font-weight:900; font-size:13px; }
     .badge.pass { background:#dff1d9; color:#13552f; }
@@ -891,6 +932,15 @@ function renderSubmitResult(data){
   const turns = Number(receipt.turns || 0);
   const compactions = Number(receipt.compactions || 0);
   const highValue = turns >= 100 || compactions >= 1;
+  const pendingRange = highValue ? '3–5' : '2–4';
+  const leaderboardRows = (publicStats.leaderboard || []).map(row => `
+    <div class="leaderboard-row">
+      <span>${escapeHtml(row.rank || '')}</span>
+      <span>${escapeHtml(row.contributor || '')}</span>
+      <span>${escapeHtml(row.sessions || '')} sessions</span>
+      <span>${escapeHtml(row.points || '—')} pts</span>
+    </div>
+  `).join('');
   const uploads = (receipt.uploads || [])
     .map(m => `<span class="metric">${escapeHtml(m.source)}</span>`)
     .join('');
@@ -903,7 +953,17 @@ function renderSubmitResult(data){
       <div class="credit-card"><strong>${highValue ? '+1' : '+0'}</strong><span>${highValue ? 'high-value session bonus' : 'high-value bonus pending'}</span></div>
       <div class="credit-card"><strong>+1</strong><span>possible coverage / usability bonus</span></div>
     </div>
-    <div class="leader-note">Pending score: <strong>${highValue ? '3–5' : '2–4'} points</strong>. Accepted donations appear on the contributor leaderboard and release acknowledgments.</div>
+    <div class="leader-note">Pending score: <strong>${pendingRange} points</strong>. Accepted donations appear on the contributor leaderboard and release acknowledgments.</div>
+    <div class="leaderboard-preview">
+      <div class="leaderboard-title"><span>Leaderboard preview</span><span class="muted">final rank after review</span></div>
+      <div class="leaderboard-row pending">
+        <span>pending</span>
+        <span>${escapeHtml(creditName)}</span>
+        <span>+1 session</span>
+        <span>${pendingRange} pts</span>
+      </div>
+      ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span>Accepted leaderboard loads after release</span><span>—</span><span>—</span></div>'}
+    </div>
     <div class="metrics"><span class="metric">Status: <strong>pending maintainer review</strong></span><span class="metric">Credit name: <strong>${escapeHtml(creditName)}</strong></span></div>
     <div class="field"><div class="field-label">Submission ID</div><div class="pathbox">${escapeHtml(publicId)}</div><div class="hint">Save this ID for support. Maintainers can use it to find your private staging submission.</div></div>
     ${data.receipt_path ? `<div class="field"><div class="field-label">Receipt</div><div class="row"><button id="revealReceipt" class="secondary">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary">Email Receipt</button></a>` : ''}</div><div class="pathbox">${escapeHtml(data.receipt_path)}</div><div class="hint">${emailHref ? 'Email opens your mail app with the receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
