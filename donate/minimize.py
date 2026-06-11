@@ -19,6 +19,7 @@ PERSONAL_RE = re.compile(
     re.IGNORECASE,
 )
 CODE_HINT_RE = re.compile(r"(```|def |class |function |const |let |var |import |from |SELECT |<[^>]+>)")
+TEXT_KEYS = {"content", "message", "text", "prompt", "input", "text_elements"}
 
 
 def approx_tokens(text: str) -> int:
@@ -45,7 +46,15 @@ def classify_user_text(text: str) -> dict[str, Any]:
 def is_user_turn(obj: dict[str, Any]) -> bool:
     role = str(obj.get("role", "")).lower()
     typ = str(obj.get("type", "")).lower()
-    return role == "user" or typ == "user"
+    payload = obj.get("payload") if isinstance(obj.get("payload"), dict) else {}
+    payload_role = str(payload.get("role", "")).lower()
+    payload_type = str(payload.get("type", "")).lower()
+    return (
+        role == "user"
+        or typ == "user"
+        or payload_type == "user_message"
+        or (payload_type == "message" and payload_role == "user")
+    )
 
 
 def minimize_value(value: Any, stats: dict[str, int]) -> Any:
@@ -57,7 +66,22 @@ def minimize_value(value: Any, stats: dict[str, int]) -> Any:
     if isinstance(value, list):
         return [minimize_value(v, stats) for v in value]
     if isinstance(value, dict):
-        return {k: minimize_value(v, stats) for k, v in value.items()}
+        return {
+            k: minimize_value(v, stats) if k in TEXT_KEYS else minimize_text_fields(v, stats)
+            for k, v in value.items()
+        }
+    return value
+
+
+def minimize_text_fields(value: Any, stats: dict[str, int]) -> Any:
+    """Preserve JSON schema while masking user-authored textual fields."""
+    if isinstance(value, list):
+        return [minimize_text_fields(v, stats) for v in value]
+    if isinstance(value, dict):
+        return {
+            k: minimize_value(v, stats) if k in TEXT_KEYS else minimize_text_fields(v, stats)
+            for k, v in value.items()
+        }
     return value
 
 
@@ -67,6 +91,9 @@ def minimize_user_turn(obj: dict[str, Any], stats: dict[str, int]) -> dict[str, 
     for key in ("content", "message", "text", "prompt"):
         if key in out:
             out[key] = minimize_value(out[key], stats)
+    if isinstance(out.get("payload"), dict):
+        payload = dict(out["payload"])
+        out["payload"] = minimize_text_fields(payload, stats)
     out["privacy_tier"] = "user_minimized"
     return out
 
