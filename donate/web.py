@@ -366,6 +366,14 @@ INDEX_HTML = r"""<!doctype html>
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
+    .support-card { border:1px solid #dce7d2; border-radius:16px; padding:12px; margin:-6px 0 16px; background:linear-gradient(135deg,#fff8df,#eef8e8); }
+    .support-title { font-weight:950; color:#13552f; }
+    .support-copy { color:var(--muted); font-size:12px; margin-top:2px; }
+    .support-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .support-actions a { text-decoration:none; }
+    .support-actions button { padding:9px 11px; font-size:12px; box-shadow:none; }
+    .support-actions button.github { background:#111b18; color:#fffef8; }
+    .support-actions button.dataset { background:#e8eddc; color:var(--ink); }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
     .reset-donated { margin-top:12px; justify-content:center; }
     .reset-donated button { padding:8px 12px; font-size:12px; }
@@ -480,6 +488,14 @@ INDEX_HTML = r"""<!doctype html>
           <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="gift"></div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
+        </div>
+        <div class="support-card">
+          <div class="support-title">Help more donors find ContextEcho</div>
+          <div class="support-copy">A star or dataset like improves visibility for this benchmark.</div>
+          <div class="support-actions">
+            <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
+            <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
+          </div>
         </div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
         <div class="row reset-donated">
