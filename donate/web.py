@@ -507,7 +507,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
           <div class="support-main">
             <div class="support-title">Help more donors find ContextEcho</div>
-            <div class="support-copy">A star or dataset like improves visibility for this benchmark.</div>
+            <div class="support-copy">A star or like improves visibility for this benchmark.</div>
             <div class="support-actions">
               <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
               <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
