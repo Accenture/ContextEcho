@@ -40,6 +40,8 @@ class WebTests(unittest.TestCase):
         )
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["contributor"], "Founding donors")
+        self.assertEqual(rows[0]["sessions_num"], 3)
+        self.assertEqual(rows[0]["turns_num"], 18380)
 
     def test_create_server_falls_back_when_port_is_busy(self):
         fake_server = mock.Mock()

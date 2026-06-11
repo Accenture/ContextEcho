@@ -299,7 +299,9 @@ def _parse_contributor_leaderboard(markdown: str) -> list[dict]:
             "rank": rank,
             "contributor": re.sub(r"\*\*", "", contributor),
             "sessions": sessions,
+            "sessions_num": int(sessions) if sessions.isdigit() else 0,
             "turns": turns,
+            "turns_num": int(turns.replace(",", "")) if turns.replace(",", "").isdigit() else 0,
             "agents": agents,
             "models": models,
             "points": points,
@@ -936,9 +938,26 @@ function renderSubmitResult(data){
   const pendingRange = highValue ? '3–5' : '2–4';
   const pendingPointsHigh = highValue ? 5 : 4;
   const acceptedLeaders = publicStats.leaderboard || [];
-  const totalDonorsEstimate = acceptedLeaders.length + 1;
-  const strongerLeaders = acceptedLeaders.filter(row => Number(row.points_num || -1) > pendingPointsHigh).length;
-  const estimatedRank = strongerLeaders + 1;
+  const sameName = row => String(row.contributor || '').toLowerCase() === creditName.toLowerCase();
+  const mergedWithExisting = acceptedLeaders.some(sameName);
+  const simulatedLeaders = acceptedLeaders.map(row => {
+    if(!sameName(row)) return {
+      name: row.contributor || '',
+      points: Number(row.points_num || 0),
+      sessions: Number(row.sessions_num || 0),
+      turns: Number(row.turns_num || 0),
+    };
+    return {
+      name: creditName,
+      points: Number(row.points_num || 0) + pendingPointsHigh,
+      sessions: Number(row.sessions_num || 0) + 1,
+      turns: Number(row.turns_num || 0) + turns,
+    };
+  });
+  if(!mergedWithExisting) simulatedLeaders.push({name: creditName, points: pendingPointsHigh, sessions: 1, turns});
+  simulatedLeaders.sort((a,b) => (b.points - a.points) || (b.sessions - a.sessions) || (b.turns - a.turns) || a.name.localeCompare(b.name));
+  const totalDonorsEstimate = simulatedLeaders.length;
+  const estimatedRank = Math.max(1, simulatedLeaders.findIndex(row => row.name === creditName) + 1);
   const rankLabel = `${estimatedRank}/${totalDonorsEstimate}`;
   const leaderboardRows = acceptedLeaders.map(row => `
     <div class="leaderboard-row">

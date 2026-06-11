@@ -8,6 +8,7 @@
         fig-app-anchor-decay fig-app-anchor-size fig-app-crossjudge \
         fig-app-crosssession fig-app-full25 fig-app-onset \
         download-donations intake-donations promote-donation reset-donation-test-state \
+        update-contributors check-contributors \
         review-donation review-donation-quick \
         fig-session-validation session-validation-dry-run session-validation-quick \
         session-validation-quick-summary session-validation-summary \
@@ -36,6 +37,8 @@ help:
 	@echo "    make review-donation-quick SUBMISSION=... run review + 30-cell quick validation"
 	@echo "    make promote-donation SUBMISSION=...      promote one accepted donation"
 	@echo "    make reset-donation-test-state            archive + clear local test intake state"
+	@echo "    make update-contributors                  regenerate CONTRIBUTORS.md from accepted ledger"
+	@echo "    make check-contributors                   verify CONTRIBUTORS.md is up to date"
 	@echo "    make session-validation-dry-run SESSION=... LABEL=...  plan a new donor validation"
 	@echo "    make session-validation-quick SESSION=... LABEL=...    run 30-cell donor intake check"
 	@echo "    make session-validation-quick-summary LABEL=...        summarize quick validation"
@@ -138,6 +141,12 @@ promote-donation:
 reset-donation-test-state:
 	$(PYTHON) scripts/reset_donation_test_state.py \
 	  $(if $(YES),--yes,)
+
+update-contributors:
+	$(PYTHON) scripts/update_contributors.py
+
+check-contributors:
+	$(PYTHON) scripts/update_contributors.py --check
 
 session-validation-dry-run:
 	@if [ -z "$(SESSION)" ] || [ -z "$(LABEL)" ]; then \
