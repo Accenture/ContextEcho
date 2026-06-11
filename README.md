@@ -201,6 +201,10 @@ the selected session on your machine, writes `session.redacted.jsonl`,
 `manifest.json`, and `CONSENT.md`, then submits only those redacted artifacts
 to private maintainer review.
 
+For public collection, maintainers should route uploads through the server-side
+relay so the Hugging Face staging token is never shipped to donors. See
+[`DONATION_RELAY.md`](DONATION_RELAY.md).
+
 > **Donor privacy.** ContextEcho analyzes **assistant behavior**, not
 > **donor personality**. The default donation mode is **full redacted**, which
 > removes **PII, secrets, paths, and custom scrub terms** while preserving task

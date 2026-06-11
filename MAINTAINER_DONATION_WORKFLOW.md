@@ -17,16 +17,18 @@ flowchart TD
   G --> H{Donor review OK?}
   H -- add terms --> F
   H -- yes --> I[Write manifest + CONSENT.md]
-  I --> J[Submit redacted artifacts to private HF staging]
-  J --> K[Maintainer intake downloads pending submissions]
-  K --> L[Technical review: files, JSONL, PII, consent, metadata]
-  L --> M[Quick 30-cell scientific validation]
-  M --> N{Acceptable?}
-  N -- no --> O[Record needs-attention / reject]
-  N -- yes --> P[Promote to data_archive_release_v2]
-  P --> Q[Append donation ledger]
-  Q --> R[Regenerate CONTRIBUTORS.md]
-  R --> S[Commit release-candidate dataset updates]
+  I --> J[Submit redacted artifacts to relay]
+  J --> K[Relay opens private HF staging PR]
+  K --> L[Maintainer merges staging PR]
+  L --> M[Maintainer intake downloads pending submissions]
+  M --> N[Technical review: files, JSONL, PII, consent, metadata]
+  N --> O[Quick 30-cell scientific validation]
+  O --> P{Acceptable?}
+  P -- no --> Q[Record needs-attention / reject]
+  P -- yes --> R[Promote to data_archive_release_v2]
+  R --> S[Append donation ledger]
+  S --> T[Regenerate CONTRIBUTORS.md]
+  T --> U[Commit release-candidate dataset updates]
 ```
 
 ## Donor Workflow
@@ -46,7 +48,8 @@ The browser wizard performs:
 4. Verify locally.
 5. Let the donor add extra scrub terms and re-run if needed.
 6. Write `session.redacted.jsonl`, `manifest.json`, and `CONSENT.md`.
-7. Submit only the verified redacted artifacts to private staging.
+7. Submit only the verified redacted artifacts to the maintainer relay or
+   private staging.
 
 Privacy tiers:
 
@@ -56,6 +59,22 @@ Privacy tiers:
   sensitive donor-authored spans while preserving coding task context.
 
 ## Maintainer Intake Workflow
+
+For public donation collection, run a relay instead of distributing a Hugging
+Face token to donors:
+
+```bash
+make setup-relay PYTHON=.venv/bin/python
+HF_STAGING_TOKEN=hf_xxx make run-relay PYTHON=.venv/bin/python
+```
+
+Then ask donors to set only the relay URL:
+
+```bash
+export CONTEXTECHO_RELAY_URL=https://your-relay.example.org
+```
+
+See [`DONATION_RELAY.md`](DONATION_RELAY.md) for deployment details.
 
 Use the repo virtualenv so all maintainer dependencies are available:
 

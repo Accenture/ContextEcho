@@ -1,0 +1,6 @@
+# Dependencies for the optional server-side donation relay.
+# Ordinary donors do not need this file; maintainers deploy the relay.
+fastapi>=0.115.0
+python-multipart>=0.0.9
+uvicorn[standard]>=0.30.0
+huggingface_hub>=1.0.0

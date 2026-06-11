@@ -4,11 +4,13 @@ Uploads the redacted session + manifest + consent to the PRIVATE staging
 dataset as a single pull request the maintainers review. Refuses to upload
 unless the verify gate passed (so unverified data can never reach staging).
 
-Auth (in priority order):
-  1. --token / CONTEXTECHO_DONATE_TOKEN  — embedded write-only staging token
-  2. the contributor's own `huggingface-cli login` (HF_TOKEN / cached)
-A write-only token can only ADD to staging; it cannot read it or touch the
-public dataset.
+Auth / upload target:
+  1. CONTEXTECHO_RELAY_URL / --relay-url — upload through a server-side relay
+  2. --token / CONTEXTECHO_DONATE_TOKEN  — maintainer/dev direct staging token
+  3. the contributor's own `huggingface-cli login` (HF_TOKEN / cached)
+
+Public donors should use the relay. It keeps the Hugging Face staging token on
+the server, not in this public repository or on donor machines.
 
 Usage:
     python -m donate.submit session.redacted.jsonl
@@ -18,11 +20,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
 import uuid
 from pathlib import Path
+from urllib import error, request
 
 STAGING_REPO = "contextecho2026/persona-drift-staging"
 
@@ -49,10 +53,91 @@ def resolve_token(cli_token: str | None) -> str | None:
     )
 
 
+def resolve_relay_url(cli_url: str | None) -> str | None:
+    value = cli_url or os.environ.get("CONTEXTECHO_RELAY_URL") or ""
+    return value.strip().rstrip("/") or None
+
+
+def gather_artifacts(session: Path) -> list[tuple[Path, str]]:
+    stem = session.stem.replace(".redacted", "")
+    manifest = session.with_name(f"{stem}.manifest.json")
+    consent = session.with_name("CONSENT.md")
+    artifacts = [(session, "session.redacted.jsonl")]
+    if manifest.exists():
+        artifacts.append((manifest, "manifest.json"))
+    else:
+        print(f"[submit] WARNING: no manifest ({manifest.name}). Run `donate.describe` first.")
+    if consent.exists():
+        artifacts.append((consent, "CONSENT.md"))
+    else:
+        print("[submit] WARNING: no CONSENT.md. Run `donate.describe` first.")
+    return artifacts
+
+
+def multipart_body(artifacts: list[tuple[Path, str]]) -> tuple[bytes, str]:
+    boundary = f"----ContextEcho{uuid.uuid4().hex}"
+    chunks: list[bytes] = []
+    for src, field_name in artifacts:
+        chunks.extend([
+            f"--{boundary}\r\n".encode(),
+            (
+                f'Content-Disposition: form-data; name="{field_name}"; '
+                f'filename="{src.name}"\r\n'
+            ).encode(),
+            b"Content-Type: application/octet-stream\r\n\r\n",
+            src.read_bytes(),
+            b"\r\n",
+        ])
+    chunks.append(f"--{boundary}--\r\n".encode())
+    return b"".join(chunks), boundary
+
+
+def submit_via_relay(relay_url: str, artifacts: list[tuple[Path, str]], dry_run: bool) -> int:
+    endpoint = f"{relay_url}/api/donate"
+    print(f"[submit] upload mode  : relay")
+    print(f"[submit] relay       : {relay_url}")
+    for src, dst in artifacts:
+        print(f"[submit]   {src.name:28s} -> {dst}")
+
+    if dry_run:
+        print("\n[submit] --dry-run: nothing uploaded.")
+        return 0
+
+    body, boundary = multipart_body(artifacts)
+    req = request.Request(
+        endpoint,
+        data=body,
+        headers={
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "User-Agent": "contextecho-donate",
+        },
+        method="POST",
+    )
+    try:
+        with request.urlopen(req, timeout=120) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        print(f"\n[submit] relay upload failed: HTTP {exc.code}", file=sys.stderr)
+        print(detail, file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"\n[submit] relay upload failed: {exc}", file=sys.stderr)
+        print("[submit] Check CONTEXTECHO_RELAY_URL or use direct maintainer auth.", file=sys.stderr)
+        return 1
+
+    submission_id = payload.get("submission_id", "unknown")
+    print("\n[submit] Submitted for maintainer review.")
+    print(f"[submit] Submission ID: {submission_id}")
+    print("[submit] You'll be credited in the next release once it's accepted. Thank you!")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description="Submit a verified session to private staging.")
     p.add_argument("session", type=Path, help="The redacted .jsonl")
     p.add_argument("--token", default=None, help="HF token (else env / cached login)")
+    p.add_argument("--relay-url", default=None, help="ContextEcho relay URL (else CONTEXTECHO_RELAY_URL)")
     p.add_argument("--dry-run", action="store_true", help="Verify + show what would upload, but do not upload")
     args = p.parse_args(argv)
 
@@ -69,18 +154,11 @@ def main(argv: list[str]) -> int:
     print("[submit] verify passed ✓\n")
 
     # --- Gather the three artifacts ----------------------------------------
-    stem = args.session.stem.replace(".redacted", "")
-    manifest = args.session.with_name(f"{stem}.manifest.json")
-    consent = args.session.with_name("CONSENT.md")
-    artifacts = [(args.session, "session.redacted.jsonl")]
-    if manifest.exists():
-        artifacts.append((manifest, "manifest.json"))
-    else:
-        print(f"[submit] WARNING: no manifest ({manifest.name}). Run `donate.describe` first.")
-    if consent.exists():
-        artifacts.append((consent, "CONSENT.md"))
-    else:
-        print("[submit] WARNING: no CONSENT.md. Run `donate.describe` first.")
+    artifacts = gather_artifacts(args.session)
+
+    relay_url = resolve_relay_url(args.relay_url)
+    if relay_url:
+        return submit_via_relay(relay_url, artifacts, args.dry_run)
 
     # Unique submission folder so concurrent PRs don't collide.
     sub_id = f"submission-{uuid.uuid4().hex[:8]}"

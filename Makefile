@@ -3,7 +3,7 @@
 # Run `make help` to see all targets. Each target wraps the underlying
 # Python command documented in REPRODUCE.md.
 
-.PHONY: help setup setup-donate setup-maintainer verify-pii smoke-test \
+.PHONY: help setup setup-donate setup-maintainer setup-relay run-relay verify-pii smoke-test \
         fig1 fig2-taxonomy fig2-forest fig4 fig5 fig6 \
         fig-app-anchor-decay fig-app-anchor-size fig-app-crossjudge \
         fig-app-crosssession fig-app-full25 fig-app-onset \
@@ -24,6 +24,8 @@ help:
 	@echo "    make setup            install Python dependencies"
 	@echo "    make setup-donate     install minimal local donation wizard dependencies"
 	@echo "    make setup-maintainer install donation intake + quick-validation dependencies"
+	@echo "    make setup-relay      install optional server-side donation relay dependencies"
+	@echo "    make run-relay        run relay; requires HF_STAGING_TOKEN"
 	@echo "    make verify-pii       run PII redaction grep audit on data_archive_release/"
 	@echo "    make smoke-test       run a 1-cell harness check"
 	@echo "    make download-donations                  download private HF staging donations"
@@ -79,6 +81,12 @@ setup-donate:
 
 setup-maintainer:
 	$(PYTHON) -m pip install -r requirements-maintainer.txt
+
+setup-relay:
+	$(PYTHON) -m pip install -r requirements-relay.txt
+
+run-relay:
+	$(PYTHON) -m uvicorn donate.relay_server:app --host $${HOST:-0.0.0.0} --port $${PORT:-8088}
 
 # Verify-pii delegates to the anonymizer's built-in audit, which loads
 # its pattern panel from the gitignored `scripts/.redaction_patterns.json`.
