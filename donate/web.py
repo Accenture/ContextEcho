@@ -757,7 +757,7 @@ function renderRedactResult(data){
       ${suggestedTerms.length ? `
         <div class="scrub-suggestion">
           <code>${escapeHtml(suggestedText)}</code>
-          <button class="secondary" type="button" id="useSuggestedScrub">Use these terms</button>
+          <button class="secondary" type="button" id="useSuggestedScrub">Add to extra terms</button>
         </div>
       ` : ''}
       <div class="hint"><strong>Next:</strong> add the remaining private word(s) above in Extra terms to scrub, then click Redact and Verify again. For paths, add the username/project part, not the full path.</div>
@@ -784,7 +784,7 @@ function renderRedactResult(data){
       const merged = [...new Set([...existing, ...suggestedTerms])];
       $('scrub').value = merged.join(', ');
       $('reviewConfirm').checked = false;
-      status('redactStatus', 'Suggested terms added. Click Redact and Verify to re-redact.');
+      status('redactStatus', 'Extra terms updated. Click Redact and Verify to re-redact.');
       refreshButtons();
     };
   }
@@ -833,7 +833,7 @@ function renderSearchResult(data){
     ${matchedTerms.length ? `
       <div class="scrub-suggestion">
         <code>${escapeHtml(matchedText)}</code>
-        <button class="secondary" type="button" id="useSearchScrub">Use matched terms</button>
+        <button class="secondary" type="button" id="useSearchScrub">Add to extra terms</button>
       </div>
     ` : ''}
   `;
@@ -845,7 +845,7 @@ function renderSearchResult(data){
       const merged = [...new Set([...existing, ...matchedTerms])];
       $('scrub').value = merged.join(', ');
       $('reviewConfirm').checked = false;
-      status('redactStatus', 'Matched search terms added. Click Redact and Verify to re-redact.');
+      status('redactStatus', 'Extra terms updated. Click Redact and Verify to re-redact.');
       refreshButtons();
     };
   }
