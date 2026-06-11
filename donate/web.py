@@ -318,13 +318,14 @@ INDEX_HTML = r"""<!doctype html>
     h1 { margin:0 0 5px; font-size:clamp(28px,3.2vw,38px); letter-spacing:-.055em; line-height:1.02; }
     h2 { margin:0 0 6px; font-size:24px; letter-spacing:-.04em; line-height:1.08; }
     .hero, .card, .bottom-nav { background:rgba(255,255,250,.9); border:1px solid rgba(127,138,119,.28); border-radius:20px; box-shadow:0 14px 42px rgba(43,59,37,.11); backdrop-filter:blur(10px); }
-    .hero { padding:24px 34px 22px; position:relative; overflow:hidden; }
+    .hero { padding:24px 34px 20px; position:relative; overflow:hidden; }
     .hero-top { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; }
     .card { padding:26px 34px; }
     .card.step { margin-top:16px; }
     .step { display:none; }
     .step.active { display:block; }
-    .steps { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:30px; align-items:center; }
+    .hero-flow { display:grid; grid-template-columns:minmax(360px,520px) 1fr; gap:26px; align-items:center; margin-top:20px; }
+    .steps { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:center; min-width:0; }
     .step-pill { position:relative; display:flex; align-items:center; gap:11px; color:#6a6f6b; font-size:15px; font-weight:850; }
     .step-pill:after { content:""; height:3px; flex:1; border-radius:999px; background:#e2e4df; margin-left:6px; }
     .step-pill:last-child:after { display:none; }
@@ -366,7 +367,7 @@ INDEX_HTML = r"""<!doctype html>
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
-    .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; margin-top:12px; max-width:520px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
+    .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; max-width:520px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
     .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
     .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
     .bow-head:before, .bow-head:after { content:""; position:absolute; top:9px; width:3px; height:3px; border-radius:50%; background:#17201c; }
@@ -463,8 +464,8 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; margin-top:24px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -474,17 +475,6 @@ INDEX_HTML = r"""<!doctype html>
       <div>
         <h1>ContextEcho Donation Wizard</h1>
         <div class="topline">Donate a coding-agent session in a few local-first steps.</div>
-        <div class="support-card">
-          <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
-          <div class="support-main">
-            <div class="support-title">Help more donors find ContextEcho</div>
-            <div class="support-copy">A star or like improves visibility for this benchmark.</div>
-            <div class="support-actions">
-              <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
-              <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
-            </div>
-          </div>
-        </div>
       </div>
       <div class="hero-side">
         <div class="privacy-note"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
@@ -494,10 +484,23 @@ INDEX_HTML = r"""<!doctype html>
         </div>
       </div>
     </div>
-    <div class="steps">
-      <span id="pill1" class="step-pill active"><span class="step-num">1</span><span>Pick a Session</span></span>
-      <span id="pill2" class="step-pill"><span class="step-num">2</span><span>Redact</span></span>
-      <span id="pill3" class="step-pill"><span class="step-num">3</span><span>Submit</span></span>
+    <div class="hero-flow">
+      <div class="support-card">
+        <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
+        <div class="support-main">
+          <div class="support-title">Help more donors find ContextEcho</div>
+          <div class="support-copy">A star or like improves visibility for this benchmark.</div>
+          <div class="support-actions">
+            <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
+            <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
+          </div>
+        </div>
+      </div>
+      <div class="steps">
+        <span id="pill1" class="step-pill active"><span class="step-num">1</span><span>Pick a Session</span></span>
+        <span id="pill2" class="step-pill"><span class="step-num">2</span><span>Redact</span></span>
+        <span id="pill3" class="step-pill"><span class="step-num">3</span><span>Submit</span></span>
+      </div>
     </div>
   </section>
 
