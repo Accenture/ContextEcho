@@ -303,6 +303,7 @@ def _parse_contributor_leaderboard(markdown: str) -> list[dict]:
             "agents": agents,
             "models": models,
             "points": points,
+            "points_num": int(points) if points.isdigit() else None,
         })
     return rows[:5]
 
@@ -933,7 +934,13 @@ function renderSubmitResult(data){
   const compactions = Number(receipt.compactions || 0);
   const highValue = turns >= 100 || compactions >= 1;
   const pendingRange = highValue ? '3–5' : '2–4';
-  const leaderboardRows = (publicStats.leaderboard || []).map(row => `
+  const pendingPointsHigh = highValue ? 5 : 4;
+  const acceptedLeaders = publicStats.leaderboard || [];
+  const totalDonorsEstimate = acceptedLeaders.length + 1;
+  const strongerLeaders = acceptedLeaders.filter(row => Number(row.points_num || -1) > pendingPointsHigh).length;
+  const estimatedRank = strongerLeaders + 1;
+  const rankLabel = `${estimatedRank}/${totalDonorsEstimate}`;
+  const leaderboardRows = acceptedLeaders.map(row => `
     <div class="leaderboard-row">
       <span>${escapeHtml(row.rank || '')}</span>
       <span>${escapeHtml(row.contributor || '')}</span>
@@ -955,9 +962,9 @@ function renderSubmitResult(data){
     </div>
     <div class="leader-note">Pending score: <strong>${pendingRange} points</strong>. Accepted donations appear on the contributor leaderboard and release acknowledgments.</div>
     <div class="leaderboard-preview">
-      <div class="leaderboard-title"><span>Leaderboard preview</span><span class="muted">final rank after review</span></div>
+      <div class="leaderboard-title"><span>Leaderboard preview</span><span>Estimated rank: ${escapeHtml(rankLabel)}</span></div>
       <div class="leaderboard-row pending">
-        <span>pending</span>
+        <span>#${escapeHtml(String(estimatedRank))}</span>
         <span>${escapeHtml(creditName)}</span>
         <span>+1 session</span>
         <span>${pendingRange} pts</span>
