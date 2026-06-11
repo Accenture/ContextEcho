@@ -217,7 +217,7 @@ def expanded_scrub_terms(scrub_terms: set[str]) -> set[str]:
 
 
 def apply_scrub_terms_to_file(src: Path, dst: Path, scrub_terms: set[str]) -> dict:
-    """Fast repair pass for already-redacted files after a failed verify."""
+    """Fast repair pass for already-redacted files with newly added scrub terms."""
     stats: dict = {}
     terms = expanded_scrub_terms(scrub_terms)
     text = src.read_text(encoding="utf-8", errors="replace")

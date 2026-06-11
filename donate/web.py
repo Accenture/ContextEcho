@@ -610,6 +610,7 @@ INDEX_HTML = r"""<!doctype html>
 let sessions = [];
 let selected = null;
 let redacted = null;
+let appliedScrubTerms = [];
 let submitted = false;
 let page = 0;
 const pageSize = 5;
@@ -651,6 +652,13 @@ function loadDiscoveryCache(){
   }
 }
 function privacyTier(){ return document.querySelector('input[name="privacyTier"]:checked')?.value || 'full_redacted'; }
+function parseScrubTerms(value){
+  return [...new Set(String(value || '').split(',').map(x => x.trim()).filter(Boolean))];
+}
+function newScrubTerms(){
+  const applied = new Set(appliedScrubTerms);
+  return parseScrubTerms($('scrub').value).filter(term => !applied.has(term));
+}
 function goStep(n){
   const pct = Math.round((n / 3) * 100);
   for(let i=1;i<=3;i++){
@@ -897,6 +905,7 @@ function renderSubmitResult(data){
 function resetSessionArtifacts(){
   selected = null;
   redacted = null;
+  appliedScrubTerms = [];
   submitted = false;
   document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
   ['selectedCard','redactResult','submitResult','searchResult'].forEach(id => {
@@ -989,7 +998,7 @@ function renderSessions(){
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
       row.classList.add('selected'); selected = s;
-      redacted = null; submitted = !!donated;
+      redacted = null; appliedScrubTerms = []; submitted = !!donated;
       renderSelectedCard(s, idx);
       status('redactStatus', donated ? 'This session is already marked donated locally. Pick a different session to avoid duplicate submissions.' : '');
       status('discoverStatus', '');
@@ -1073,6 +1082,7 @@ document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
   el.onchange = () => {
     if(redacted){
       redacted = null;
+      appliedScrubTerms = [];
       $('reviewConfirm').checked = false;
       $('redactResult').classList.remove('show');
       $('searchPanel').classList.remove('show');
@@ -1087,7 +1097,7 @@ $('scrub').oninput = () => {
     $('reviewConfirm').checked = false;
     $('searchPanel').classList.remove('show');
     $('searchResult').classList.remove('show');
-    status('redactStatus', redacted.verify_passed ? 'Scrub terms changed. Click Redact and Verify again before moving on.' : 'Scrub terms changed. Click Redact and Verify to quickly repair the existing redacted file.');
+    status('redactStatus', 'Scrub terms changed. Click Redact and Verify to quickly repair the existing redacted file.');
   }
   refreshButtons();
 };
@@ -1114,10 +1124,18 @@ $('redactBtn').onclick = async () => {
   status('redactStatus','Starting local redaction...');
   try {
     let finalData = null;
-    const canRepair = !!(redacted && !redacted.verify_passed && redacted.redacted_file && redacted.privacy_tier === privacyTier());
+    const pendingScrubTerms = newScrubTerms();
+    const canRepair = !!(redacted && redacted.redacted_file && redacted.privacy_tier === privacyTier() && pendingScrubTerms.length);
+    const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : $('scrub').value;
+    if(redacted && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
+      status('redactStatus', 'No new extra terms to apply. Review the current redacted file or add another term.');
+      renderRedactResult(redacted);
+      refreshButtons();
+      return;
+    }
     await postStream('/api/redact_stream', {
       path:selected.path,
-      scrub:$('scrub').value,
+      scrub:scrubForRun,
       auto:selected,
       confirm_safe:$('safeConfirm').checked,
       privacy_tier:privacyTier(),
@@ -1129,7 +1147,7 @@ $('redactBtn').onclick = async () => {
         status('redactStatus', `Preparing to redact ${ev.total || '?'} records locally...`);
       } else if(ev.event === 'repair'){
         setBusy('redactProgress', true, ev.percent || 55);
-        status('redactStatus', ev.message || 'Re-redacting the existing redacted file with new scrub terms...');
+        status('redactStatus', ev.message || 'Applying new extra terms to the existing redacted file...');
       } else if(ev.event === 'engine'){
         setBusy('redactProgress', true, 8);
         status('redactStatus', 'Loading local redaction engine...');
@@ -1151,6 +1169,9 @@ $('redactBtn').onclick = async () => {
     if(!redacted) throw new Error('redaction did not return a result');
     setBusy('redactProgress', true, 100);
     submitted = false;
+    appliedScrubTerms = canRepair
+      ? [...new Set([...appliedScrubTerms, ...pendingScrubTerms])]
+      : parseScrubTerms($('scrub').value);
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
     status('redactStatus', redacted.verify_passed ? 'Review the result above. Add more scrub terms if needed, then check the review box to continue.' : verifyFailureSummary(redacted));
@@ -1310,14 +1331,14 @@ class Handler(BaseHTTPRequestHandler):
                 emit({
                     "event": "repair",
                     "percent": 45,
-                    "message": "Re-redacting the existing redacted file with new scrub terms...",
+                    "message": "Applying new extra terms to the existing redacted file...",
                 })
             stats = redact_mod.apply_scrub_terms_to_file(previous, previous, scrub_terms)
             if emit:
                 emit({
                     "event": "repair",
                     "percent": 82,
-                    "message": "Re-redaction complete. Preparing verify gate...",
+                    "message": "Fast repair complete. Preparing verify gate...",
                 })
                 emit({
                     "event": "verify",
@@ -1339,6 +1360,7 @@ class Handler(BaseHTTPRequestHandler):
                 "verify_passed": bool(verify_report.get("passed")),
                 "verify_report": verify_report,
                 "repair_used": True,
+                "repair_terms": sorted(scrub_terms),
             }
 
         src = Path(data.get("path", "")).expanduser()
@@ -1407,6 +1429,8 @@ class Handler(BaseHTTPRequestHandler):
             "privacy_tier": privacy_tier,
             "verify_passed": verify_ok,
             "verify_report": verify_report,
+            "repair_used": False,
+            "scrub_terms": sorted(scrub_terms),
         }
 
     def _handle_redact_stream(self) -> None:
