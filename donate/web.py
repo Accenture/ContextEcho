@@ -612,6 +612,8 @@ let page = 0;
 const pageSize = 5;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
+const discoveryCacheKey = 'contextechoDiscoveryCacheV1';
+const discoveryCacheMaxAgeMs = 30 * 60 * 1000;
 let publicStats = {};
 const statIcons = {
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 2.4l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.47l-5.9 3.1 1.13-6.57-4.78-4.66 6.6-.96L12 2.4z"/></svg>',
@@ -621,6 +623,30 @@ const statIcons = {
 };
 function iconSvg(name){ return statIcons[name] || ''; }
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
+function annotateCachedDonations(rows){
+  return (rows || []).map(s => ({...s, donated: !!(s.donated || donatedPaths.has(s.path))}));
+}
+function saveDiscoveryCache(){
+  localStorage.setItem(discoveryCacheKey, JSON.stringify({saved_at:Date.now(), sessions, page}));
+}
+function loadDiscoveryCache(){
+  try {
+    const cache = JSON.parse(localStorage.getItem(discoveryCacheKey) || 'null');
+    if(!cache || !Array.isArray(cache.sessions)) return false;
+    const age = Date.now() - Number(cache.saved_at || 0);
+    if(age < 0 || age > discoveryCacheMaxAgeMs) return false;
+    sessions = annotateCachedDonations(cache.sessions);
+    const maxPage = Math.max(0, Math.ceil(sessions.length / pageSize) - 1);
+    page = Math.max(0, Math.min(Number(cache.page || 0), maxPage));
+    renderSessions();
+    $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
+    const mins = Math.max(1, Math.round(age / 60000));
+    status('discoverStatus', `Loaded ${sessions.length} recently discovered sessions from ${mins} min ago. Click Discover Sessions to refresh.`);
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
 function privacyTier(){ return document.querySelector('input[name="privacyTier"]:checked')?.value || 'full_redacted'; }
 function goStep(n){
   const pct = Math.round((n / 3) * 100);
@@ -989,6 +1015,7 @@ $('discoverBtn').onclick = async () => {
     }
     sessions = (final && final.sessions) || [];
     page = 0;
+    saveDiscoveryCache();
     status('discoverStatus', `Found ${sessions.length} usable sessions. Click a row to select.`);
     renderSessions();
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
@@ -1003,6 +1030,7 @@ $('clearDonatedBtn').onclick = async () => {
     donatedPaths.clear();
     saveDonatedPaths();
     sessions = sessions.map(s => ({...s, donated:false}));
+    saveDiscoveryCache();
     if(selected) selected.donated = false;
     submitted = false;
     renderSessions();
@@ -1132,7 +1160,7 @@ $('submitBtn').onclick = async () => {
     if(!data) throw new Error('submit did not return a result');
     setBusy('submitProgress', true, 100);
     submitted = true;
-    if(selected && selected.path){ selected.donated = true; donatedPaths.add(selected.path); saveDonatedPaths(); renderSessions(); }
+    if(selected && selected.path){ selected.donated = true; donatedPaths.add(selected.path); saveDonatedPaths(); saveDiscoveryCache(); renderSessions(); }
     renderSubmitResult(data);
     status('submitStatus', 'Submission marked donated locally. Pick another session to submit more.');
     refreshButtons();
@@ -1141,6 +1169,7 @@ $('submitBtn').onclick = async () => {
   finally { setBusy('submitProgress', false); refreshButtons(); }
 };
 loadProjectStats();
+loadDiscoveryCache();
 </script>
 </body>
 </html>
