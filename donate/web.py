@@ -366,7 +366,21 @@ INDEX_HTML = r"""<!doctype html>
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
-    .support-card { border:1px solid #dce7d2; border-radius:16px; padding:12px; margin:-6px 0 16px; background:linear-gradient(135deg,#fff8df,#eef8e8); }
+    .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:12px; margin:-6px 0 16px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
+    .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
+    .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
+    .bow-head:before, .bow-head:after { content:""; position:absolute; top:9px; width:3px; height:3px; border-radius:50%; background:#17201c; }
+    .bow-head:before { left:7px; }
+    .bow-head:after { right:7px; }
+    .bow-body { position:absolute; left:10px; top:24px; width:27px; height:20px; border-radius:10px 10px 6px 6px; background:#17713f; transform-origin:50% 0; animation:bowBody 2.4s ease-in-out infinite; }
+    .bow-hands { position:absolute; left:4px; top:34px; width:39px; height:9px; border-radius:999px; background:#f1bf86; transform-origin:50% 50%; animation:bowHands 2.4s ease-in-out infinite; }
+    .bow-star { position:absolute; right:0; top:0; color:#d28b00; font-size:14px; line-height:1; animation:twinkle 1.4s ease-in-out infinite; }
+    @keyframes bowHead { 0%,62%,100% { transform:rotate(0deg) translateY(0); } 28%,42% { transform:rotate(18deg) translateY(7px); } }
+    @keyframes bowBody { 0%,62%,100% { transform:rotate(0deg); } 28%,42% { transform:rotate(10deg); } }
+    @keyframes bowHands { 0%,62%,100% { transform:translateY(0) scaleX(1); } 28%,42% { transform:translateY(5px) scaleX(1.08); } }
+    @keyframes twinkle { 0%,100% { transform:scale(.9) rotate(0deg); opacity:.72; } 50% { transform:scale(1.18) rotate(14deg); opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { .bow-head,.bow-body,.bow-hands,.bow-star { animation:none; } }
+    .support-main { min-width:0; flex:1; }
     .support-title { font-weight:950; color:#13552f; }
     .support-copy { color:var(--muted); font-size:12px; margin-top:2px; }
     .support-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
@@ -490,11 +504,14 @@ INDEX_HTML = r"""<!doctype html>
           <div class="stat-card"><div class="stat-icon" data-icon="gift"></div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
         </div>
         <div class="support-card">
-          <div class="support-title">Help more donors find ContextEcho</div>
-          <div class="support-copy">A star or dataset like improves visibility for this benchmark.</div>
-          <div class="support-actions">
-            <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
-            <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
+          <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
+          <div class="support-main">
+            <div class="support-title">Help more donors find ContextEcho</div>
+            <div class="support-copy">A star or dataset like improves visibility for this benchmark.</div>
+            <div class="support-actions">
+              <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
+              <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
+            </div>
           </div>
         </div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
