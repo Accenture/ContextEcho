@@ -503,6 +503,7 @@ INDEX_HTML = r"""<!doctype html>
     .ok { color:var(--accent); font-weight:800; }
     .hint { font-size:13px; color:var(--muted); margin-top:6px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .submit-grid { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:16px; align-items:start; }
     .topline { color:var(--muted); max-width:760px; font-size:18px; }
     .actions { justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
     .compact-input-row label { margin:0; white-space:nowrap; }
@@ -512,7 +513,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .actions { justify-content:flex-start; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -638,12 +639,11 @@ INDEX_HTML = r"""<!doctype html>
     <h2>3. Submit</h2>
     <p class="muted">Contributor info is used for credit, leaderboard accounting, and release acknowledgments. Leave blank to stay anonymous.</p>
     <p class="muted">The tool writes manifest + consent, runs a final verify gate, uploads the verified redacted session, and saves a local receipt.</p>
-    <div class="grid">
+    <div class="submit-grid">
       <div><label>Name or GitHub/HF handle <span class="muted">(for credit, optional)</span></label><input id="contributorName" placeholder="anonymous" /></div>
       <div><label>Email <span class="muted">(optional)</span></label><input id="contributorEmail" placeholder="you@example.com" /></div>
+      <div><label>Institute <span class="muted">(optional)</span></label><input id="contributorInstitute" placeholder="University / company / independent" /></div>
     </div>
-    <label>Institute <span class="muted">(optional)</span></label>
-    <input id="contributorInstitute" placeholder="University / company / independent" />
     <div class="row actions">
       <button id="submitPrev" class="secondary">Previous</button>
       <button id="submitBtn" disabled>Submit Donation</button>
