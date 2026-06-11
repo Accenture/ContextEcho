@@ -132,6 +132,15 @@ def display_name(record: dict[str, Any], fallback: str) -> str:
     return name
 
 
+def anonymous_ledger_name(row: dict[str, Any], sid: str) -> str:
+    submission = norm(row.get("submission_id"))
+    if submission.startswith("submission-"):
+        return f"Anonymous donor {submission.removeprefix('submission-')}"
+    if submission:
+        return f"Anonymous donor {submission}"
+    return f"Anonymous donor {sid}"
+
+
 def merge_key(name: str, email: str, institute: str, unique: str) -> tuple[str, ...]:
     """Merge only when name, email, and institute are all present and equal."""
     if name and email and institute and not name.lower().startswith("anonymous donor"):
@@ -149,7 +158,7 @@ def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
         if manifest_path.exists():
             manifest = read_json(manifest_path)
         sid = f"S{i}"
-        name = display_name(row, f"Anonymous donor {sid}")
+        name = display_name(row, anonymous_ledger_name(row, sid))
         email = norm(manifest.get("contributor_email") or row.get("contributor_email"))
         institute = norm(row.get("institute") or manifest.get("contributor_institute"))
         source_key = norm(manifest.get("redacted_file")) or norm(row.get("session_sha256")) or norm(row.get("submission_id"))

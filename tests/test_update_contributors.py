@@ -1,6 +1,12 @@
 import unittest
 
-from scripts.update_contributors import Contributor, SessionEntry, group_contributors, score_sessions
+from scripts.update_contributors import (
+    SessionEntry,
+    anonymous_ledger_name,
+    display_name,
+    group_contributors,
+    score_sessions,
+)
 
 
 class UpdateContributorsTests(unittest.TestCase):
@@ -13,6 +19,10 @@ class UpdateContributorsTests(unittest.TestCase):
         contributors = group_contributors(sessions)
         self.assertEqual(len(contributors), 2)
         self.assertEqual({c.name for c in contributors}, {"Anonymous donor S4", "Anonymous donor S5"})
+
+    def test_future_anonymous_donor_uses_submission_id(self):
+        fallback = anonymous_ledger_name({"submission_id": "submission-d51e3f33"}, "S4")
+        self.assertEqual(display_name({"credit_name": "anonymous"}, fallback), "Anonymous donor d51e3f33")
 
     def test_matching_name_email_and_institute_merge(self):
         sessions = [
