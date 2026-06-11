@@ -218,6 +218,8 @@ make intake-donations RUN_QUICK=1 PROMOTE=1
 Accepted sessions are copied into `data_archive_release_v2/data/sessions/`,
 with consent, manifests, review reports, and a donation ledger under
 `data_archive_release_v2/data/donations/`.
+See [`MAINTAINER_DONATION_WORKFLOW.md`](MAINTAINER_DONATION_WORKFLOW.md) for
+the full donor-to-ledger workflow and maintainer checklist.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the points scale, the local-first
 redaction pipeline, session scoring rule, confidentiality rules, and exactly

@@ -148,6 +148,9 @@ make intake-donations RUN_QUICK=1 PROMOTE=1
 
 This writes release-ready files under `data_archive_release_v2/`, including the
 redacted session, manifest, consent, review report, and public donation ledger.
+See [`MAINTAINER_DONATION_WORKFLOW.md`](MAINTAINER_DONATION_WORKFLOW.md) for
+the full donor-to-ledger workflow, contributor ranking rules, and maintainer
+checklist.
 
 Before opening a real collection round after testing, maintainers can reset
 local test intake state:
