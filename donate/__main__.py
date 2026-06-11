@@ -13,8 +13,28 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import sys
 from pathlib import Path
+
+
+def reexec_repo_venv_if_available() -> None:
+    """Let `python3 -m donate --web` use the venv created by `make setup-donate`."""
+    repo_root = Path(__file__).resolve().parent.parent
+    venv_python = repo_root / ".venv" / "bin" / "python"
+    if not venv_python.exists():
+        return
+    try:
+        current = Path(sys.executable).resolve()
+        target = venv_python.resolve()
+    except OSError:
+        return
+    if current == target or os.environ.get("CONTEXTECHO_DONATE_NO_REEXEC"):
+        return
+    os.execv(str(target), [str(target), "-m", "donate", *sys.argv[1:]])
+
+
+reexec_repo_venv_if_available()
 
 from donate.adapters.base import is_redacted_artifact
 from donate import describe as describe_mod

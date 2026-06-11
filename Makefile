@@ -16,6 +16,8 @@
         clean-pyc
 
 PYTHON ?= python3
+DONATE_VENV ?= .venv
+DONATE_PYTHON ?= $(DONATE_VENV)/bin/python
 
 help:
 	@echo "ContextEcho — reproduction targets"
@@ -77,7 +79,8 @@ setup:
 	$(PYTHON) -m pip install -r requirements.txt
 
 setup-donate:
-	$(PYTHON) -m pip install -r requirements-donate.txt
+	python3 -m venv $(DONATE_VENV)
+	$(DONATE_PYTHON) -m pip install -r requirements-donate.txt
 
 setup-maintainer:
 	$(PYTHON) -m pip install -r requirements-maintainer.txt
