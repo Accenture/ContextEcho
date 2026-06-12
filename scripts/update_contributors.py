@@ -236,8 +236,8 @@ def short_set(values: list[str], fallback: str = "—") -> str:
     return " · ".join(clean[:2]) + f" · +{len(clean) - 2}"
 
 
-def medal(rank: int) -> str:
-    return {1: "🥇", 2: "🥈", 3: "🥉"}.get(rank, str(rank))
+def rank_label(rank: int) -> str:
+    return str(rank)
 
 
 def md_escape(text: str) -> str:
@@ -293,7 +293,7 @@ def render_contributors(contributors: list[Contributor], sessions: list[SessionE
         counted_sessions = contributor.counted_sessions
         lines.append(
             "| {rank} | {name} | {sessions} | {turns:,} | {agents} | {models} | {points} |".format(
-                rank=medal(i),
+                rank=rank_label(i),
                 name=md_escape(contributor.name),
                 sessions=len(counted_sessions),
                 turns=contributor.turns,
