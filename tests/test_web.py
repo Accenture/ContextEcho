@@ -13,6 +13,7 @@ from donate.web import (
     artifact_key,
     clear_donation_registry,
     create_server,
+    friendly_submit_error,
     is_duplicate_submit_output,
     load_donated_artifact_keys,
     local_pending_summary,
@@ -191,6 +192,14 @@ class WebTests(unittest.TestCase):
             '[submit] relay upload failed: HTTP 409 {"detail":"duplicate redacted session artifact"}'
         ))
         self.assertFalse(is_duplicate_submit_output("[submit] relay upload failed: HTTP 500"))
+
+    def test_friendly_submit_error_explains_missing_relay_or_token(self):
+        msg = friendly_submit_error(
+            "401 Client Error. Repository Not Found for url: "
+            "https://huggingface.co/api/datasets/contextecho2026/persona-drift-staging"
+        )
+        self.assertIn("Upload is not configured for public donors yet", msg)
+        self.assertIn("CONTEXTECHO_RELAY_URL", msg)
 
 
 if __name__ == "__main__":

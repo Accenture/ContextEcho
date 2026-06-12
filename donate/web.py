@@ -217,6 +217,28 @@ def is_duplicate_submit_output(output: str) -> bool:
     return "duplicate redacted session artifact" in text or "http 409" in text and "duplicate" in text
 
 
+def friendly_submit_error(output: str) -> str:
+    text = output.lower()
+    if (
+        "repository not found" in text
+        or "invalid username or password" in text
+        or "401 client error" in text
+        or "private or gated repo" in text
+    ):
+        return (
+            "Upload is not configured for public donors yet. The redacted file is verified "
+            "and saved locally, but submitting to the private staging repo requires a "
+            "ContextEcho relay URL or a maintainer Hugging Face token. Ask the maintainer "
+            "for CONTEXTECHO_RELAY_URL, or set CONTEXTECHO_DONATE_TOKEN if you are a maintainer."
+        )
+    if "check contextecho_relay_url" in text:
+        return (
+            "Relay upload failed. Check CONTEXTECHO_RELAY_URL, then submit again. "
+            "Your verified redacted files are still saved locally."
+        )
+    return output or "submit failed"
+
+
 def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[Path, dict]:
     stem = session.stem.replace(".redacted", "")
     manifest_path = session.with_name(f"{stem}.manifest.json")
@@ -1848,7 +1870,7 @@ class Handler(BaseHTTPRequestHandler):
                 "consent": describe_result.get("consent"),
             }
         if rc != 0:
-            raise ValueError(output or f"submit failed with code {rc}")
+            raise ValueError(friendly_submit_error(output or f"submit failed with code {rc}"))
         if emit:
             emit({"event": "progress", "percent": 85, "message": "Upload accepted. Saving local receipt..."})
         receipt_path, receipt = write_receipt(session, source_path or "", output)
