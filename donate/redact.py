@@ -83,15 +83,76 @@ def pseudonym(name: str) -> str:
 
 def build_analyzer():
     from presidio_analyzer import AnalyzerEngine, Pattern, PatternRecognizer
+    from presidio_analyzer.nlp_engine import NlpArtifacts, NlpEngine
+    import spacy
 
     try:
-        analyzer = AnalyzerEngine()
-    except Exception as exc:
-        raise RuntimeError(
-            "Could not initialize the local redaction engine. Run "
-            "`make setup-donate` from the repository root. If Presidio reports "
-            "a missing English model, run `python3 -m spacy download en_core_web_lg`."
-        ) from exc
+        import tldextract
+
+        tldextract.TLD_EXTRACTOR = tldextract.TLDExtract(
+            suffix_list_urls=(),
+            cache_dir=None,
+        )
+    except Exception:
+        pass
+
+    class BlankEnglishNlpEngine(NlpEngine):
+        """Tokenization-only engine; avoids runtime spaCy model downloads."""
+
+        def __init__(self):
+            self.nlp = spacy.blank("en")
+
+        def load(self) -> None:
+            return None
+
+        def is_loaded(self) -> bool:
+            return True
+
+        def process_text(self, text: str, language: str) -> NlpArtifacts:
+            doc = self.nlp(text)
+            return NlpArtifacts(
+                entities=list(doc.ents),
+                tokens=doc,
+                tokens_indices=[token.idx for token in doc],
+                lemmas=[token.lemma_ for token in doc],
+                nlp_engine=self,
+                language=language,
+            )
+
+        def process_batch(
+            self,
+            texts,
+            language: str,
+            batch_size: int = 1,
+            n_process: int = 1,
+            **kwargs,
+        ):
+            for doc in self.nlp.pipe(texts, batch_size=batch_size, n_process=n_process):
+                yield doc.text, NlpArtifacts(
+                    entities=list(doc.ents),
+                    tokens=doc,
+                    tokens_indices=[token.idx for token in doc],
+                    lemmas=[token.lemma_ for token in doc],
+                    nlp_engine=self,
+                    language=language,
+                )
+
+        def is_stopword(self, word: str, language: str) -> bool:
+            return self.nlp.vocab[word].is_stop
+
+        def is_punct(self, word: str, language: str) -> bool:
+            return self.nlp.vocab[word].is_punct
+
+        def get_supported_entities(self) -> list[str]:
+            return []
+
+        def get_supported_languages(self) -> list[str]:
+            return ["en"]
+
+    analyzer = AnalyzerEngine(
+        nlp_engine=BlankEnglishNlpEngine(),
+        supported_languages=["en"],
+    )
 
     api_key = PatternRecognizer(
         supported_entity="API_KEY",

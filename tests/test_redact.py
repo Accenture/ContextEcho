@@ -7,7 +7,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from donate.redact import apply_scrub_terms_to_file, redact_file, redact_file_with_progress, redact_text
+from donate.redact import (
+    apply_scrub_terms_to_file,
+    build_analyzer,
+    redact_file,
+    redact_file_with_progress,
+    redact_text,
+)
 
 
 HAS_LOCAL_PRESIDIO = (
@@ -17,6 +23,17 @@ HAS_LOCAL_PRESIDIO = (
 
 
 class RedactTests(unittest.TestCase):
+    def test_build_analyzer_uses_no_download_nlp_engine(self) -> None:
+        with mock.patch("presidio_analyzer.AnalyzerEngine") as analyzer_cls:
+            analyzer = mock.Mock()
+            analyzer_cls.return_value = analyzer
+
+            build_analyzer()
+
+        kwargs = analyzer_cls.call_args.kwargs
+        self.assertEqual(kwargs["supported_languages"], ["en"])
+        self.assertEqual(kwargs["nlp_engine"].get_supported_languages(), ["en"])
+
     @unittest.skipUnless(HAS_LOCAL_PRESIDIO, "local Presidio spaCy model not installed")
     def test_redact_preserves_jsonl_when_redacting_nested_url_text(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
