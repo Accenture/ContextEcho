@@ -27,4 +27,4 @@ else
 fi
 
 echo "[ContextEcho] starting local donation wizard..."
-"${UV_RUN[@]}" tool run --refresh --python 3.11 --managed-python --from "$SPEC" contextecho-donate
+"${UV_RUN[@]}" run --refresh --no-project --python 3.11 --managed-python --with "$SPEC" -m donate --web
