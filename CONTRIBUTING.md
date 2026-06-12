@@ -107,16 +107,18 @@ release* as authors. Missing the first paper does not close the door.
 > Uploads go to a private maintainer staging area first; nothing becomes public
 > until maintainers accept it into a release.
 
-Fastest donor path, after the package is published:
+Fastest donor path:
 
 ```bash
-pipx run contextecho-donate
+curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/run-donate.sh | bash
 ```
 
-Until then, run directly from GitHub:
+This bootstraps `pipx` with `python3` if needed, then launches the local
+browser wizard from GitHub. If you already have `pipx`, you can run the package
+directly:
 
 ```bash
-pipx run --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
+pipx run --no-cache --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
 ```
 
 From a cloned checkout:

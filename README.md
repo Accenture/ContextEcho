@@ -189,16 +189,18 @@ session it covers. We welcome contributions, and we credit them.
   release** (rolling re-authorship — missing the first paper doesn't close the
   door).
 
-Fastest donor path, after the package is published:
+Fastest donor path:
 
 ```bash
-pipx run contextecho-donate
+curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/run-donate.sh | bash
 ```
 
-Until then, run directly from the GitHub repo:
+This bootstraps `pipx` with `python3` if needed, then launches the local
+browser wizard from the GitHub repo. If you already have `pipx`, you can run
+the package directly:
 
 ```bash
-pipx run --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
+pipx run --no-cache --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
 ```
 
 Or donate from this cloned repository with the local browser wizard:
