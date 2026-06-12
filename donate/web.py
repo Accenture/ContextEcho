@@ -529,6 +529,8 @@ INDEX_HTML = r"""<!doctype html>
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
     .session-row.donated-row { cursor:not-allowed; opacity:.72; background:#f7f9f4; }
     .session-row.donated-row:hover { background:#f7f9f4; }
+    .all-donated-note { margin:12px; border:1px solid #b9d6b0; background:#f2fbef; border-radius:14px; padding:14px 16px; color:#145832; font-weight:900; }
+    .all-donated-note span { display:block; margin-top:4px; color:#52605a; font-weight:650; }
     .session-icon { width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:14px; }
     .session-title { font-weight:900; font-size:14px; }
     .session-date { color:#5f6662; font-size:13px; }
@@ -836,6 +838,12 @@ function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSO
 function annotateCachedDonations(rows){
   return (rows || []).map(s => ({...s, donated: !!(s.donated || donatedPaths.has(s.path))}));
 }
+function allSessionsDonated(){
+  return sessions.length > 0 && sessions.every(s => !!s.donated || donatedPaths.has(s.path));
+}
+function allSessionsDonatedMessage(){
+  return `Thank you for donating all your scanned session data. ${sessions.length} session${sessions.length === 1 ? '' : 's'} on this machine are marked donated.`;
+}
 function saveDiscoveryCache(){
   localStorage.setItem(discoveryCacheKey, JSON.stringify({saved_at:Date.now(), sessions, page}));
 }
@@ -851,7 +859,7 @@ function loadDiscoveryCache(){
     renderSessions();
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
     const mins = Math.max(1, Math.round(age / 60000));
-    status('discoverStatus', `Loaded ${sessions.length} recently discovered sessions from ${mins} min ago. Click Discover Sessions to refresh.`);
+    status('discoverStatus', allSessionsDonated() ? allSessionsDonatedMessage() : `Loaded ${sessions.length} recently discovered sessions from ${mins} min ago. Click Discover Sessions to refresh.`);
     return true;
   } catch(e) {
     return false;
@@ -883,7 +891,7 @@ function goStep(n){
 }
 function refreshButtons(){
   const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(selected.path)));
-  $('pickNext').disabled = !selected;
+  $('pickNext').disabled = !selected || allSessionsDonated();
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
@@ -1302,6 +1310,7 @@ function renderSessions(){
   list.innerHTML = '';
   const start = page * pageSize;
   const rows = sessions.slice(start, start + pageSize);
+  const allDonated = allSessionsDonated();
   $('sessionCount').textContent = `${sessions.length} found`;
   if(!rows.length){
     list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div><div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
@@ -1340,10 +1349,20 @@ function renderSessions(){
     };
     list.appendChild(row);
   });
+  if(allDonated){
+    selected = null;
+    redacted = null;
+    submitted = false;
+    $('selectedCard').innerHTML = '';
+    $('selectedCard').classList.remove('show');
+    $('reviewConfirm').checked = false;
+    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated on this machine. You can close the wizard or clear local donated labels only if a previous submission failed.</span></div>`);
+  }
   const totalPages = Math.max(1, Math.ceil(sessions.length / pageSize));
   $('pageInfo').textContent = `Page ${page + 1} of ${totalPages} · showing ${sessions.length ? start + 1 : 0}-${Math.min(start + pageSize, sessions.length)} of ${sessions.length}`;
   $('prevPage').disabled = page <= 0;
   $('nextPage').disabled = page >= totalPages - 1;
+  refreshButtons();
 }
 $('discoverBtn').onclick = async () => {
   $('discoverBtn').disabled = true;
@@ -1384,7 +1403,7 @@ $('discoverBtn').onclick = async () => {
     sessions = (final && final.sessions) || [];
     page = 0;
     saveDiscoveryCache();
-    status('discoverStatus', `Found ${sessions.length} usable sessions. Click a row to select.`);
+    status('discoverStatus', allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} usable sessions. Click a row to select.`);
     renderSessions();
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
   } catch(e) { status('discoverStatus','ERROR: '+e.message); }
@@ -1549,7 +1568,7 @@ $('submitBtn').onclick = async () => {
     submitted = true;
     if(selected && selected.path){ selected.donated = true; donatedPaths.add(selected.path); saveDonatedPaths(); saveDiscoveryCache(); renderSessions(); }
     renderSubmitResult(data);
-    status('submitStatus', data.duplicate ? 'This session was already received. It is now marked donated locally.' : 'Submission marked donated locally. Pick another session to submit more.');
+    status('submitStatus', allSessionsDonated() ? allSessionsDonatedMessage() : (data.duplicate ? 'This session was already received. It is now marked donated locally.' : 'Submission marked donated locally. Pick another session to submit more.'));
     refreshButtons();
   }
   catch(e) { status('submitStatus','ERROR: '+e.message); }
