@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 from donate.web import (
+    _load_contributors_markdown,
     _parse_contributor_leaderboard,
     _parse_donated_sessions,
     already_submitted,
@@ -44,6 +45,18 @@ class WebTests(unittest.TestCase):
         self.assertEqual(rows[0]["contributor"], "Founding donors")
         self.assertEqual(rows[0]["sessions_num"], 3)
         self.assertEqual(rows[0]["turns_num"], 18380)
+
+    def test_load_contributors_markdown_falls_back_to_github_when_packaged(self):
+        remote_text = "| Rank | Contributor | Sessions | Turns | Agents | Models | Points |\n"
+        with TemporaryDirectory() as td:
+            missing = Path(td) / "CONTRIBUTORS.md"
+            with mock.patch("donate.web._fetch_text", return_value=remote_text) as fetch_text:
+                text = _load_contributors_markdown(missing)
+
+        self.assertEqual(text, remote_text)
+        fetch_text.assert_called_once_with(
+            "https://raw.githubusercontent.com/Accenture/ContextEcho/main/CONTRIBUTORS.md"
+        )
 
     def test_create_server_falls_back_when_port_is_busy(self):
         fake_server = mock.Mock()

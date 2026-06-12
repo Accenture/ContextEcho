@@ -363,6 +363,15 @@ def _parse_contributor_leaderboard(markdown: str) -> list[dict]:
     return rows[:5]
 
 
+def _load_contributors_markdown(local_path: Path | None = None) -> str:
+    if local_path is None:
+        local_path = Path(__file__).resolve().parents[1] / "CONTRIBUTORS.md"
+    try:
+        return local_path.read_text(encoding="utf-8")
+    except Exception:
+        return _fetch_text("https://raw.githubusercontent.com/Accenture/ContextEcho/main/CONTRIBUTORS.md")
+
+
 def project_stats() -> dict:
     """Best-effort public project stats. Never block the donation flow."""
     stats = {
@@ -389,8 +398,7 @@ def project_stats() -> dict:
     except Exception:
         pass
     try:
-        local_contributors = Path(__file__).resolve().parents[1] / "CONTRIBUTORS.md"
-        text = local_contributors.read_text(encoding="utf-8")
+        text = _load_contributors_markdown()
         stats["leaderboard"] = _parse_contributor_leaderboard(text)
     except Exception:
         pass
