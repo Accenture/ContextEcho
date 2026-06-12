@@ -102,7 +102,41 @@ def load_donated_artifact_keys() -> set[str]:
     return {str(x) for x in data.get("artifact_keys", [])}
 
 
-def save_donation_record(source_path: str | Path = "", artifact_path: str | Path = "", output: str = "") -> None:
+def donation_points_range(turns: str | int = 0, compactions: str | int = 0) -> tuple[int, int]:
+    turns_n = int(turns or 0)
+    compactions_n = int(compactions or 0)
+    return (3, 5) if turns_n >= 100 or compactions_n >= 1 else (2, 4)
+
+
+def contributor_identity(receipt: dict) -> str:
+    name = str(receipt.get("credit_name") or receipt.get("contributor") or "").strip().lower()
+    email = str(receipt.get("contributor_email") or "").strip().lower()
+    institute = str(receipt.get("institute") or "").strip().lower()
+    if not (name and email and institute):
+        return ""
+    return "\n".join([name, email, institute])
+
+
+def local_pending_summary(receipt: dict) -> dict:
+    target = contributor_identity(receipt)
+    if not target:
+        low, high = donation_points_range(receipt.get("turns", 0), receipt.get("compactions", 0))
+        return {"sessions": 1, "points_low": low, "points_high": high}
+    sessions = 0
+    points_low = 0
+    points_high = 0
+    turns = 0
+    for item in load_donation_registry().get("submissions", []):
+        if item.get("contributor_identity") != target:
+            continue
+        sessions += 1
+        points_low += int(item.get("points_low") or 0)
+        points_high += int(item.get("points_high") or 0)
+        turns += int(item.get("turns") or 0)
+    return {"sessions": sessions or 1, "points_low": points_low or 0, "points_high": points_high or 0, "turns": turns}
+
+
+def save_donation_record(source_path: str | Path = "", artifact_path: str | Path = "", output: str = "", receipt: dict | None = None) -> None:
     DONATION_ROOT.mkdir(parents=True, exist_ok=True)
     data = load_donation_registry()
     source_keys = {str(x) for x in data.get("source_keys", [])}
@@ -119,11 +153,21 @@ def save_donation_record(source_path: str | Path = "", artifact_path: str | Path
     m = re.search(r"\[submit\] submission\s*:\s*(pending/submission-[^/\s]+/)", output)
     if not m:
         m = re.search(r"\[submit\]\s*Submission ID:\s*(submission-[A-Za-z0-9_-]+)", output)
+    receipt = receipt or {}
+    points_low, points_high = donation_points_range(receipt.get("turns", 0), receipt.get("compactions", 0))
     submissions.append({
         "submitted_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "source_key": skey,
         "artifact_key": akey,
         "submission": m.group(1) if m else "",
+        "contributor_identity": contributor_identity(receipt),
+        "credit_name": receipt.get("credit_name", ""),
+        "contributor_email": receipt.get("contributor_email", ""),
+        "institute": receipt.get("institute", ""),
+        "turns": int(receipt.get("turns") or 0),
+        "compactions": int(receipt.get("compactions") or 0),
+        "points_low": points_low,
+        "points_high": points_high,
     })
     payload = {
         "updated_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -1031,6 +1075,12 @@ function renderSubmitResult(data){
   const pendingRange = highValue ? '3–5' : '2–4';
   const pendingPointsLow = highValue ? 3 : 2;
   const pendingPointsHigh = highValue ? 5 : 4;
+  const localPending = data.local_pending || {};
+  const localPendingSessions = Number(localPending.sessions || 1);
+  const localPendingLow = Number(localPending.points_low || pendingPointsLow);
+  const localPendingHigh = Number(localPending.points_high || pendingPointsHigh);
+  const localPendingTurns = Number(localPending.turns || turns);
+  const localPendingRange = `${localPendingLow}–${localPendingHigh}`;
   const acceptedLeaders = publicStats.leaderboard || [];
   const sameName = row => String(row.contributor || '').toLowerCase() === creditName.toLowerCase();
   const mergedWithExisting = acceptedLeaders.some(sameName);
@@ -1050,22 +1100,22 @@ function renderSubmitResult(data){
     };
     return {
       name: creditName,
-      points: basePoints + pendingPointsLow,
-      pointsLow: basePoints + pendingPointsLow,
-      pointsHigh: basePoints + pendingPointsHigh,
-      sessions: baseSessions + 1,
-      turns: baseTurns + turns,
+      points: basePoints + localPendingLow,
+      pointsLow: basePoints + localPendingLow,
+      pointsHigh: basePoints + localPendingHigh,
+      sessions: baseSessions + localPendingSessions,
+      turns: baseTurns + localPendingTurns,
       pending: true,
       pendingExisting: true,
     };
   });
   if(!mergedWithExisting) simulatedLeaders.push({
     name: creditName,
-    points: pendingPointsLow,
-    pointsLow: pendingPointsLow,
-    pointsHigh: pendingPointsHigh,
-    sessions: 1,
-    turns,
+    points: localPendingLow,
+    pointsLow: localPendingLow,
+    pointsHigh: localPendingHigh,
+    sessions: localPendingSessions,
+    turns: localPendingTurns,
     pending: true,
     pendingExisting: false,
   });
@@ -1085,10 +1135,10 @@ function renderSubmitResult(data){
   const leaderboardRows = simulatedLeaders.slice(windowStart, windowStart + windowSize).map((row, offset) => {
     const rank = windowStart + offset + 1;
     const sessionText = row.pending
-      ? (row.pendingExisting ? `${row.sessions} sessions` : '+1 pending')
+      ? `${row.sessions} pending`
       : `${row.sessions} session${row.sessions === 1 ? '' : 's'}`;
     const pointsText = row.pending
-      ? (row.pendingExisting ? `${row.pointsLow}–${row.pointsHigh} pts` : `${pendingRange} pts`)
+      ? `${row.pointsLow}–${row.pointsHigh} pts`
       : `${row.points} pts`;
     return `
     <div class="leaderboard-row ${row.pending ? 'pending' : ''}">
@@ -1118,7 +1168,7 @@ function renderSubmitResult(data){
           <div class="credit-card"><div class="credit-icon">◇</div><div><strong>${highValue ? '+1' : '+0'}</strong><span>${highValue ? 'High-value session bonus' : 'High-value bonus pending'}</span></div></div>
           <div class="credit-card"><div class="credit-icon">▣</div><div><strong>+1</strong><span>Possible coverage / usability bonus</span></div></div>
         </div>
-        <div class="leader-note"><span><strong>Pending score: ${pendingRange} points.</strong> Accepted donations appear on the contributor leaderboard and release acknowledgments.</span></div>
+        <div class="leader-note"><span><strong>Pending score: ${localPendingRange} points across ${localPendingSessions} pending session${localPendingSessions === 1 ? '' : 's'}.</strong> Accepted donations appear on the contributor leaderboard and release acknowledgments.</span></div>
         <div class="leaderboard-preview">
           <div class="leaderboard-title"><span class="leaderboard-title-main">♙ <span>Leaderboard preview</span></span><span class="leaderboard-rank-badge">Estimated rank: ${escapeHtml(rankLabel)}</span></div>
           <div class="leaderboard-head"><span>#</span><span>Contributor</span><span>Sessions</span><span>Points</span></div>
@@ -1771,9 +1821,9 @@ class Handler(BaseHTTPRequestHandler):
         if rc != 0 and is_duplicate_submit_output(output):
             if emit:
                 emit({"event": "progress", "percent": 85, "message": "This redacted session was already received. Saving local donated label..."})
-            save_donation_record(source_path=source_path or "", artifact_path=session, output="[submit] Submission ID: submission-already-received")
             receipt_path, receipt = write_receipt(session, source_path or "", "[submit] Submission ID: submission-already-received")
             receipt["duplicate"] = True
+            save_donation_record(source_path=source_path or "", artifact_path=session, output="[submit] Submission ID: submission-already-received", receipt=receipt)
             if emit:
                 emit({"event": "progress", "percent": 95, "message": "Local duplicate receipt saved."})
             return {
@@ -1781,6 +1831,7 @@ class Handler(BaseHTTPRequestHandler):
                 "output": output,
                 "receipt_path": str(receipt_path),
                 "receipt": receipt,
+                "local_pending": local_pending_summary(receipt),
                 "manifest": describe_result.get("manifest"),
                 "consent": describe_result.get("consent"),
             }
@@ -1788,14 +1839,15 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError(output or f"submit failed with code {rc}")
         if emit:
             emit({"event": "progress", "percent": 85, "message": "Upload accepted. Saving local receipt..."})
-        save_donation_record(source_path=source_path or "", artifact_path=session, output=output)
         receipt_path, receipt = write_receipt(session, source_path or "", output)
+        save_donation_record(source_path=source_path or "", artifact_path=session, output=output, receipt=receipt)
         if emit:
             emit({"event": "progress", "percent": 95, "message": "Local receipt saved."})
         return {
             "output": output,
             "receipt_path": str(receipt_path),
             "receipt": receipt,
+            "local_pending": local_pending_summary(receipt),
             "manifest": describe_result.get("manifest"),
             "consent": describe_result.get("consent"),
         }
