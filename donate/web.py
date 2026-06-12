@@ -531,6 +531,8 @@ INDEX_HTML = r"""<!doctype html>
     .session-row.donated-row:hover { background:#f7f9f4; }
     .all-donated-note { margin:12px; border:1px solid #b9d6b0; background:#f2fbef; border-radius:14px; padding:14px 16px; color:#145832; font-weight:900; }
     .all-donated-note span { display:block; margin-top:4px; color:#52605a; font-weight:650; }
+    .empty-sessions.thanks { color:#145832; font-weight:900; background:#f8fcf4; }
+    .empty-sessions.thanks span { display:block; margin-top:6px; color:#52605a; font-weight:650; }
     .session-icon { width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:14px; }
     .session-title { font-weight:900; font-size:14px; }
     .session-date { color:#5f6662; font-size:13px; }
@@ -843,6 +845,9 @@ function allSessionsDonated(){
 }
 function allSessionsDonatedMessage(){
   return `Thank you for donating all your scanned session data. ${sessions.length} session${sessions.length === 1 ? '' : 's'} on this machine are marked donated.`;
+}
+function noSessionsMessage(){
+  return 'Thanks for considering a ContextEcho donation. We did not find any usable Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.';
 }
 function saveDiscoveryCache(){
   localStorage.setItem(discoveryCacheKey, JSON.stringify({saved_at:Date.now(), sessions, page}));
@@ -1313,7 +1318,11 @@ function renderSessions(){
   const allDonated = allSessionsDonated();
   $('sessionCount').textContent = `${sessions.length} found`;
   if(!rows.length){
-    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div><div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
+    const searched = $('discoverProgress').style.display === 'block';
+    const emptyText = searched
+      ? `<div class="empty-sessions thanks">Thanks for considering a ContextEcho donation.<span>We did not find any usable Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.</span></div>`
+      : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
+    list.innerHTML = `<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div>${emptyText}`;
   }
   if(rows.length){
     list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div>';
@@ -1403,7 +1412,7 @@ $('discoverBtn').onclick = async () => {
     sessions = (final && final.sessions) || [];
     page = 0;
     saveDiscoveryCache();
-    status('discoverStatus', allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} usable sessions. Click a row to select.`);
+    status('discoverStatus', sessions.length === 0 ? noSessionsMessage() : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} usable sessions. Click a row to select.`));
     renderSessions();
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
   } catch(e) { status('discoverStatus','ERROR: '+e.message); }
