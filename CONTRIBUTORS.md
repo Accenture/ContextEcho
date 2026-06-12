@@ -19,9 +19,9 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Rank | Contributor | Sessions | Turns | Agents | Models | Points |
 |:----:|-------------|:--------:|------:|--------|--------|:------:|
-| 1 | Anonymous donor S1 | 1 | 9,716 | Claude Code | Opus 4.x (mixed) | 5 |
-| 2 | Anonymous donor S3 | 1 | 4,918 | Claude Code | Opus 4.x (mixed) | 5 |
-| 3 | Anonymous donor S2 | 1 | 3,746 | Claude Code | Opus 4.x (mixed) | 5 |
+| 🥇 | Anonymous donor S1 | 1 | 9,716 | Claude Code | Opus 4.x (mixed) | 5 |
+| 🥈 | Anonymous donor S3 | 1 | 4,918 | Claude Code | Opus 4.x (mixed) | 5 |
+| 🥉 | Anonymous donor S2 | 1 | 3,746 | Claude Code | Opus 4.x (mixed) | 5 |
 
 *Corpus total: **3 sessions · 18,380 user turns**.*
 
