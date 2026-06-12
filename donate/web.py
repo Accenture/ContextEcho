@@ -599,6 +599,8 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) .privacy-icon { background:#e8f8e5; }
     .redact-info-strip { display:flex; gap:10px; align-items:center; margin-top:12px; padding:10px 12px; border-radius:10px; background:#f3f4f2; color:#3f4843; font-size:13px; }
     .redact-info-strip:before { content:"i"; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:2px solid #3c6da8; color:#275c99; font-weight:950; font-family:ui-serif, Georgia, serif; }
+    .scrub-helper { margin:6px 0 0; color:#59635e; font-size:13px; }
+    .scrub-helper strong { color:#28332e; }
     .redact-action-row { margin-top:12px; }
     .redact-action-row button { background:#be2e35; box-shadow:0 10px 18px rgba(190,46,53,.18); }
     .redact-review-grid { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:18px; align-items:start; margin-top:14px; }
@@ -615,6 +617,7 @@ INDEX_HTML = r"""<!doctype html>
     .redacted-path-row .pathbox { flex:1; min-width:0; margin-top:4px; }
     .copy-file-btn { padding:8px 10px; box-shadow:none; background:#f4f5f1; color:#24312b; }
     .removed-count { color:var(--muted); font-weight:900; }
+    .removed-note { margin-top:6px; color:#667068; font-size:13px; }
     .search-panel.compact-search { border-style:solid; background:#fffef9; }
     .search-panel.compact-search label { margin-top:0; }
     .search-panel.compact-search .row { flex-wrap:nowrap; }
@@ -741,8 +744,9 @@ INDEX_HTML = r"""<!doctype html>
     <div class="redact-info-strip"><strong>Automatic redaction covers:</strong> paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</div>
     <label><input id="safeConfirm" type="checkbox" style="width:auto"> I confirm this session is safe to donate.</label>
     <div id="scrubRow" class="row compact-input-row" style="margin-top:12px">
-      <label>Extra terms to scrub <span class="muted">(optional)</span></label>
-      <input id="scrub" placeholder="your name, Project Codename" />
+      <label>Private words to remove on the next redaction run <span class="muted">(optional)</span></label>
+      <input id="scrub" placeholder="xianzhong, Project Codename, private repo name" />
+      <div class="scrub-helper"><strong>Use this only if you still see a private word.</strong> Type the exact word or phrase here, then click Redact and Verify again.</div>
     </div>
     <div class="row redact-action-row">
       <button id="redactBtn" disabled>Redact and Verify</button>
@@ -751,10 +755,10 @@ INDEX_HTML = r"""<!doctype html>
     <div class="redact-review-grid">
       <div id="redactResult" class="result"></div>
       <div id="searchPanel" class="search-panel compact-search">
-        <label>Test search in redacted file <span class="muted">(optional)</span></label>
+        <label>Check whether a private word is still present <span class="muted">(optional)</span></label>
         <div class="row">
-          <input id="searchTerms" placeholder="your name, Project Codename" style="flex:1; min-width:260px" />
-          <button id="searchBtn" class="secondary">Search Redacted File</button>
+          <input id="searchTerms" placeholder="word or phrase to check" style="flex:1; min-width:260px" />
+          <button id="searchBtn" class="secondary">Check File</button>
         </div>
         <div id="searchProgress" class="progress"><div></div></div>
         <div id="searchResult" class="result"></div>
@@ -901,7 +905,7 @@ function verifyFailureSummary(data){
   const entries = Object.entries(blocking);
   if(!entries.length) return 'Verify failed. Re-run redaction; if it repeats, inspect the redacted file with Test search.';
   const labels = entries.map(([k,v]) => `${k} (${(v || []).length})`).join(', ');
-  return `Verify failed: residual ${labels}. Add the shown term(s) to Extra terms to scrub, then click Redact and Verify again.`;
+  return `Verify failed: residual ${labels}. Add the shown private word(s) to the removal box, then click Redact and Verify again.`;
 }
 function suggestedScrubTerms(data){
   const blocking = ((data || {}).verify_report || {}).blocking || {};
@@ -950,10 +954,10 @@ function renderRedactResult(data){
       ${suggestedTerms.length ? `
         <div class="scrub-suggestion">
           <code>${escapeHtml(suggestedText)}</code>
-          <button class="secondary" type="button" id="useSuggestedScrub">Add to extra terms</button>
+          <button class="secondary" type="button" id="useSuggestedScrub">Add to removal box</button>
         </div>
       ` : ''}
-      <div class="hint"><strong>Next:</strong> ${blocking.detect_secrets ? 'Click Redact and Verify again to run the credential-pattern redactor. If it still fails, reveal the redacted file and remove the credential-shaped line manually.' : 'add the remaining private word(s) above in Extra terms to scrub, then click Redact and Verify again. For paths, add the username/project part, not the full path.'}</div>
+      <div class="hint"><strong>Next:</strong> ${blocking.detect_secrets ? 'Click Redact and Verify again to run the credential-pattern redactor. If it still fails, reveal the redacted file and remove the credential-shaped line manually.' : 'add the remaining private word(s) to the “Private words to remove” box, then click Redact and Verify again. For paths, add the username/project part, not the full path.'}</div>
     </div>
   `;
   const removedCount = entries.reduce((acc, item) => acc + Number(item[1] || 0), 0);
@@ -968,7 +972,7 @@ function renderRedactResult(data){
     ${failureBox}
     <div class="field"><div class="field-label">Redacted file</div><div class="redacted-path-row"><div class="pathbox">${escapeHtml(data.redacted_file)}</div><button class="copy-file-btn" type="button" id="copyRedactedPath">Copy</button></div></div>
     <div class="row" style="margin-top:8px"><button class="secondary" id="revealRedactedFile">Reveal File</button></div>
-    <div class="field"><div class="field-label">Removed ${removedCount ? `<span class="removed-count">(${removedCount})</span>` : ''}</div><div class="metrics">${metrics}</div></div>
+    <div class="field"><div class="field-label">Already removed in this output ${removedCount ? `<span class="removed-count">(${removedCount})</span>` : ''}</div><div class="metrics">${metrics}</div><div class="removed-note">These chips are a summary of what the tool already removed. They are not terms to type.</div></div>
   `;
   $('redactResult').className = `result show redact-card ${data.verify_passed ? 'pass-card' : 'fail-card'}`;
   $('searchPanel').classList.add('show');
@@ -982,7 +986,7 @@ function renderRedactResult(data){
       const merged = [...new Set([...existing, ...suggestedTerms])];
       $('scrub').value = merged.join(', ');
       $('reviewConfirm').checked = false;
-      status('redactStatus', 'Extra terms updated. Click Redact and Verify to re-redact.');
+      status('redactStatus', 'Private words added. Click Redact and Verify again to remove them from the file.');
       refreshButtons();
     };
   }
@@ -1024,14 +1028,14 @@ function renderSearchResult(data){
     : '<span class="metric">No terms entered</span>';
   $('searchResult').innerHTML = `
     <div class="result-head">
-      <div><span class="badge ${anyHit ? 'fail' : 'pass'}">${anyHit ? 'Matches found' : 'No matches'}</span></div>
-      <div class="muted">${anyHit ? 'Add matched terms to scrub and re-run redaction.' : 'Manual search passed for these terms.'}</div>
+      <div><span class="badge ${anyHit ? 'fail' : 'pass'}">${anyHit ? 'Still present' : 'Not found'}</span></div>
+      <div class="muted">${anyHit ? 'Add the matched word(s), then run Redact and Verify again.' : 'The checked word(s) were not found in the redacted file.'}</div>
     </div>
     <div class="metrics">${metrics}</div>
     ${matchedTerms.length ? `
       <div class="scrub-suggestion">
         <code>${escapeHtml(matchedText)}</code>
-        <button class="secondary" type="button" id="useSearchScrub">Add to extra terms</button>
+        <button class="secondary" type="button" id="useSearchScrub">Add to removal box</button>
       </div>
     ` : ''}
   `;
@@ -1043,7 +1047,7 @@ function renderSearchResult(data){
       const merged = [...new Set([...existing, ...matchedTerms])];
       $('scrub').value = merged.join(', ');
       $('reviewConfirm').checked = false;
-      status('redactStatus', 'Extra terms updated. Click Redact and Verify to re-redact.');
+      status('redactStatus', 'Private words added. Click Redact and Verify again to remove them from the file.');
       refreshButtons();
     };
   }
@@ -1405,7 +1409,7 @@ $('scrub').oninput = () => {
     $('reviewConfirm').checked = false;
     $('searchPanel').classList.remove('show');
     $('searchResult').classList.remove('show');
-    status('redactStatus', 'Scrub terms changed. Click Redact and Verify to quickly repair the existing redacted file.');
+    status('redactStatus', 'Private words changed. Click Redact and Verify again to update the redacted file.');
   }
   refreshButtons();
 };
@@ -1441,7 +1445,7 @@ $('redactBtn').onclick = async () => {
     );
     const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : $('scrub').value;
     if(redacted && redacted.verify_passed && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
-      status('redactStatus', 'No new extra terms to apply. Review the current redacted file or add another term.');
+      status('redactStatus', 'No new private words to remove. Review the current redacted file or add another word.');
       renderRedactResult(redacted);
       refreshButtons();
       return;
@@ -1460,7 +1464,7 @@ $('redactBtn').onclick = async () => {
         status('redactStatus', `Preparing to redact ${ev.total || '?'} records locally...`);
       } else if(ev.event === 'repair'){
         setBusy('redactProgress', true, ev.percent || 55);
-        status('redactStatus', ev.message || 'Applying new extra terms to the existing redacted file...');
+        status('redactStatus', ev.message || 'Applying new private words to the existing redacted file...');
       } else if(ev.event === 'engine'){
         setBusy('redactProgress', true, 8);
         status('redactStatus', 'Loading local redaction engine...');
@@ -1489,7 +1493,7 @@ $('redactBtn').onclick = async () => {
     }
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
-    status('redactStatus', redacted.verify_passed ? 'Review the result above. Add more scrub terms if needed, then check the review box to continue.' : verifyFailureSummary(redacted));
+    status('redactStatus', redacted.verify_passed ? 'Review the result above. If a private word remains, add it to the removal box and rerun. Otherwise check the review box to continue.' : verifyFailureSummary(redacted));
     refreshButtons();
   } catch(e) { status('redactStatus','ERROR: '+e.message); }
   finally { setBusy('redactProgress', false); refreshButtons(); }
@@ -1646,7 +1650,7 @@ class Handler(BaseHTTPRequestHandler):
                 emit({
                     "event": "repair",
                     "percent": 45,
-                    "message": "Applying new scrub terms and credential cleanup to the existing redacted file...",
+                    "message": "Applying new private words and credential cleanup to the existing redacted file...",
                 })
             stats = redact_mod.apply_scrub_terms_to_file(previous, previous, scrub_terms)
             if emit:
