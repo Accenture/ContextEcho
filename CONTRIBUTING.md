@@ -114,10 +114,17 @@ curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/ru
 ```
 
 This bootstraps a private `uv` runner with `python3` if needed, then launches
-the local browser wizard from GitHub with Python 3.11. If you already have
-`pipx` and Python 3.10+, you can run the package directly:
+the local browser wizard from GitHub with Python 3.11. Verified donations
+upload through the official ContextEcho relay:
+
+```text
+https://contextecho2026-context-echo-donation-relay.hf.space
+```
+
+If you already have `pipx` and Python 3.10+, you can run the package directly:
 
 ```bash
+CONTEXTECHO_RELAY_URL=https://contextecho2026-context-echo-donation-relay.hf.space \
 pipx run --no-cache --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
 ```
 

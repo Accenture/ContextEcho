@@ -50,10 +50,16 @@ curl http://localhost:8088/health
 
 ## Donor Configuration
 
+The official public relay is:
+
+```text
+https://contextecho2026-context-echo-donation-relay.hf.space
+```
+
 Donors should set only the relay URL:
 
 ```bash
-export CONTEXTECHO_RELAY_URL=https://your-relay.example.org
+export CONTEXTECHO_RELAY_URL=https://contextecho2026-context-echo-donation-relay.hf.space
 python3 -m donate --web
 ```
 

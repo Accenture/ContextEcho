@@ -196,10 +196,17 @@ curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/ru
 ```
 
 This bootstraps a private `uv` runner with `python3` if needed, then launches
-the local browser wizard from the GitHub repo with Python 3.11. If you already
-have `pipx` and Python 3.10+, you can run the package directly:
+the local browser wizard from the GitHub repo with Python 3.11. Verified
+donations upload through the official ContextEcho relay:
+
+```text
+https://contextecho2026-context-echo-donation-relay.hf.space
+```
+
+If you already have `pipx` and Python 3.10+, you can run the package directly:
 
 ```bash
+CONTEXTECHO_RELAY_URL=https://contextecho2026-context-echo-donation-relay.hf.space \
 pipx run --no-cache --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
 ```
 
@@ -215,8 +222,8 @@ the selected session on your machine, writes `session.redacted.jsonl`,
 `manifest.json`, and `CONSENT.md`, then submits only those redacted artifacts
 to private maintainer review.
 
-For public collection, maintainers should route uploads through the server-side
-relay so the Hugging Face staging token is never shipped to donors. See
+Public collection routes uploads through the server-side relay so the Hugging
+Face staging token is never shipped to donors. See
 [`DONATION_RELAY.md`](DONATION_RELAY.md).
 
 > **Donor privacy.** ContextEcho analyzes **assistant behavior**, not
