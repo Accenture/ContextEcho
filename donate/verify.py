@@ -149,9 +149,20 @@ def run_detect_secrets(path: Path) -> list[str]:
     except Exception:
         return []
     try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         with default_settings():
-            return [s.type for s in scan.scan_file(str(path))
-                    if s.type not in _NOISY_DS_TYPES]
+            findings = []
+            for s in scan.scan_file(str(path)):
+                if s.type in _NOISY_DS_TYPES:
+                    continue
+                if s.type == "Private Key":
+                    line = lines[s.line_number - 1] if 0 < s.line_number <= len(lines) else ""
+                    # detect-secrets flags prose like "BEGIN RSA PRIVATE KEY".
+                    # Only block real PEM delimiters that still expose key data.
+                    if "-----BEGIN" not in line or "PRIVATE KEY-----" not in line:
+                        continue
+                findings.append(s.type)
+            return findings
     except Exception:
         return []
 
