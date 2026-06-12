@@ -530,6 +530,40 @@ INDEX_HTML = r"""<!doctype html>
     .selected-card-action { flex:0 0 auto; }
     .search-panel { display:none; border:1px dashed #b8c9ad; border-radius:16px; padding:14px; margin-top:12px; background:#fffef7; }
     .search-panel.show { display:block; }
+    .step-headline { display:flex; gap:14px; align-items:flex-start; margin-bottom:16px; }
+    .step-bubble { flex:0 0 42px; width:42px; height:42px; border-radius:50%; display:grid; place-items:center; background:var(--accent); color:white; font-weight:950; font-size:18px; box-shadow:0 10px 22px rgba(23,113,63,.18); }
+    .step-bubble.warn { background:#be2e35; box-shadow:0 10px 22px rgba(190,46,53,.18); }
+    .step-headline h2 { margin:0; }
+    .step-headline p { margin:6px 0 0; }
+    .redact-section-title { margin:12px 0 4px; font-weight:900; color:#111b18; }
+    .privacy-card { position:relative; display:grid; grid-template-columns:auto 46px minmax(0,1fr); gap:14px; align-items:center; min-height:68px; }
+    .privacy-card strong { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .privacy-icon { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:#eef3ed; color:#1f6f43; font-size:22px; }
+    .privacy-card:has(input:checked) .privacy-icon { background:#e8f8e5; }
+    .redact-info-strip { display:flex; gap:10px; align-items:center; margin-top:12px; padding:10px 12px; border-radius:10px; background:#f3f4f2; color:#3f4843; font-size:13px; }
+    .redact-info-strip:before { content:"i"; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:2px solid #3c6da8; color:#275c99; font-weight:950; font-family:ui-serif, Georgia, serif; }
+    .redact-action-row { margin-top:12px; }
+    .redact-action-row button { background:#be2e35; box-shadow:0 10px 18px rgba(190,46,53,.18); }
+    .redact-review-grid { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:18px; align-items:start; margin-top:14px; }
+    .redact-review-grid .result, .redact-review-grid .search-panel { margin-top:0; }
+    .result.redact-card { border-radius:14px; padding:16px; background:#fffef9; }
+    .result.redact-card.fail-card { border-color:#efb7ad; background:#fff8f5; }
+    .result.redact-card.pass-card { border-color:#b9d6b0; background:#fbfff7; }
+    .result-title { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+    .result-title-main { display:flex; gap:10px; align-items:center; font-weight:950; }
+    .status-dot { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-weight:950; }
+    .status-dot.pass { color:#12683a; border:2px solid #75bd7f; }
+    .status-dot.fail { color:#9b201c; background:#f7d6d2; }
+    .redacted-path-row { display:flex; gap:8px; align-items:center; }
+    .redacted-path-row .pathbox { flex:1; min-width:0; margin-top:4px; }
+    .copy-file-btn { padding:8px 10px; box-shadow:none; background:#f4f5f1; color:#24312b; }
+    .removed-count { color:var(--muted); font-weight:900; }
+    .search-panel.compact-search { border-style:solid; background:#fffef9; }
+    .search-panel.compact-search label { margin-top:0; }
+    .search-panel.compact-search .row { flex-wrap:nowrap; }
+    .search-panel.compact-search input { min-width:0 !important; }
+    .search-panel.compact-search button { box-shadow:none; }
+    .search-panel.compact-search .result { padding:12px; border-radius:12px; }
     .progress { width:100%; height:12px; border-radius:999px; overflow:hidden; background:#e5eadc; margin-top:12px; display:none; }
     .progress > div { height:100%; width:0%; background:linear-gradient(90deg,#1f6f43,#89b65b); transition:width .2s ease; }
     .danger { color:#7f241b; font-weight:800; background:#fff1ed; border:1px solid #f2c9c0; padding:10px 12px; border-radius:14px; }
@@ -542,11 +576,11 @@ INDEX_HTML = r"""<!doctype html>
     .compact-input-row label { margin:0; white-space:nowrap; }
     .compact-input-row input { flex:1 1 520px; min-width:260px; }
     .privacy-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
-    .privacy-card { border:1px solid var(--line); border-radius:16px; padding:12px; background:#fffef7; cursor:pointer; }
+    .privacy-card { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .selected-card-layout { flex-direction:column; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -632,33 +666,42 @@ INDEX_HTML = r"""<!doctype html>
   </section>
 
   <section id="step2" class="card step">
-    <h2>2. Redact + Verify</h2>
-    <div id="selectedCard" class="selected-card"></div>
-    <div class="danger">Only donate personal, internal tooling, or open-source sessions. Do not donate client-confidential/NDA data.</div>
-    <p class="muted"><strong>ContextEcho analyzes assistant behavior, not donor personality.</strong> Choose how much of your own wording to keep.</p>
-    <div class="privacy-options">
-      <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><strong>Full redacted <span class="pill best">recommended</span></strong><div class="hint">Default. Keeps task flow after PII/secrets/custom terms are removed. Highest scientific fidelity.</div></label>
-      <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><strong>User-minimized</strong><div class="hint">Selectively masks sensitive donor text after redaction. Coding task context remains; stronger privacy.</div></label>
+    <div class="step-headline">
+      <div id="redactStepBubble" class="step-bubble">2</div>
+      <div>
+        <h2>Redact + Verify</h2>
+        <p class="muted">Review your session details, choose a redaction mode, and verify the output.</p>
+      </div>
     </div>
-    <p class="muted">Automatic redaction covers common sensitive data such as paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</p>
+    <div id="selectedCard" class="selected-card"></div>
+    <div class="danger">Only donate personal, internal tooling, or open-source sessions. <span style="font-weight:500">Do not donate client-confidential/NDA data.</span></div>
+    <div class="redact-section-title">Choose your redaction level</div>
+    <p class="muted" style="margin-top:0">ContextEcho analyzes assistant behavior, not donor personality. Choose how much of your own wording to keep.</p>
+    <div class="privacy-options">
+      <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><div class="privacy-icon">✣</div><div><strong>Full redacted <span class="pill best">Recommended</span></strong><div class="hint">Default. Keeps task flow after PII/secrets/custom terms are removed.<br>Highest scientific fidelity.</div></div></label>
+      <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><div class="privacy-icon">♢</div><div><strong>User-minimized</strong><div class="hint">Selectively masks sensitive donor text after redaction.<br>Coding task context remains; stronger privacy.</div></div></label>
+    </div>
+    <div class="redact-info-strip"><strong>Automatic redaction covers:</strong> paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</div>
     <label><input id="safeConfirm" type="checkbox" style="width:auto"> I confirm this session is safe to donate.</label>
     <div id="scrubRow" class="row compact-input-row" style="margin-top:12px">
       <label>Extra terms to scrub <span class="muted">(optional)</span></label>
       <input id="scrub" placeholder="your name, Project Codename" />
     </div>
-    <div class="row" style="margin-top:12px">
+    <div class="row redact-action-row">
       <button id="redactBtn" disabled>Redact and Verify</button>
     </div>
     <div id="redactProgress" class="progress"><div></div></div>
-    <div id="redactResult" class="result"></div>
-    <div id="searchPanel" class="search-panel">
-      <label>Test search in redacted file <span class="muted">(optional)</span></label>
-      <div class="row">
-        <input id="searchTerms" placeholder="your name, Project Codename" style="flex:1; min-width:260px" />
-        <button id="searchBtn" class="secondary">Search Redacted File</button>
+    <div class="redact-review-grid">
+      <div id="redactResult" class="result"></div>
+      <div id="searchPanel" class="search-panel compact-search">
+        <label>Test search in redacted file <span class="muted">(optional)</span></label>
+        <div class="row">
+          <input id="searchTerms" placeholder="your name, Project Codename" style="flex:1; min-width:260px" />
+          <button id="searchBtn" class="secondary">Search Redacted File</button>
+        </div>
+        <div id="searchProgress" class="progress"><div></div></div>
+        <div id="searchResult" class="result"></div>
       </div>
-      <div id="searchProgress" class="progress"><div></div></div>
-      <div id="searchResult" class="result"></div>
     </div>
     <div class="inline-status" id="redactStatus"></div>
     <label style="margin-top:14px"><input id="reviewConfirm" type="checkbox" style="width:auto" disabled> I reviewed the verify output and redacted file path; it is ready to submit.</label>
@@ -852,20 +895,25 @@ function renderRedactResult(data){
       <div class="hint"><strong>Next:</strong> ${blocking.detect_secrets ? 'Click Redact and Verify again to run the credential-pattern redactor. If it still fails, reveal the redacted file and remove the credential-shaped line manually.' : 'add the remaining private word(s) above in Extra terms to scrub, then click Redact and Verify again. For paths, add the username/project part, not the full path.'}</div>
     </div>
   `;
+  const removedCount = entries.reduce((acc, item) => acc + Number(item[1] || 0), 0);
   $('redactResult').innerHTML = `
-    <div class="result-head">
-      <div><span class="badge ${data.verify_passed ? 'pass' : 'fail'}">${data.verify_passed ? 'Verified clean' : 'Verify failed'}</span></div>
-      <div class="muted">${data.privacy_tier === 'user_minimized' ? 'Redaction + user minimization complete' : 'Redaction complete'}</div>
+    <div class="result-title">
+      <div class="result-title-main">
+        <span class="status-dot ${data.verify_passed ? 'pass' : 'fail'}">${data.verify_passed ? '✓' : '×'}</span>
+        <span>${data.verify_passed ? 'Verified clean' : 'Verify failed'}</span>
+      </div>
+      <div class="muted">${data.privacy_tier === 'user_minimized' ? 'Redaction + user minimization complete' : 'Redaction complete'} ${data.verify_passed ? '✓' : ''}</div>
     </div>
     ${failureBox}
-    <div class="field"><div class="field-label">Redacted file</div><div class="pathbox">${escapeHtml(data.redacted_file)}</div></div>
+    <div class="field"><div class="field-label">Redacted file</div><div class="redacted-path-row"><div class="pathbox">${escapeHtml(data.redacted_file)}</div><button class="copy-file-btn" type="button" id="copyRedactedPath">Copy</button></div></div>
     <div class="row" style="margin-top:8px"><button class="secondary" id="revealRedactedFile">Reveal File</button></div>
-    <div class="field"><div class="field-label">Removed</div><div class="metrics">${metrics}</div></div>
+    <div class="field"><div class="field-label">Removed ${removedCount ? `<span class="removed-count">(${removedCount})</span>` : ''}</div><div class="metrics">${metrics}</div></div>
   `;
-  $('redactResult').classList.add('show');
+  $('redactResult').className = `result show redact-card ${data.verify_passed ? 'pass-card' : 'fail-card'}`;
   $('searchPanel').classList.add('show');
   $('searchResult').classList.remove('show');
   $('revealRedactedFile').onclick = () => post('/api/open_path', {path:data.redacted_file, reveal:true}).catch(e => status('redactStatus','ERROR: '+e.message));
+  $('copyRedactedPath').onclick = () => navigator.clipboard?.writeText(data.redacted_file).catch(()=>{});
   const suggestedBtn = $('useSuggestedScrub');
   if(suggestedBtn){
     suggestedBtn.onclick = () => {
@@ -884,14 +932,14 @@ function renderSelectedCard(s, idx){
       <div class="selected-card-main">
         <div class="result-head">
           <div><strong>Selected #${idx + 1}: ${escapeHtml(s.project || 'unknown project')}</strong></div>
-          <span class="pill ${fit(s)}">${fit(s)}</span>
+          <span class="pill ${fit(s)}">${fit(s).charAt(0).toUpperCase() + fit(s).slice(1)}</span>
         </div>
         <div class="metrics">
           <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
           <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
           <span class="metric">User turns: <strong>${compactNumber(s.turns)}</strong></span>
           <span class="metric">Records: <strong>${compactNumber(s.records || s.turns)}</strong></span>
-          <span class="metric">Context compactions: <strong>${s.compactions || 0}</strong></span>
+          <span class="metric">Compactions: <strong>${s.compactions || 0}</strong></span>
           <span class="metric">Last active: <strong>${escapeHtml(s.last_active || s.modified || '?')}</strong></span>
         </div>
         <div class="hint">${escapeHtml(compactionNote(s))}</div>
