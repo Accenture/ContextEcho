@@ -113,9 +113,9 @@ Fastest donor path:
 curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/run-donate.sh | bash
 ```
 
-This bootstraps `pipx` with `python3` if needed, then launches the local
-browser wizard from GitHub. If you already have `pipx`, you can run the package
-directly:
+This bootstraps a private `uv` runner with `python3` if needed, then launches
+the local browser wizard from GitHub with Python 3.11. If you already have
+`pipx` and Python 3.10+, you can run the package directly:
 
 ```bash
 pipx run --no-cache --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
