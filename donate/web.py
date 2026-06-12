@@ -168,6 +168,11 @@ def parse_submit_output(output: str) -> dict:
     return {"url": url, "repo": repo, "submission": submission, "uploads": uploads}
 
 
+def is_duplicate_submit_output(output: str) -> bool:
+    text = output.lower()
+    return "duplicate redacted session artifact" in text or "http 409" in text and "duplicate" in text
+
+
 def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[Path, dict]:
     stem = session.stem.replace(".redacted", "")
     manifest_path = session.with_name(f"{stem}.manifest.json")
@@ -1013,6 +1018,7 @@ function receiptEmailHref(receipt, receiptPath){
 }
 function renderSubmitResult(data){
   const receipt = data.receipt || {};
+  const duplicate = !!data.duplicate || !!receipt.duplicate;
   const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'not available';
   const idHint = receipt.submission
     ? 'Save this ID for support. Maintainers can use it to find your private staging submission.'
@@ -1103,8 +1109,8 @@ function renderSubmitResult(data){
         <div class="success-hero">
           <div class="success-check">✓</div>
           <div>
-            <div class="success-title">Thank you, ${escapeHtml(firstName)}.</div>
-            <div class="success-subtitle">Your verified redacted session is submitted for maintainer review and release credit.</div>
+            <div class="success-title">${duplicate ? 'Already received' : `Thank you, ${escapeHtml(firstName)}.`}</div>
+            <div class="success-subtitle">${duplicate ? 'This verified redacted session was already submitted. We marked it donated locally to prevent repeat uploads.' : 'Your verified redacted session is submitted for maintainer review and release credit.'}</div>
           </div>
         </div>
         <div class="credit-scoreboard">
@@ -1123,7 +1129,7 @@ function renderSubmitResult(data){
       <aside class="success-detail-card">
         <div class="detail-section">
           <div class="detail-heading"><span class="detail-icon">◷</span><span>Status</span></div>
-          <div class="detail-chip">Pending maintainer review</div>
+          <div class="detail-chip">${duplicate ? 'Already submitted' : 'Pending maintainer review'}</div>
         </div>
         <div class="detail-section">
           <div class="detail-heading"><span class="detail-icon">♙</span><span>Credit name</span></div>
@@ -1459,7 +1465,7 @@ $('submitBtn').onclick = async () => {
     submitted = true;
     if(selected && selected.path){ selected.donated = true; donatedPaths.add(selected.path); saveDonatedPaths(); saveDiscoveryCache(); renderSessions(); }
     renderSubmitResult(data);
-    status('submitStatus', 'Submission marked donated locally. Pick another session to submit more.');
+    status('submitStatus', data.duplicate ? 'This session was already received. It is now marked donated locally.' : 'Submission marked donated locally. Pick another session to submit more.');
     refreshButtons();
   }
   catch(e) { status('submitStatus','ERROR: '+e.message); }
@@ -1762,6 +1768,22 @@ class Handler(BaseHTTPRequestHandler):
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             rc = submit_mod.main([str(session)])
         output = buf.getvalue()
+        if rc != 0 and is_duplicate_submit_output(output):
+            if emit:
+                emit({"event": "progress", "percent": 85, "message": "This redacted session was already received. Saving local donated label..."})
+            save_donation_record(source_path=source_path or "", artifact_path=session, output="[submit] Submission ID: submission-already-received")
+            receipt_path, receipt = write_receipt(session, source_path or "", "[submit] Submission ID: submission-already-received")
+            receipt["duplicate"] = True
+            if emit:
+                emit({"event": "progress", "percent": 95, "message": "Local duplicate receipt saved."})
+            return {
+                "duplicate": True,
+                "output": output,
+                "receipt_path": str(receipt_path),
+                "receipt": receipt,
+                "manifest": describe_result.get("manifest"),
+                "consent": describe_result.get("consent"),
+            }
         if rc != 0:
             raise ValueError(output or f"submit failed with code {rc}")
         if emit:

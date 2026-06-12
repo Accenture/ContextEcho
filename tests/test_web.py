@@ -12,6 +12,7 @@ from donate.web import (
     artifact_key,
     clear_donation_registry,
     create_server,
+    is_duplicate_submit_output,
     load_donated_artifact_keys,
     parse_submit_output,
     save_donation_record,
@@ -144,6 +145,12 @@ class WebTests(unittest.TestCase):
         )
         self.assertEqual(parsed["submission"], "submission-abc12345")
         self.assertEqual(parsed["uploads"][0]["source"], "session.redacted.jsonl")
+
+    def test_duplicate_relay_submit_output_is_detected(self):
+        self.assertTrue(is_duplicate_submit_output(
+            '[submit] relay upload failed: HTTP 409 {"detail":"duplicate redacted session artifact"}'
+        ))
+        self.assertFalse(is_duplicate_submit_output("[submit] relay upload failed: HTTP 500"))
 
 
 if __name__ == "__main__":
