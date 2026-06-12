@@ -1019,28 +1019,53 @@ function renderSubmitResult(data){
   const compactions = Number(receipt.compactions || 0);
   const highValue = turns >= 100 || compactions >= 1;
   const pendingRange = highValue ? '3–5' : '2–4';
+  const pendingPointsLow = highValue ? 3 : 2;
   const pendingPointsHigh = highValue ? 5 : 4;
   const acceptedLeaders = publicStats.leaderboard || [];
   const sameName = row => String(row.contributor || '').toLowerCase() === creditName.toLowerCase();
   const mergedWithExisting = acceptedLeaders.some(sameName);
   const simulatedLeaders = acceptedLeaders.map(row => {
+    const basePoints = Number(row.points_num || 0);
+    const baseSessions = Number(row.sessions_num || 0);
+    const baseTurns = Number(row.turns_num || 0);
     if(!sameName(row)) return {
       name: row.contributor || '',
-      points: Number(row.points_num || 0),
-      sessions: Number(row.sessions_num || 0),
-      turns: Number(row.turns_num || 0),
+      points: basePoints,
+      pointsLow: basePoints,
+      pointsHigh: basePoints,
+      sessions: baseSessions,
+      turns: baseTurns,
       pending: false,
+      pendingExisting: false,
     };
     return {
       name: creditName,
-      points: Number(row.points_num || 0) + pendingPointsHigh,
-      sessions: Number(row.sessions_num || 0) + 1,
-      turns: Number(row.turns_num || 0) + turns,
+      points: basePoints + pendingPointsLow,
+      pointsLow: basePoints + pendingPointsLow,
+      pointsHigh: basePoints + pendingPointsHigh,
+      sessions: baseSessions + 1,
+      turns: baseTurns + turns,
       pending: true,
+      pendingExisting: true,
     };
   });
-  if(!mergedWithExisting) simulatedLeaders.push({name: creditName, points: pendingPointsHigh, sessions: 1, turns, pending: true});
-  simulatedLeaders.sort((a,b) => (b.points - a.points) || (b.sessions - a.sessions) || (b.turns - a.turns) || a.name.localeCompare(b.name));
+  if(!mergedWithExisting) simulatedLeaders.push({
+    name: creditName,
+    points: pendingPointsLow,
+    pointsLow: pendingPointsLow,
+    pointsHigh: pendingPointsHigh,
+    sessions: 1,
+    turns,
+    pending: true,
+    pendingExisting: false,
+  });
+  simulatedLeaders.sort((a,b) =>
+    (Number(b.pointsLow || b.points || 0) - Number(a.pointsLow || a.points || 0)) ||
+    ((a.pending && !a.pendingExisting ? 1 : 0) - (b.pending && !b.pendingExisting ? 1 : 0)) ||
+    (b.sessions - a.sessions) ||
+    (b.turns - a.turns) ||
+    a.name.localeCompare(b.name)
+  );
   const totalDonorsEstimate = simulatedLeaders.length;
   const estimatedRank = Math.max(1, simulatedLeaders.findIndex(row => row.pending) + 1);
   const rankLabel = `${estimatedRank}/${totalDonorsEstimate}`;
@@ -1048,8 +1073,12 @@ function renderSubmitResult(data){
   const windowStart = Math.max(0, Math.min(estimatedRank - 3, Math.max(0, simulatedLeaders.length - windowSize)));
   const leaderboardRows = simulatedLeaders.slice(windowStart, windowStart + windowSize).map((row, offset) => {
     const rank = windowStart + offset + 1;
-    const sessionText = row.pending ? '+1 session' : `${row.sessions} session${row.sessions === 1 ? '' : 's'}`;
-    const pointsText = row.pending ? `${pendingRange} pts` : `${row.points} pts`;
+    const sessionText = row.pending
+      ? (row.pendingExisting ? `${row.sessions} sessions` : '+1 pending')
+      : `${row.sessions} session${row.sessions === 1 ? '' : 's'}`;
+    const pointsText = row.pending
+      ? (row.pendingExisting ? `${row.pointsLow}–${row.pointsHigh} pts` : `${pendingRange} pts`)
+      : `${row.points} pts`;
     return `
     <div class="leaderboard-row ${row.pending ? 'pending' : ''}">
       <span>${escapeHtml(String(rank))}</span>
