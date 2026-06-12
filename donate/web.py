@@ -1071,6 +1071,7 @@ function renderSubmitResult(data){
   const rankLabel = `${estimatedRank}/${totalDonorsEstimate}`;
   const windowSize = 5;
   const windowStart = Math.max(0, Math.min(estimatedRank - 3, Math.max(0, simulatedLeaders.length - windowSize)));
+  const displayRank = rank => ({1:'🥇', 2:'🥈', 3:'🥉'}[rank] || String(rank));
   const leaderboardRows = simulatedLeaders.slice(windowStart, windowStart + windowSize).map((row, offset) => {
     const rank = windowStart + offset + 1;
     const sessionText = row.pending
@@ -1081,7 +1082,7 @@ function renderSubmitResult(data){
       : `${row.points} pts`;
     return `
     <div class="leaderboard-row ${row.pending ? 'pending' : ''}">
-      <span>${escapeHtml(String(rank))}</span>
+      <span>${escapeHtml(displayRank(rank))}</span>
       <span class="leader-person">${escapeHtml(row.name || 'anonymous')}</span>
       <span>${escapeHtml(sessionText)}</span>
       <span>${escapeHtml(pointsText)}</span>
