@@ -107,6 +107,18 @@ release* as authors. Missing the first paper does not close the door.
 > Uploads go to a private maintainer staging area first; nothing becomes public
 > until maintainers accept it into a release.
 
+Fastest donor path, after the package is published:
+
+```bash
+pipx run contextecho-donate
+```
+
+Until then, run directly from GitHub:
+
+```bash
+pipx run --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
+```
+
 From a cloned checkout:
 
 ```bash

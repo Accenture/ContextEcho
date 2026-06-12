@@ -2,6 +2,9 @@
 .env
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
 
 # Local dataset/materialized outputs.
 data

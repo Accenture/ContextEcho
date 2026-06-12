@@ -189,7 +189,19 @@ session it covers. We welcome contributions, and we credit them.
   release** (rolling re-authorship — missing the first paper doesn't close the
   door).
 
-Donate from this cloned repository with the local browser wizard:
+Fastest donor path, after the package is published:
+
+```bash
+pipx run contextecho-donate
+```
+
+Until then, run directly from the GitHub repo:
+
+```bash
+pipx run --spec git+https://github.com/Accenture/ContextEcho.git contextecho-donate
+```
+
+Or donate from this cloned repository with the local browser wizard:
 
 ```bash
 make setup-donate
