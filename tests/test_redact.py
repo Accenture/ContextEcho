@@ -76,6 +76,22 @@ class RedactTests(unittest.TestCase):
         self.assertNotIn("/Users/alice", text)
         self.assertNotIn("-Users-alice", text)
 
+    def test_fast_scrub_repair_removes_private_key_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "session.redacted.jsonl"
+            path.write_text(
+                '{"text":"-----BEGIN PRIVATE KEY-----\\nabc123\\n-----END PRIVATE KEY-----"}\n',
+                encoding="utf-8",
+            )
+
+            stats = apply_scrub_terms_to_file(path, path, set())
+            text = path.read_text(encoding="utf-8")
+
+        self.assertNotIn("BEGIN PRIVATE KEY", text)
+        self.assertNotIn("abc123", text)
+        self.assertGreaterEqual(stats.get("api_key", 0), 1)
+
     def test_redact_text_removes_basic_auth_credentials(self) -> None:
         class NoopAnonymizer:
             @property

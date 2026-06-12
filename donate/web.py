@@ -782,6 +782,10 @@ function newScrubTerms(){
   const applied = new Set(appliedScrubTerms);
   return parseScrubTerms($('scrub').value).filter(term => !applied.has(term));
 }
+function hasDetectSecretsFailure(data){
+  const blocking = ((data || {}).verify_report || {}).blocking || {};
+  return Array.isArray(blocking.detect_secrets) && blocking.detect_secrets.length > 0;
+}
 function goStep(n){
   const pct = Math.round((n / 3) * 100);
   for(let i=1;i<=3;i++){
@@ -1365,7 +1369,12 @@ $('redactBtn').onclick = async () => {
   try {
     let finalData = null;
     const pendingScrubTerms = newScrubTerms();
-    const canRepair = !!(redacted && redacted.redacted_file && redacted.privacy_tier === privacyTier() && pendingScrubTerms.length);
+    const canRepair = !!(
+      redacted &&
+      redacted.redacted_file &&
+      redacted.privacy_tier === privacyTier() &&
+      (pendingScrubTerms.length || hasDetectSecretsFailure(redacted))
+    );
     const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : $('scrub').value;
     if(redacted && redacted.verify_passed && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
       status('redactStatus', 'No new extra terms to apply. Review the current redacted file or add another term.');
@@ -1566,14 +1575,14 @@ class Handler(BaseHTTPRequestHandler):
         if privacy_tier not in {"full_redacted", "user_minimized"}:
             raise ValueError("invalid privacy tier")
         previous = Path(data.get("previous_redacted_file", "")).expanduser()
-        if data.get("repair_allowed") and scrub_terms and previous.exists() and is_redacted_artifact(previous):
+        if data.get("repair_allowed") and previous.exists() and is_redacted_artifact(previous):
             if not previous.resolve().is_relative_to(DONATION_ROOT.resolve()):
                 raise ValueError("repair is only allowed for local donation output files")
             if emit:
                 emit({
                     "event": "repair",
                     "percent": 45,
-                    "message": "Applying new extra terms to the existing redacted file...",
+                    "message": "Applying new scrub terms and credential cleanup to the existing redacted file...",
                 })
             stats = redact_mod.apply_scrub_terms_to_file(previous, previous, scrub_terms)
             if emit:

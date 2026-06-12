@@ -62,6 +62,7 @@ API_KEY_RES = [
     re.compile(r"hf_[A-Za-z0-9]{20,}"),             # HuggingFace
     re.compile(r"[A-Za-z][A-Za-z0-9+.\-]*://[^/\s:@]+:[^/\s:@]+@"),  # basic-auth URL
     re.compile(r"(?i)\bAuthorization:\s*Basic\s+[A-Za-z0-9+/=]{16,}"),  # HTTP basic auth
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.DOTALL),
 ]
 
 
@@ -236,6 +237,10 @@ def apply_scrub_terms_to_file(src: Path, dst: Path, scrub_terms: set[str]) -> di
     text, n = SLUG_PATH_RE.subn(lambda m: m.group("prefix") + "<USER>", text)
     if n:
         stats["home_path"] = stats.get("home_path", 0) + n
+    for rx in API_KEY_RES:
+        text, n = rx.subn("<SECRET>", text)
+        if n:
+            stats["api_key"] = stats.get("api_key", 0) + n
     dst.write_text(text, encoding="utf-8")
     return stats
 
