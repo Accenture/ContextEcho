@@ -469,10 +469,10 @@ INDEX_HTML = r"""<!doctype html>
     .result.show { display:block; }
     .success-panel { border:1px solid rgba(127,138,119,.24); background:rgba(255,255,250,.96); box-shadow:0 18px 60px rgba(43,59,37,.12); padding:26px; }
     .success-layout { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:28px; align-items:start; }
-    .success-hero { display:flex; gap:18px; align-items:flex-start; margin-bottom:20px; }
-    .success-check { flex:0 0 58px; width:58px; height:58px; border-radius:50%; display:grid; place-items:center; background:#e5f9df; color:#14703d; border:2px solid #9ddd9e; box-shadow:0 10px 22px rgba(31,111,67,.12); font-size:38px; line-height:1; }
-    .success-title { font-size:clamp(28px,3vw,38px); font-weight:950; letter-spacing:-.05em; color:#13552f; line-height:1.02; }
-    .success-subtitle { font-size:15px; color:#4b5650; margin-top:8px; }
+    .success-hero { display:flex; gap:14px; align-items:flex-start; margin-bottom:18px; }
+    .success-check { flex:0 0 44px; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:#e5f9df; color:#14703d; border:2px solid #9ddd9e; box-shadow:0 8px 18px rgba(31,111,67,.1); font-size:28px; line-height:1; }
+    .success-title { font-size:clamp(24px,2.4vw,32px); font-weight:950; letter-spacing:-.045em; color:#13552f; line-height:1.04; }
+    .success-subtitle { font-size:14px; color:#4b5650; margin-top:6px; }
     .credit-scoreboard { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0 0 16px; }
     .credit-card { display:flex; gap:12px; align-items:center; border:1px solid #e2e7dd; border-radius:16px; padding:14px; background:#fffefb; box-shadow:0 8px 20px rgba(43,59,37,.07); min-height:62px; }
     .credit-icon { flex:0 0 44px; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; background:#eaf7e8; color:#17713f; font-size:22px; }
@@ -485,7 +485,7 @@ INDEX_HTML = r"""<!doctype html>
     .leaderboard-title { padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:10px; color:#12332a; font-size:16px; font-weight:950; border-bottom:1px solid #e6eadf; }
     .leaderboard-title-main { display:flex; gap:8px; align-items:center; }
     .leaderboard-rank-badge { border-radius:10px; padding:6px 10px; background:#eaf7e8; color:#13552f; font-size:12px; font-weight:950; white-space:nowrap; }
-    .leaderboard-head, .leaderboard-row { display:grid; grid-template-columns:48px minmax(0,1fr) 92px 64px; gap:10px; align-items:center; }
+    .leaderboard-head, .leaderboard-row { display:grid; grid-template-columns:48px minmax(0,1fr) 86px 60px; gap:10px; align-items:center; }
     .leaderboard-head { padding:9px 16px; color:#5f6662; font-size:12px; font-weight:900; border-bottom:1px solid #eef1e8; }
     .leaderboard-row { padding:10px 16px; border-top:1px solid #eef1e8; font-size:13px; }
     .leaderboard-row.pending { margin:0 8px 8px; border:1px solid #d8ecce; border-radius:12px; background:#f1fbeb; color:#13552f; font-weight:900; }
@@ -981,27 +981,36 @@ function renderSubmitResult(data){
       points: Number(row.points_num || 0),
       sessions: Number(row.sessions_num || 0),
       turns: Number(row.turns_num || 0),
+      pending: false,
     };
     return {
       name: creditName,
       points: Number(row.points_num || 0) + pendingPointsHigh,
       sessions: Number(row.sessions_num || 0) + 1,
       turns: Number(row.turns_num || 0) + turns,
+      pending: true,
     };
   });
-  if(!mergedWithExisting) simulatedLeaders.push({name: creditName, points: pendingPointsHigh, sessions: 1, turns});
+  if(!mergedWithExisting) simulatedLeaders.push({name: creditName, points: pendingPointsHigh, sessions: 1, turns, pending: true});
   simulatedLeaders.sort((a,b) => (b.points - a.points) || (b.sessions - a.sessions) || (b.turns - a.turns) || a.name.localeCompare(b.name));
   const totalDonorsEstimate = simulatedLeaders.length;
-  const estimatedRank = Math.max(1, simulatedLeaders.findIndex(row => row.name === creditName) + 1);
+  const estimatedRank = Math.max(1, simulatedLeaders.findIndex(row => row.pending) + 1);
   const rankLabel = `${estimatedRank}/${totalDonorsEstimate}`;
-  const leaderboardRows = acceptedLeaders.slice(0, 4).map(row => `
-    <div class="leaderboard-row">
-      <span>${escapeHtml(row.rank || '')}</span>
-      <span class="leader-person">${escapeHtml(row.contributor || '')}</span>
-      <span>${escapeHtml(row.sessions || '')} sessions</span>
-      <span>${escapeHtml(row.points || '—')} pts</span>
+  const windowSize = 5;
+  const windowStart = Math.max(0, Math.min(estimatedRank - 3, Math.max(0, simulatedLeaders.length - windowSize)));
+  const leaderboardRows = simulatedLeaders.slice(windowStart, windowStart + windowSize).map((row, offset) => {
+    const rank = windowStart + offset + 1;
+    const sessionText = row.pending ? '+1 session' : `${row.sessions} session${row.sessions === 1 ? '' : 's'}`;
+    const pointsText = row.pending ? `${pendingRange} pts` : `${row.points} pts`;
+    return `
+    <div class="leaderboard-row ${row.pending ? 'pending' : ''}">
+      <span>${escapeHtml(String(rank))}</span>
+      <span class="leader-person">${escapeHtml(row.name || 'anonymous')}</span>
+      <span>${escapeHtml(sessionText)}</span>
+      <span>${escapeHtml(pointsText)}</span>
     </div>
-  `).join('');
+  `;
+  }).join('');
   const uploads = (receipt.uploads || [])
     .map(m => `<div class="file-pill">${escapeHtml(m.source)}</div>`)
     .join('');
@@ -1024,13 +1033,7 @@ function renderSubmitResult(data){
         <div class="leader-note"><span><strong>Pending score: ${pendingRange} points.</strong> Accepted donations appear on the contributor leaderboard and release acknowledgments.</span></div>
         <div class="leaderboard-preview">
           <div class="leaderboard-title"><span class="leaderboard-title-main">♙ <span>Leaderboard preview</span></span><span class="leaderboard-rank-badge">Estimated rank: ${escapeHtml(rankLabel)}</span></div>
-          <div class="leaderboard-head"><span>#</span><span>Contributor</span><span>+1 session</span><span>${escapeHtml(pendingRange)} pts</span></div>
-          <div class="leaderboard-row pending">
-            <span>${escapeHtml(String(estimatedRank))}</span>
-            <span class="leader-person">${escapeHtml(creditName)}</span>
-            <span>+1 session</span>
-            <span>${pendingRange} pts</span>
-          </div>
+          <div class="leaderboard-head"><span>#</span><span>Contributor</span><span>Sessions</span><span>Points</span></div>
           ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span class="leader-person">Accepted leaderboard loads after release</span><span>—</span><span>—</span></div>'}
         </div>
         ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">Email opens your mail app with the receipt details; no email is sent by the local tool.</div></div>` : ''}
