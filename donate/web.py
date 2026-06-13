@@ -1162,26 +1162,41 @@ function renderSearchResult(data){
   $('searchResult').innerHTML = `
     <div class="result-head">
       <div><span class="badge ${anyHit ? 'fail' : 'pass'}">${anyHit ? 'Still present' : 'Not found'}</span></div>
-      <div class="muted">${anyHit ? 'Add the matched word(s), then run Redact and Verify again.' : 'The checked word(s) were not found in the redacted file.'}</div>
+      <div class="muted">${anyHit ? 'Run cleanup here to remove the matched word(s), then this check will refresh.' : 'The checked word(s) were not found in the redacted file.'}</div>
     </div>
     <div class="metrics">${metrics}</div>
     ${matchedTerms.length ? `
       <div class="scrub-suggestion">
         <code>${escapeHtml(matchedText)}</code>
-        <button class="secondary" type="button" id="useSearchScrub">Add to removal box</button>
+        <button class="secondary" type="button" id="repairSearchTerms">Remove and verify</button>
       </div>
     ` : ''}
   `;
   $('searchResult').classList.add('show');
-  const searchScrubBtn = $('useSearchScrub');
-  if(searchScrubBtn){
-    searchScrubBtn.onclick = () => {
-      const existing = $('scrub').value.split(',').map(x => x.trim()).filter(Boolean);
-      const merged = [...new Set([...existing, ...matchedTerms])];
-      $('scrub').value = merged.join(', ');
-      $('reviewConfirm').checked = false;
-      status('redactStatus', 'Private words added. Click Redact and Verify again to remove them from the file.');
-      refreshButtons();
+  const repairBtn = $('repairSearchTerms');
+  if(repairBtn){
+    repairBtn.onclick = async () => {
+      repairBtn.disabled = true;
+      repairBtn.textContent = 'Removing...';
+      setBusy('searchProgress', true, 60);
+      $('searchResult').innerHTML = `
+        <div class="result-head">
+          <div><span class="badge fail">Removing</span></div>
+          <div class="muted">Running redaction and verify to remove the matched word(s)...</div>
+        </div>
+        <div class="metrics">${metrics}</div>
+      `;
+      try {
+        await runRedactVerify(matchedTerms, {fromSearch:true});
+        const refreshed = await post('/api/search_redacted', {redacted_file:redacted.redacted_file, terms:matchedText});
+        renderSearchResult(refreshed);
+        const remaining = (refreshed.results || []).reduce((acc, row) => acc + Number(row.count || 0), 0);
+        status('redactStatus', remaining ? 'Cleanup ran, but the checked word is still present. Inspect the redacted file or try a more exact term.' : 'Cleanup complete. The checked word is now found 0 times.');
+      } catch(e) {
+        status('redactStatus','ERROR: '+e.message);
+      } finally {
+        setBusy('searchProgress', false);
+      }
     };
   }
 }
@@ -1580,17 +1595,20 @@ $('searchBtn').onclick = async () => {
   } catch(e) { status('redactStatus','ERROR: '+e.message); }
   finally { setBusy('searchProgress', false); }
 };
-$('redactBtn').onclick = async () => {
+async function runRedactVerify(extraTerms = [], opts = {}){
   if(!selected) return;
   $('redactBtn').disabled = true;
   $('redactResult').classList.remove('show');
-  $('searchPanel').classList.remove('show');
-  $('searchResult').classList.remove('show');
+  if(!opts.fromSearch){
+    $('searchPanel').classList.remove('show');
+    $('searchResult').classList.remove('show');
+  }
   setBusy('redactProgress', true, 30);
-  status('redactStatus','Starting local redaction...');
+  status('redactStatus', opts.fromSearch ? 'Running cleanup for the checked private word...' : 'Starting local redaction...');
   try {
     let finalData = null;
-    const pendingScrubTerms = newScrubTerms();
+    const directTerms = [...new Set((extraTerms || []).map(x => String(x || '').trim()).filter(Boolean))];
+    const pendingScrubTerms = [...new Set([...newScrubTerms(), ...directTerms])];
     const canRepair = !!(
       redacted &&
       redacted.redacted_file &&
@@ -1651,7 +1669,8 @@ $('redactBtn').onclick = async () => {
     refreshButtons();
   } catch(e) { status('redactStatus','ERROR: '+e.message); }
   finally { setBusy('redactProgress', false); refreshButtons(); }
-};
+}
+$('redactBtn').onclick = () => runRedactVerify();
 $('submitBtn').onclick = async () => {
   if(!redacted || !confirm('Upload verified redacted artifacts as a PR?')) return;
   $('submitBtn').disabled = true;

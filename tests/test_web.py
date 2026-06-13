@@ -34,6 +34,11 @@ class WebTests(unittest.TestCase):
         self.assertIn("Show me anonymously on the public leaderboard", INDEX_HTML)
         self.assertIn("Your public rank still counts", INDEX_HTML)
 
+    def test_search_panel_can_run_cleanup_directly(self):
+        self.assertIn("Remove and verify", INDEX_HTML)
+        self.assertIn("Running redaction and verify to remove the matched word", INDEX_HTML)
+        self.assertIn("The checked word is now found 0 times", INDEX_HTML)
+
     def test_auto_repair_removes_detect_secrets_value(self):
         with TemporaryDirectory() as td:
             path = Path(td) / "session.redacted.jsonl"
