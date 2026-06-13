@@ -664,6 +664,7 @@ INDEX_HTML = r"""<!doctype html>
     .scrub-suggestion { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .scrub-suggestion code { flex:1; min-width:220px; overflow:auto; white-space:nowrap; }
     .scrub-suggestion button { padding:7px 10px; font-size:12px; box-shadow:none; }
+    .scrub-suggestion button.redact-primary { background:#be2e35; color:white; box-shadow:0 10px 18px rgba(190,46,53,.18); }
     .metrics { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .metric { background:#edf3e8; border:1px solid #d5e4ce; border-radius:999px; padding:6px 10px; font-size:13px; }
     .selected-card { display:none; border:2px solid #7cb67d; background:#eef8e8; border-radius:18px; padding:14px; margin-top:14px; }
@@ -1167,8 +1168,7 @@ function renderSearchResult(data){
     <div class="metrics">${metrics}</div>
     ${matchedTerms.length ? `
       <div class="scrub-suggestion">
-        <code>${escapeHtml(matchedText)}</code>
-        <button class="secondary" type="button" id="repairSearchTerms">Remove and verify</button>
+        <button class="redact-primary" type="button" id="repairSearchTerms">Redact and Verify</button>
       </div>
     ` : ''}
   `;
