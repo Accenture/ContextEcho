@@ -719,13 +719,8 @@ INDEX_HTML = r"""<!doctype html>
     .hint { font-size:13px; color:var(--muted); margin-top:6px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
     .submit-grid { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:16px; align-items:start; }
-    .visibility-panel { margin-top:14px; border:1px solid #dfe6d8; background:#fffef9; border-radius:14px; padding:14px; }
-    .visibility-panel-title { font-weight:950; color:#12332a; margin-bottom:10px; }
-    .visibility-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .visibility-box { border:1px solid #e5eadf; border-radius:12px; padding:12px; background:#ffffff; }
-    .visibility-box strong { display:block; color:#12332a; margin-bottom:6px; }
-    .visibility-box ul { margin:0; padding-left:18px; color:var(--muted); font-size:13px; line-height:1.45; }
-    .public-credit-option { margin-top:14px; border:1px solid #dfe6d8; background:#fbfff7; border-radius:14px; padding:12px 14px; color:#26332d; }
+    .submit-leaderboard { margin-top:14px; }
+    .public-credit-option { padding:12px 16px; border-top:1px solid #e6eadf; background:#fbfff7; color:#26332d; }
     .public-credit-option label { margin:0; display:flex; gap:10px; align-items:flex-start; font-weight:900; }
     .public-credit-option input { width:auto; margin-top:3px; }
     .public-credit-option .hint { margin-left:26px; }
@@ -738,7 +733,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } .visibility-grid { grid-template-columns:1fr; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
     @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
@@ -874,36 +869,12 @@ INDEX_HTML = r"""<!doctype html>
     <h2>3. Submit</h2>
     <p class="muted">Contributor info is used for credit, leaderboard accounting, and release acknowledgments. Leave blank to stay anonymous.</p>
     <p class="muted">The tool writes manifest + consent, runs a final verify gate, uploads the verified redacted session, and saves a local receipt.</p>
-    <div class="visibility-panel">
-      <div class="visibility-panel-title">What becomes public after maintainer acceptance?</div>
-      <div class="visibility-grid">
-        <div class="visibility-box">
-          <strong>Public dataset and leaderboard</strong>
-          <ul>
-            <li>Verified redacted session artifacts.</li>
-            <li>Session metadata such as agent, model, language, turns, and privacy tier.</li>
-            <li>Your rank and public credit name, or an anonymous donor label if selected below.</li>
-          </ul>
-        </div>
-        <div class="visibility-box">
-          <strong>Private to maintainers</strong>
-          <ul>
-            <li>Name, email, and institute entered here.</li>
-            <li>Submission ID and review status for support and duplicate checks.</li>
-            <li>Raw local sessions never leave your machine.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
     <div class="submit-grid">
       <div><label>Name or GitHub/HF handle <span class="muted">(for credit, optional)</span></label><input id="contributorName" placeholder="anonymous" /></div>
       <div><label>Email <span class="muted">(optional)</span></label><input id="contributorEmail" placeholder="you@example.com" /></div>
       <div><label>Institute <span class="muted">(optional)</span></label><input id="contributorInstitute" placeholder="University / company / independent" /></div>
     </div>
-    <div class="public-credit-option">
-      <label><input id="publicAnonymous" type="checkbox"> Show me anonymously on the public leaderboard</label>
-      <div class="hint">Your public rank still counts, but the public leaderboard and release acknowledgments will use an anonymous donor label. Maintainers can still see the name, email, and institute you entered for review and support.</div>
-    </div>
+    <div id="submitLeaderboardPreview" class="submit-leaderboard"></div>
     <div class="row actions">
       <button id="submitPrev" class="secondary">Previous</button>
       <button id="submitBtn" disabled>Submit Donation</button>
@@ -990,6 +961,7 @@ function goStep(n){
   $('stepPercentText').textContent = `${pct}% complete`;
   $('progressRing').style.setProperty('--pct', pct);
   $('progressRingText').textContent = `${pct}%`;
+  if(n === 3) renderSubmitLeaderboardPreview();
 }
 function refreshButtons(){
   const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(selected.path)));
@@ -1061,6 +1033,7 @@ async function loadProjectStats(){
     if(!r.ok) return;
     publicStats = await r.json();
     renderProjectStats();
+    renderSubmitLeaderboardPreview();
   } catch(e) {
     renderProjectStats();
   }
@@ -1225,31 +1198,20 @@ function receiptEmailHref(receipt, receiptPath){
   ].join('\n');
   return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
-function renderSubmitResult(data){
-  const receipt = data.receipt || {};
-  const duplicate = !!data.duplicate || !!receipt.duplicate;
-  const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'not available';
-  const idHint = receipt.submission
-    ? 'Save this ID for support. Maintainers can use it to find your private staging submission.'
-    : 'The receipt was saved locally, but no staging submission ID was returned.';
-  const creditName = (receipt.credit_name || receipt.contributor || $('contributorName').value || 'Contributor').trim();
-  const publicAnonymous = !!receipt.public_anonymous;
-  const publicCreditName = publicAnonymous
-    ? `Anonymous donor ${publicId.replace(/^submission-/, '') || 'pending'}`
-    : creditName;
-  const firstName = creditName.split(/\s+/)[0] || 'Contributor';
-  const turns = Number(receipt.turns || 0);
-  const compactions = Number(receipt.compactions || 0);
-  const highValue = turns >= 100 || compactions >= 1;
-  const pendingRange = highValue ? '3–5' : '2–4';
+function publicCreditLabel(creditName, publicAnonymous, publicId='pending'){
+  const cleanName = String(creditName || '').trim() || 'anonymous';
+  if(!publicAnonymous) return cleanName;
+  const suffix = String(publicId || '').replace(/^submission-/, '') || 'pending';
+  return `Anonymous donor ${suffix}`;
+}
+function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending = {}){
+  const highValue = Number(turns || 0) >= 100 || Number(compactions || 0) >= 1;
   const pendingPointsLow = highValue ? 3 : 2;
   const pendingPointsHigh = highValue ? 5 : 4;
-  const localPending = data.local_pending || {};
   const localPendingSessions = Number(localPending.sessions || 1);
   const localPendingLow = Number(localPending.points_low || pendingPointsLow);
   const localPendingHigh = Number(localPending.points_high || pendingPointsHigh);
-  const localPendingTurns = Number(localPending.turns || turns);
-  const localPendingRange = `${localPendingLow}–${localPendingHigh}`;
+  const localPendingTurns = Number(localPending.turns || turns || 0);
   const acceptedLeaders = publicStats.leaderboard || [];
   const sameName = row => !publicAnonymous && String(row.contributor || '').toLowerCase() === publicCreditName.toLowerCase();
   const mergedWithExisting = acceptedLeaders.some(sameName);
@@ -1295,13 +1257,22 @@ function renderSubmitResult(data){
     (b.turns - a.turns) ||
     a.name.localeCompare(b.name)
   );
-  const totalDonorsEstimate = simulatedLeaders.length;
-  const estimatedRank = Math.max(1, simulatedLeaders.findIndex(row => row.pending) + 1);
-  const rankLabel = `${estimatedRank}/${totalDonorsEstimate}`;
+  return {
+    highValue,
+    localPendingSessions,
+    localPendingLow,
+    localPendingHigh,
+    simulatedLeaders,
+    estimatedRank: Math.max(1, simulatedLeaders.findIndex(row => row.pending) + 1),
+  };
+}
+function leaderboardPreviewHtml(model){
+  const totalDonorsEstimate = model.simulatedLeaders.length;
+  const rankLabel = `${model.estimatedRank}/${totalDonorsEstimate}`;
   const windowSize = 5;
-  const windowStart = Math.max(0, Math.min(estimatedRank - 3, Math.max(0, simulatedLeaders.length - windowSize)));
+  const windowStart = Math.max(0, Math.min(model.estimatedRank - 3, Math.max(0, model.simulatedLeaders.length - windowSize)));
   const displayRank = rank => ({1:'🥇', 2:'🥈', 3:'🥉'}[rank] || String(rank));
-  const leaderboardRows = simulatedLeaders.slice(windowStart, windowStart + windowSize).map((row, offset) => {
+  const leaderboardRows = model.simulatedLeaders.slice(windowStart, windowStart + windowSize).map((row, offset) => {
     const rank = windowStart + offset + 1;
     const sessionText = row.pending
       ? `${row.sessions} pending`
@@ -1318,6 +1289,51 @@ function renderSubmitResult(data){
     </div>
   `;
   }).join('');
+  return `
+    <div class="leaderboard-title"><span class="leaderboard-title-main">♙ <span>Leaderboard preview</span></span><span class="leaderboard-rank-badge">Estimated rank: ${escapeHtml(rankLabel)}</span></div>
+    <div class="leaderboard-head"><span>#</span><span>Contributor</span><span>Sessions</span><span>Points</span></div>
+    ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span class="leader-person">Accepted leaderboard loads after release</span><span>—</span><span>—</span></div>'}
+  `;
+}
+function renderSubmitLeaderboardPreview(){
+  const target = $('submitLeaderboardPreview');
+  if(!target) return;
+  const creditName = ($('contributorName').value || 'anonymous').trim();
+  const publicAnonymous = !!$('publicAnonymous')?.checked;
+  const publicName = publicCreditLabel(creditName, publicAnonymous, 'pending');
+  const model = pendingLeaderboardModel(publicName, publicAnonymous, selected?.turns || 0, selected?.compactions || 0);
+  target.innerHTML = `
+    <div class="leader-note"><span><strong>Pending score: ${model.localPendingLow}–${model.localPendingHigh} points if accepted.</strong> This preview shows the public leaderboard name before submission.</span></div>
+    <div class="leaderboard-preview">
+      ${leaderboardPreviewHtml(model)}
+      <div class="public-credit-option">
+        <label><input id="publicAnonymous" type="checkbox" ${publicAnonymous ? 'checked' : ''}> Show me anonymously on the public leaderboard</label>
+        <div class="hint">Default is public credit. If selected, your public rank still counts as ${escapeHtml(publicName)}; maintainers can still see the name, email, and institute above for review and support.</div>
+      </div>
+    </div>
+  `;
+  $('publicAnonymous').onchange = renderSubmitLeaderboardPreview;
+}
+function renderSubmitResult(data){
+  const receipt = data.receipt || {};
+  const duplicate = !!data.duplicate || !!receipt.duplicate;
+  const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'not available';
+  const idHint = receipt.submission
+    ? 'Save this ID for support. Maintainers can use it to find your private staging submission.'
+    : 'The receipt was saved locally, but no staging submission ID was returned.';
+  const creditName = (receipt.credit_name || receipt.contributor || $('contributorName').value || 'Contributor').trim();
+  const publicAnonymous = !!receipt.public_anonymous;
+  const publicCreditName = publicCreditLabel(creditName, publicAnonymous, publicId);
+  const firstName = creditName.split(/\s+/)[0] || 'Contributor';
+  const turns = Number(receipt.turns || 0);
+  const compactions = Number(receipt.compactions || 0);
+  const localPending = data.local_pending || {};
+  const model = pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending);
+  const highValue = model.highValue;
+  const localPendingSessions = model.localPendingSessions;
+  const localPendingLow = model.localPendingLow;
+  const localPendingHigh = model.localPendingHigh;
+  const localPendingRange = `${localPendingLow}–${localPendingHigh}`;
   const uploads = (receipt.uploads || [])
     .map(m => `<div class="file-pill">${escapeHtml(m.source)}</div>`)
     .join('');
@@ -1339,9 +1355,7 @@ function renderSubmitResult(data){
         </div>
         <div class="leader-note"><span><strong>Pending score: ${localPendingRange} points across ${localPendingSessions} pending session${localPendingSessions === 1 ? '' : 's'}.</strong> Accepted donations appear on the contributor leaderboard and release acknowledgments.</span></div>
         <div class="leaderboard-preview">
-          <div class="leaderboard-title"><span class="leaderboard-title-main">♙ <span>Leaderboard preview</span></span><span class="leaderboard-rank-badge">Estimated rank: ${escapeHtml(rankLabel)}</span></div>
-          <div class="leaderboard-head"><span>#</span><span>Contributor</span><span>Sessions</span><span>Points</span></div>
-          ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span class="leader-person">Accepted leaderboard loads after release</span><span>—</span><span>—</span></div>'}
+          ${leaderboardPreviewHtml(model)}
         </div>
         ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">Email opens your mail app with the receipt details; no email is sent by the local tool.</div></div>` : ''}
       </div>
@@ -1590,6 +1604,9 @@ $('pickNext').onclick = () => goStep(2);
 $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
 $('submitPrev').onclick = () => goStep(2);
+['contributorName','contributorEmail','contributorInstitute'].forEach(id => {
+  $(id).oninput = renderSubmitLeaderboardPreview;
+});
 $('searchBtn').onclick = async () => {
   if(!redacted) return;
   setBusy('searchProgress', true, 55);

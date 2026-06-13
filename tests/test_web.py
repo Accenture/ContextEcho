@@ -28,11 +28,12 @@ from donate.web import (
 
 
 class WebTests(unittest.TestCase):
-    def test_submit_step_explains_public_and_private_identity(self):
-        self.assertIn("What becomes public after maintainer acceptance?", INDEX_HTML)
-        self.assertIn("Private to maintainers", INDEX_HTML)
+    def test_submit_step_previews_public_leaderboard_identity(self):
+        self.assertIn("submitLeaderboardPreview", INDEX_HTML)
+        self.assertIn("Leaderboard preview", INDEX_HTML)
         self.assertIn("Show me anonymously on the public leaderboard", INDEX_HTML)
-        self.assertIn("Your public rank still counts", INDEX_HTML)
+        self.assertIn("Default is public credit", INDEX_HTML)
+        self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
 
     def test_search_panel_can_run_cleanup_directly(self):
         self.assertIn("Redact and Verify Again", INDEX_HTML)
