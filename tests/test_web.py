@@ -53,13 +53,18 @@ class WebTests(unittest.TestCase):
             secret = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
             path.write_text(f'aws_secret_access_key = "{secret}"\n', encoding="utf-8")
             report = verify_session(path)
+            events = []
 
-            repaired_report, stats, passes = _auto_repair_until_verified(path, report, {})
+            repaired_report, stats, passes = _auto_repair_until_verified(path, report, {}, emit=events.append)
             repaired_text = path.read_text(encoding="utf-8")
 
         self.assertGreaterEqual(passes, 1)
         self.assertTrue(repaired_report["passed"])
         self.assertGreaterEqual(stats.get("scrub_term", 0), 1)
+        self.assertGreaterEqual(stats.get("credential_pattern", 0), 1)
+        self.assertFalse(any(key.startswith("private_word:") for key in stats))
+        self.assertIn("redacting residual private patterns", " ".join(str(e.get("message", "")) for e in events))
+        self.assertIn("Verifying after auto-repair", " ".join(str(e.get("message", "")) for e in events))
         self.assertNotIn(secret, repaired_text)
 
     def test_parse_redacted_donor_sessions_from_readme(self):

@@ -431,7 +431,7 @@ def project_stats() -> dict:
     return stats
 
 
-def _safe_repair_terms_from_report(path: Path, verify_report: dict) -> set[str]:
+def _safe_repair_terms_from_report(path: Path, verify_report: dict) -> dict[str, str]:
     """Internal repair terms for residual verify findings.
 
     Values returned here are used locally to rewrite the redacted file. They are
@@ -439,16 +439,16 @@ def _safe_repair_terms_from_report(path: Path, verify_report: dict) -> set[str]:
     real credentials.
     """
     blocking = verify_report.get("blocking") or {}
-    terms: set[str] = set()
+    terms: dict[str, str] = {}
     for category in ("email", "home_path", "api_key"):
         for value in blocking.get(category) or []:
             if isinstance(value, str) and value and not value.startswith("<"):
-                terms.add(value)
+                terms[value] = category
     if blocking.get("detect_secrets"):
         for item in verify_mod.detect_secret_findings(path):
             value = str(item.get("secret_value") or "")
             if value and not value.startswith("<"):
-                terms.add(value)
+                terms[value] = "credential_pattern"
     return terms
 
 
@@ -472,16 +472,22 @@ def _auto_repair_until_verified(
             emit({
                 "event": "repair",
                 "percent": min(98, 90 + pass_no),
-                "message": f"Auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}: removing residual private patterns found by verify...",
+                "message": f"Auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}: redacting residual private patterns found by verify...",
             })
-        repair_stats = redact_mod.apply_scrub_terms_to_file(path, path, repair_terms)
+        repair_stats = redact_mod.apply_scrub_terms_to_file(path, path, set(repair_terms))
         for key, value in repair_stats.items():
+            if key.startswith("private_word:"):
+                term = key[len("private_word:"):]
+                category = repair_terms.get(term, "private_pattern")
+                aggregate_key = "credential_pattern" if category in {"api_key", "credential_pattern"} else "path_or_private_pattern"
+                stats[aggregate_key] = int(stats.get(aggregate_key, 0) or 0) + int(value or 0)
+                continue
             stats[key] = int(stats.get(key, 0) or 0) + int(value or 0)
         if emit:
             emit({
                 "event": "verify",
                 "percent": min(99, 93 + pass_no),
-                "message": f"Verify after auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}...",
+                "message": f"Verifying after auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}...",
             })
         current_report = verify_mod.verify_session(path)
     return current_report, stats, repair_passes
@@ -1040,9 +1046,21 @@ async function loadProjectStats(){
 }
 function renderRedactResult(data){
   const stats = data.stats || {};
-  const entries = Object.entries(stats)
+  const displayStats = {};
+  Object.entries(stats).forEach(([k,v]) => {
+    const value = Number(v || 0);
+    if(!value) return;
+    if(k.startsWith('private_word:')){
+      const term = k.slice('private_word:'.length);
+      const noisy = term.length > 24 || /PRIVATE KEY|BEGIN |[A-Z0-9]{20,}|[@=]/.test(term);
+      const label = noisy ? 'credential/private patterns' : term;
+      displayStats[label] = (displayStats[label] || 0) + value;
+      return;
+    }
+    displayStats[k] = (displayStats[k] || 0) + value;
+  });
+  const entries = Object.entries(displayStats)
     .filter(([k]) => k !== 'scrub_term' || !Object.keys(stats).some(name => name.startsWith('private_word:')))
-    .map(([k,v]) => [k.startsWith('private_word:') ? k.slice('private_word:'.length) : k, v])
     .sort((a,b)=>b[1]-a[1]);
   const metrics = entries.length
     ? entries.map(([k,v]) => `<span class="metric">${escapeHtml(k)}: <strong>${v}</strong></span>`).join('')
@@ -1640,7 +1658,7 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     );
     const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : $('scrub').value;
     if(redacted && redacted.verify_passed && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
-      status('redactStatus', 'No new private words to remove. Review the current redacted file or add another word.');
+      status('redactStatus', 'No new private words to redact. Review the current redacted file or add another word.');
       renderRedactResult(redacted);
       refreshButtons();
       return;
