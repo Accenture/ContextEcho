@@ -121,6 +121,9 @@ upload through the official ContextEcho relay:
 https://contextecho2026-context-echo-donation-relay.hf.space
 ```
 
+Supported donor platforms: macOS, Linux, and Windows via WSL. Native Windows
+PowerShell/CMD is not supported by the one-line launcher yet.
+
 If you already have `pipx` and Python 3.10+, you can run the package directly:
 
 ```bash
