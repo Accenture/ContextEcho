@@ -687,7 +687,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) .privacy-icon { background:#e8f8e5; }
     .redact-info-strip { display:flex; gap:10px; align-items:center; margin-top:12px; padding:10px 12px; border-radius:10px; background:#f3f4f2; color:#3f4843; font-size:13px; }
     .redact-info-strip:before { content:"i"; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:2px solid #3c6da8; color:#275c99; font-weight:950; font-family:ui-serif, Georgia, serif; }
-    .scrub-helper { margin:0; color:#59635e; font-size:13px; flex:0 1 520px; min-width:260px; }
+    .scrub-helper { margin:6px 0 0; color:#59635e; font-size:13px; }
     .scrub-helper strong { color:#28332e; }
     .redact-action-row { margin-top:12px; }
     .redact-action-row button { background:#be2e35; box-shadow:0 10px 18px rgba(190,46,53,.18); }
@@ -844,8 +844,8 @@ INDEX_HTML = r"""<!doctype html>
     <div id="scrubRow" class="row compact-input-row" style="margin-top:12px">
       <label>Private words to redact <span class="muted">(optional)</span></label>
       <input id="scrub" placeholder="your name, Project Codename, private repo name" />
-      <div class="scrub-helper"><strong>Use this only if a private word remains.</strong> Type the exact word or phrase, then click Redact and Verify.</div>
     </div>
+    <div class="scrub-helper"><strong>Use this only if a private word remains.</strong> Type the exact word or phrase, then click Redact and Verify.</div>
     <div class="row redact-action-row">
       <button id="redactBtn" disabled>Redact and Verify</button>
     </div>
