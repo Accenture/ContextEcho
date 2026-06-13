@@ -33,6 +33,7 @@ from donate.adapters.base import is_redacted_artifact
 
 DONATION_ROOT = Path.home() / "Downloads" / "ContextEcho_donations"
 DONATION_REGISTRY = DONATION_ROOT / ".donated_sessions.json"
+MAX_AUTO_REPAIR_PASSES = 3
 
 
 def create_server(host: str, port: int, attempts: int = 20) -> tuple[ThreadingHTTPServer, int]:
@@ -428,6 +429,62 @@ def project_stats() -> dict:
     except Exception:
         pass
     return stats
+
+
+def _safe_repair_terms_from_report(path: Path, verify_report: dict) -> set[str]:
+    """Internal repair terms for residual verify findings.
+
+    Values returned here are used locally to rewrite the redacted file. They are
+    intentionally not sent to the browser because detect-secrets findings can be
+    real credentials.
+    """
+    blocking = verify_report.get("blocking") or {}
+    terms: set[str] = set()
+    for category in ("email", "home_path", "api_key"):
+        for value in blocking.get(category) or []:
+            if isinstance(value, str) and value and not value.startswith("<"):
+                terms.add(value)
+    if blocking.get("detect_secrets"):
+        for item in verify_mod.detect_secret_findings(path):
+            value = str(item.get("secret_value") or "")
+            if value and not value.startswith("<"):
+                terms.add(value)
+    return terms
+
+
+def _auto_repair_until_verified(
+    path: Path,
+    verify_report: dict,
+    stats: dict,
+    emit=None,
+) -> tuple[dict, dict, int]:
+    """Bounded automatic repair loop after verify finds exact residual values."""
+    repair_passes = 0
+    current_report = verify_report
+    for pass_no in range(1, MAX_AUTO_REPAIR_PASSES + 1):
+        if current_report.get("passed"):
+            break
+        repair_terms = _safe_repair_terms_from_report(path, current_report)
+        if not repair_terms:
+            break
+        repair_passes += 1
+        if emit:
+            emit({
+                "event": "repair",
+                "percent": min(98, 90 + pass_no),
+                "message": f"Auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}: removing residual private patterns found by verify...",
+            })
+        repair_stats = redact_mod.apply_scrub_terms_to_file(path, path, repair_terms)
+        for key, value in repair_stats.items():
+            stats[key] = int(stats.get(key, 0) or 0) + int(value or 0)
+        if emit:
+            emit({
+                "event": "verify",
+                "percent": min(99, 93 + pass_no),
+                "message": f"Verify after auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}...",
+            })
+        current_report = verify_mod.verify_session(path)
+    return current_report, stats, repair_passes
 
 
 INDEX_HTML = r"""<!doctype html>
@@ -978,6 +1035,9 @@ function verifyFailureSummary(data){
   const entries = Object.entries(blocking);
   if(!entries.length) return 'Verify failed. Re-run redaction; if it repeats, inspect the redacted file with Test search.';
   const labels = entries.map(([k,v]) => `${k} (${(v || []).length})`).join(', ');
+  if(blocking.detect_secrets){
+    return `Verify failed: residual ${labels}. Automatic cleanup could not safely remove every credential-shaped finding. Reveal the redacted file, remove the flagged line or token, then run Redact and Verify again.`;
+  }
   return `Verify failed: residual ${labels}. Add the shown private word(s) to the removal box, then click Redact and Verify again.`;
 }
 function suggestedScrubTerms(data){
@@ -1030,7 +1090,7 @@ function renderRedactResult(data){
           <button class="secondary" type="button" id="useSuggestedScrub">Add to removal box</button>
         </div>
       ` : ''}
-      <div class="hint"><strong>Next:</strong> ${blocking.detect_secrets ? 'Click Redact and Verify again to run the credential-pattern redactor. If it still fails, reveal the redacted file and remove the credential-shaped line manually.' : 'add the remaining private word(s) to the “Private words to remove” box, then click Redact and Verify again. For paths, add the username/project part, not the full path.'}</div>
+      <div class="hint"><strong>Next:</strong> ${blocking.detect_secrets ? 'the tool already tried automatic credential cleanup. Reveal the redacted file and remove the credential-shaped line or token manually, then run Redact and Verify again.' : 'add the remaining private word(s) to the “Private words to remove” box, then click Redact and Verify again. For paths, add the username/project part, not the full path.'}</div>
     </div>
   `;
   const removedCount = entries.reduce((acc, item) => acc + Number(item[1] || 0), 0);
@@ -1760,6 +1820,12 @@ class Handler(BaseHTTPRequestHandler):
                     "message": "Verify 1/2: scanning for residual emails, paths, API keys, and secrets...",
                 })
             verify_report = verify_mod.verify_session(previous)
+            verify_report, stats, auto_repair_passes = _auto_repair_until_verified(
+                previous,
+                verify_report,
+                stats,
+                emit=emit,
+            )
             if emit:
                 emit({
                     "event": "verify",
@@ -1774,6 +1840,7 @@ class Handler(BaseHTTPRequestHandler):
                 "verify_passed": bool(verify_report.get("passed")),
                 "verify_report": verify_report,
                 "repair_used": True,
+                "auto_repair_passes": auto_repair_passes,
                 "repair_terms": sorted(scrub_terms),
             }
 
@@ -1829,6 +1896,12 @@ class Handler(BaseHTTPRequestHandler):
                 "message": "Verify 1/2: scanning for residual emails, paths, API keys, and secrets...",
             })
         verify_report = verify_mod.verify_session(out)
+        verify_report, stats, auto_repair_passes = _auto_repair_until_verified(
+            out,
+            verify_report,
+            stats,
+            emit=emit,
+        )
         if emit:
             emit({
                 "event": "verify",
@@ -1844,6 +1917,7 @@ class Handler(BaseHTTPRequestHandler):
             "verify_passed": verify_ok,
             "verify_report": verify_report,
             "repair_used": False,
+            "auto_repair_passes": auto_repair_passes,
             "scrub_terms": sorted(scrub_terms),
         }
 

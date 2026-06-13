@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import math
 import re
 import sys
@@ -100,6 +101,11 @@ def find_high_entropy(text: str, min_len: int = 20, max_len: int = 64,
     return hits
 
 
+def mask_token(tok: str) -> str:
+    digest = hashlib.sha256(tok.encode("utf-8", errors="ignore")).hexdigest()[:8]
+    return f"<HIGH_ENTROPY len={len(tok)} sha256={digest}>"
+
+
 def verify_text(text: str) -> dict[str, list[str]]:
     findings: dict[str, list[str]] = {}
 
@@ -137,7 +143,7 @@ _NOISY_DS_TYPES = {
 }
 
 
-def run_detect_secrets(path: Path) -> list[str]:
+def detect_secret_findings(path: Path) -> list[dict[str, str | int]]:
     """Independent second opinion via Yelp detect-secrets, if available.
 
     Keeps only NAMED-provider detectors (AWS, GitHub, Stripe, etc.); drops the
@@ -151,7 +157,7 @@ def run_detect_secrets(path: Path) -> list[str]:
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         with default_settings():
-            findings = []
+            findings: list[dict[str, str | int]] = []
             for s in scan.scan_file(str(path)):
                 if s.type in _NOISY_DS_TYPES:
                     continue
@@ -161,16 +167,26 @@ def run_detect_secrets(path: Path) -> list[str]:
                     # Only block real PEM delimiters that still expose key data.
                     if "-----BEGIN" not in line or "PRIVATE KEY-----" not in line:
                         continue
-                findings.append(s.type)
+                findings.append({
+                    "type": s.type,
+                    "line_number": s.line_number,
+                    "secret_value": getattr(s, "secret_value", "") or "",
+                    "secret_hash": getattr(s, "secret_hash", "") or "",
+                })
             return findings
     except Exception:
         return []
 
 
+def run_detect_secrets(path: Path) -> list[str]:
+    """Return only safe-to-display detect-secrets finding types."""
+    return [str(item["type"]) for item in detect_secret_findings(path)]
+
+
 def verify_session(path: Path) -> dict:
     text = path.read_text(encoding="utf-8", errors="replace")
     findings = verify_text(text)
-    findings["high_entropy"] = sorted(set(find_high_entropy(text)))[:10]
+    findings["high_entropy"] = [mask_token(tok) for tok in sorted(set(find_high_entropy(text)))[:10]]
     ds = run_detect_secrets(path)
     if ds:
         findings["detect_secrets"] = sorted(set(ds))

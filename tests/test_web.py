@@ -4,8 +4,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
 
+from donate.verify import verify_session
 from donate.web import (
     INDEX_HTML,
+    _auto_repair_until_verified,
     _load_contributors_markdown,
     _parse_contributor_leaderboard,
     _parse_donated_sessions,
@@ -31,6 +33,21 @@ class WebTests(unittest.TestCase):
         self.assertIn("Private to maintainers", INDEX_HTML)
         self.assertIn("Show me anonymously on the public leaderboard", INDEX_HTML)
         self.assertIn("Your public rank still counts", INDEX_HTML)
+
+    def test_auto_repair_removes_detect_secrets_value(self):
+        with TemporaryDirectory() as td:
+            path = Path(td) / "session.redacted.jsonl"
+            secret = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+            path.write_text(f'aws_secret_access_key = "{secret}"\n', encoding="utf-8")
+            report = verify_session(path)
+
+            repaired_report, stats, passes = _auto_repair_until_verified(path, report, {})
+            repaired_text = path.read_text(encoding="utf-8")
+
+        self.assertGreaterEqual(passes, 1)
+        self.assertTrue(repaired_report["passed"])
+        self.assertGreaterEqual(stats.get("scrub_term", 0), 1)
+        self.assertNotIn(secret, repaired_text)
 
     def test_parse_redacted_donor_sessions_from_readme(self):
         self.assertEqual(_parse_donated_sessions("3 redacted donor sessions"), 3)

@@ -32,6 +32,18 @@ class VerifyTests(unittest.TestCase):
 
         self.assertIn("detect_secrets", report["blocking"])
 
+    def test_detect_secrets_report_exposes_type_not_secret_value(self) -> None:
+        secret = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "session.redacted.jsonl"
+            path.write_text(f'aws_secret_access_key = "{secret}"\n', encoding="utf-8")
+
+            report = verify_session(path)
+
+        self.assertIn("detect_secrets", report["blocking"])
+        self.assertIn("AWS Access Key", report["blocking"]["detect_secrets"])
+        self.assertNotIn(secret, str(report))
+
 
 if __name__ == "__main__":
     unittest.main()
