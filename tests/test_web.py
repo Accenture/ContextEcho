@@ -46,6 +46,9 @@ class WebTests(unittest.TestCase):
         self.assertIn("Private words you asked to redact", INDEX_HTML)
         self.assertIn("mergeRedactionStats", INDEX_HTML)
         self.assertIn("minmax(180px,1fr) 120px 100px", INDEX_HTML)
+        self.assertIn("progress-time", INDEX_HTML)
+        self.assertIn("progressBreakdown", INDEX_HTML)
+        self.assertIn("Elapsed", INDEX_HTML)
 
     def test_private_word_input_uses_redact_language(self):
         self.assertIn("Private words to redact", INDEX_HTML)

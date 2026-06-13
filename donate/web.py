@@ -720,6 +720,7 @@ INDEX_HTML = r"""<!doctype html>
     .search-panel.compact-search .result { padding:12px; border-radius:12px; }
     .progress { width:100%; height:12px; border-radius:999px; overflow:hidden; background:#e5eadc; margin-top:12px; display:none; }
     .progress > div { height:100%; width:0%; background:linear-gradient(90deg,#1f6f43,#89b65b); transition:width .2s ease; }
+    .progress-time { display:none; margin-top:6px; color:var(--muted); font-size:12px; font-weight:650; }
     .danger { color:#7f241b; font-weight:800; background:#fff1ed; border:1px solid #f2c9c0; padding:10px 12px; border-radius:14px; }
     .ok { color:var(--accent); font-weight:800; }
     .hint { font-size:13px; color:var(--muted); margin-top:6px; }
@@ -1439,11 +1440,55 @@ function resetSessionArtifacts(){
 function setProgress(pct){
   $('discoverProgress').style.display = 'block';
   $('discoverProgress').firstElementChild.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  updateProgressTime('discoverProgress');
 }
-function setBusy(id, on, pct=35){
+const progressTimers = {};
+function fmtElapsed(ms){
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return mins ? `${mins}m ${secs}s` : `${secs}s`;
+}
+function progressTimeEl(id){
+  const progress = $(id);
+  let el = progress.nextElementSibling;
+  if(!el || !el.classList.contains('progress-time')){
+    el = document.createElement('div');
+    el.className = 'progress-time';
+    progress.insertAdjacentElement('afterend', el);
+  }
+  return el;
+}
+function updateProgressTime(id, text='', opts={}){
+  const timer = progressTimers[id];
+  const el = progressTimeEl(id);
+  if(!timer){
+    if(opts.keep && text){
+      el.textContent = text;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+      el.textContent = '';
+    }
+    return;
+  }
+  const elapsed = fmtElapsed(Date.now() - timer.start);
+  el.textContent = text || `Elapsed ${elapsed}`;
+  el.style.display = 'block';
+}
+function progressBreakdown(parts){
+  return Object.entries(parts || {})
+    .filter(([,ms]) => ms > 0)
+    .map(([name,ms]) => `${name}: ${fmtElapsed(ms)}`)
+    .join(' · ');
+}
+function setBusy(id, on, pct=35, opts={}){
   const el = $(id);
   el.style.display = on ? 'block' : 'none';
   el.firstElementChild.style.width = on ? pct + '%' : '0%';
+  if(on && !progressTimers[id]) progressTimers[id] = {start: Date.now()};
+  if(!on) delete progressTimers[id];
+  updateProgressTime(id, opts.finalText || '', {keep:opts.keepTime});
 }
 async function post(url, body){
   const r = await fetch(url, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
@@ -1546,7 +1591,9 @@ function renderSessions(){
 $('discoverBtn').onclick = async () => {
   $('discoverBtn').disabled = true;
   status('discoverStatus','Scanning local session logs. This can take a minute for large histories...');
+  progressTimers.discoverProgress = {start: Date.now()};
   setProgress(2);
+  let discoverTiming = '';
   try {
     const max = '50';
     const r = await fetch('/api/discover_stream?max_per_agent=' + max);
@@ -1582,11 +1629,17 @@ $('discoverBtn').onclick = async () => {
     sessions = (final && final.sessions) || [];
     page = 0;
     saveDiscoveryCache();
+    discoverTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
     status('discoverStatus', sessions.length === 0 ? noSessionsMessage() : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} usable sessions. Click a row to select.`));
     renderSessions();
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
   } catch(e) { status('discoverStatus','ERROR: '+e.message); }
-  finally { $('discoverBtn').disabled = false; }
+  finally {
+    if(!discoverTiming && progressTimers.discoverProgress) discoverTiming = `Stopped after ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
+    $('discoverBtn').disabled = false;
+    delete progressTimers.discoverProgress;
+    updateProgressTime('discoverProgress', discoverTiming, {keep:!!discoverTiming});
+  }
 };
 $('clearDonatedBtn').onclick = async () => {
   const ok = confirm('Clear local donated labels on this browser and machine? This does not delete or retract submitted data. It may allow resubmission; maintainers may reject duplicates.');
@@ -1643,15 +1696,35 @@ $('submitPrev').onclick = () => goStep(2);
 $('searchBtn').onclick = async () => {
   if(!redacted) return;
   setBusy('searchProgress', true, 55);
+  let searchTiming = '';
   try {
     const data = await post('/api/search_redacted', {redacted_file:redacted.redacted_file, terms:$('searchTerms').value});
+    searchTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.searchProgress.start)}`;
+    updateProgressTime('searchProgress', searchTiming);
     renderSearchResult(data);
   } catch(e) { status('redactStatus','ERROR: '+e.message); }
-  finally { setBusy('searchProgress', false); }
+  finally { setBusy('searchProgress', false, 35, {keepTime:!!searchTiming, finalText:searchTiming}); }
 };
 async function runRedactVerify(extraTerms = [], opts = {}){
   if(!selected) return;
   const progressId = opts.fromSearch ? 'searchProgress' : 'redactProgress';
+  const stageTimes = {};
+  let stageName = 'starting';
+  let stageStart = Date.now();
+  const markStage = next => {
+    const now = Date.now();
+    stageTimes[stageName] = (stageTimes[stageName] || 0) + (now - stageStart);
+    stageName = next;
+    stageStart = now;
+  };
+  let progressTimingText = '';
+  const showTiming = (label='Elapsed') => {
+    const live = {...stageTimes, [stageName]: (stageTimes[stageName] || 0) + (Date.now() - stageStart)};
+    const total = progressTimers[progressId] ? fmtElapsed(Date.now() - progressTimers[progressId].start) : '0s';
+    const breakdown = progressBreakdown(live);
+    progressTimingText = breakdown ? `${label} ${total} · ${breakdown}` : `${label} ${total}`;
+    updateProgressTime(progressId, progressTimingText);
+  };
   $('redactBtn').disabled = true;
   $('redactResult').classList.remove('show');
   if(!opts.fromSearch){
@@ -1689,27 +1762,35 @@ async function runRedactVerify(extraTerms = [], opts = {}){
       previous_redacted_file: canRepair ? redacted.redacted_file : ''
     }, ev => {
       if(ev.event === 'start'){
+        markStage('preparing');
         setBusy(progressId, true, 5);
         status('redactStatus', `Preparing to redact ${ev.total || '?'} records locally...`);
       } else if(ev.event === 'repair'){
+        markStage('repair');
         setBusy(progressId, true, ev.percent || 55);
         status('redactStatus', ev.message || 'Applying new private words to the existing redacted file...');
       } else if(ev.event === 'engine'){
+        markStage('engine');
         setBusy(progressId, true, 8);
         status('redactStatus', 'Loading local redaction engine...');
       } else if(ev.event === 'progress'){
+        if(stageName !== 'redacting') markStage('redacting');
         const pct = Math.max(5, Math.min(92, ev.percent || 5));
         setBusy(progressId, true, pct);
         status('redactStatus', `Redacting locally: ${ev.current}/${ev.total} records (${Math.round(ev.percent || 0)}%).`);
       } else if(ev.event === 'minimize'){
+        markStage('minimizing');
         setBusy(progressId, true, 94);
         status('redactStatus', 'Applying user-minimized privacy mode...');
       } else if(ev.event === 'verify'){
+        markStage('verifying');
         setBusy(progressId, true, ev.percent || 96);
         status('redactStatus', ev.message || 'Running verify gate on the redacted file...');
       } else if(ev.event === 'done'){
+        markStage('done');
         finalData = ev.result;
       }
+      showTiming();
     });
     if(!finalData) throw new Error('redaction did not return a result');
     if(previousStats) finalData.stats = mergeRedactionStats(previousStats, finalData.stats || {});
@@ -1726,7 +1807,11 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     status('redactStatus', redacted.verify_passed ? 'Review the result above. If a private word remains, add it to the removal box and rerun. Otherwise check the review box to continue.' : verifyFailureSummary(redacted));
     refreshButtons();
   } catch(e) { status('redactStatus','ERROR: '+e.message); }
-  finally { setBusy(progressId, false); refreshButtons(); }
+  finally {
+    if(progressTimers[progressId]) showTiming(progressTimingText ? 'Completed in' : 'Stopped after');
+    setBusy(progressId, false, 35, {keepTime:!!progressTimingText, finalText:progressTimingText});
+    refreshButtons();
+  }
 }
 $('redactBtn').onclick = () => runRedactVerify();
 $('submitBtn').onclick = async () => {
@@ -1735,6 +1820,23 @@ $('submitBtn').onclick = async () => {
   $('submitResult').classList.remove('show');
   setBusy('submitProgress', true, 10);
   status('submitStatus','Preparing upload...');
+  const submitStages = {};
+  let submitStage = 'preparing';
+  let submitStageStart = Date.now();
+  let submitTimingText = '';
+  const markSubmitStage = next => {
+    const now = Date.now();
+    submitStages[submitStage] = (submitStages[submitStage] || 0) + (now - submitStageStart);
+    submitStage = next;
+    submitStageStart = now;
+  };
+  const showSubmitTiming = (label='Elapsed') => {
+    const live = {...submitStages, [submitStage]: (submitStages[submitStage] || 0) + (Date.now() - submitStageStart)};
+    const total = progressTimers.submitProgress ? fmtElapsed(Date.now() - progressTimers.submitProgress.start) : '0s';
+    const breakdown = progressBreakdown(live);
+    submitTimingText = breakdown ? `${label} ${total} · ${breakdown}` : `${label} ${total}`;
+    updateProgressTime('submitProgress', submitTimingText);
+  };
   try {
     let data = null;
     await postStream('/api/submit_stream', {
@@ -1748,10 +1850,14 @@ $('submitBtn').onclick = async () => {
       public_anonymous:$('publicAnonymous').checked
     }, ev => {
       if(ev.event === 'progress'){
+        markSubmitStage('uploading');
         setBusy('submitProgress', true, ev.percent || 45);
         status('submitStatus', ev.message || 'Submitting donation...');
+        showSubmitTiming();
       } else if(ev.event === 'done'){
+        markSubmitStage('done');
         data = ev.result;
+        showSubmitTiming();
       }
     });
     if(!data) throw new Error('submit did not return a result');
@@ -1763,7 +1869,11 @@ $('submitBtn').onclick = async () => {
     refreshButtons();
   }
   catch(e) { status('submitStatus','ERROR: '+e.message); }
-  finally { setBusy('submitProgress', false); refreshButtons(); }
+  finally {
+    if(progressTimers.submitProgress) showSubmitTiming(submitTimingText ? 'Completed in' : 'Stopped after');
+    setBusy('submitProgress', false, 35, {keepTime:!!submitTimingText, finalText:submitTimingText});
+    refreshButtons();
+  }
 };
 loadProjectStats();
 loadDiscoveryCache();
