@@ -1066,7 +1066,10 @@ async function loadProjectStats(){
 }
 function renderRedactResult(data){
   const stats = data.stats || {};
-  const entries = Object.entries(stats).sort((a,b)=>b[1]-a[1]);
+  const entries = Object.entries(stats)
+    .filter(([k]) => k !== 'scrub_term' || !Object.keys(stats).some(name => name.startsWith('private_word:')))
+    .map(([k,v]) => [k.startsWith('private_word:') ? k.slice('private_word:'.length) : k, v])
+    .sort((a,b)=>b[1]-a[1]);
   const metrics = entries.length
     ? entries.map(([k,v]) => `<span class="metric">${escapeHtml(k)}: <strong>${v}</strong></span>`).join('')
     : '<span class="metric">No detector matches</span>';
@@ -1106,7 +1109,7 @@ function renderRedactResult(data){
     ${failureBox}
     <div class="field"><div class="field-label">Redacted file</div><div class="redacted-path-row"><div class="pathbox">${escapeHtml(data.redacted_file)}</div><button class="copy-file-btn" type="button" id="copyRedactedPath">Copy</button></div></div>
     <div class="row" style="margin-top:8px"><button class="secondary" id="revealRedactedFile">Reveal File</button></div>
-    <div class="field"><div class="field-label">Already removed in this output ${removedCount ? `<span class="removed-count">(${removedCount})</span>` : ''}</div><div class="metrics">${metrics}</div><div class="removed-note">These chips are a summary of what the tool already removed. They are not terms to type.</div></div>
+    <div class="field"><div class="field-label">Already redacted in this output ${removedCount ? `<span class="removed-count">(${removedCount})</span>` : ''}</div><div class="metrics">${metrics}</div><div class="removed-note">These chips are a summary of what the tool already redacted. They are not terms to type.</div></div>
   `;
   $('redactResult').className = `result show redact-card ${data.verify_passed ? 'pass-card' : 'fail-card'}`;
   $('searchPanel').classList.add('show');
@@ -1163,12 +1166,12 @@ function renderSearchResult(data){
   $('searchResult').innerHTML = `
     <div class="result-head">
       <div><span class="badge ${anyHit ? 'fail' : 'pass'}">${anyHit ? 'Still present' : 'Not found'}</span></div>
-      <div class="muted">${anyHit ? 'Run cleanup here to remove the matched word(s), then this check will refresh.' : 'The checked word(s) were not found in the redacted file.'}</div>
+      <div class="muted">${anyHit ? 'Run Redact and Verify again here for the matched word(s), then this check will refresh.' : 'The checked word(s) were not found in the redacted file.'}</div>
     </div>
     <div class="metrics">${metrics}</div>
     ${matchedTerms.length ? `
       <div class="scrub-suggestion">
-        <button class="redact-primary" type="button" id="repairSearchTerms">Redact and Verify</button>
+        <button class="redact-primary" type="button" id="repairSearchTerms">Redact and Verify Again</button>
       </div>
     ` : ''}
   `;
@@ -1177,12 +1180,12 @@ function renderSearchResult(data){
   if(repairBtn){
     repairBtn.onclick = async () => {
       repairBtn.disabled = true;
-      repairBtn.textContent = 'Removing...';
+      repairBtn.textContent = 'Redacting...';
       setBusy('searchProgress', true, 60);
       $('searchResult').innerHTML = `
         <div class="result-head">
-          <div><span class="badge fail">Removing</span></div>
-          <div class="muted">Running redaction and verify to remove the matched word(s)...</div>
+          <div><span class="badge fail">Redacting</span></div>
+          <div class="muted">Running Redact and Verify again for the matched word(s)...</div>
         </div>
         <div class="metrics">${metrics}</div>
       `;
@@ -1191,7 +1194,7 @@ function renderSearchResult(data){
         const refreshed = await post('/api/search_redacted', {redacted_file:redacted.redacted_file, terms:matchedText});
         renderSearchResult(refreshed);
         const remaining = (refreshed.results || []).reduce((acc, row) => acc + Number(row.count || 0), 0);
-        status('redactStatus', remaining ? 'Cleanup ran, but the checked word is still present. Inspect the redacted file or try a more exact term.' : 'Cleanup complete. The checked word is now found 0 times.');
+        status('redactStatus', remaining ? 'Redaction ran, but the checked word is still present. Inspect the redacted file or try a more exact term.' : 'Redaction complete. The checked word is now found 0 times.');
       } catch(e) {
         status('redactStatus','ERROR: '+e.message);
       } finally {

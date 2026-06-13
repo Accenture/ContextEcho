@@ -89,6 +89,7 @@ class RedactTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
 
         self.assertGreaterEqual(stats.get("scrub_term", 0), 3)
+        self.assertGreaterEqual(stats.get("private_word:alice", 0), 1)
         self.assertNotIn("alice", text)
         self.assertNotIn("/Users/alice", text)
         self.assertNotIn("-Users-alice", text)

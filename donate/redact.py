@@ -207,6 +207,7 @@ def redact_text(
         if n:
             text = text.replace(term, "<REDACTED>")
             stats["scrub_term"] = stats.get("scrub_term", 0) + n
+            stats[f"private_word:{term}"] = stats.get(f"private_word:{term}", 0) + n
 
     # 3. Home-path prefixes left over -> generic (slash and dash-slug forms).
     text, n = HOME_PATH_RE.subn(lambda m: m.group("prefix") + "<USER>", text)
@@ -290,6 +291,7 @@ def apply_scrub_terms_to_file(src: Path, dst: Path, scrub_terms: set[str]) -> di
         if n:
             text = text.replace(term, "<REDACTED>")
             stats["scrub_term"] = stats.get("scrub_term", 0) + n
+            stats[f"private_word:{term}"] = stats.get(f"private_word:{term}", 0) + n
     # Re-apply deterministic path cleanup in case the added term exposed a
     # path-shaped residue without paying the full Presidio/NER cost again.
     text, n = HOME_PATH_RE.subn(lambda m: m.group("prefix") + "<USER>", text)
