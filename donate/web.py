@@ -687,7 +687,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) .privacy-icon { background:#e8f8e5; }
     .redact-info-strip { display:flex; gap:10px; align-items:center; margin-top:12px; padding:10px 12px; border-radius:10px; background:#f3f4f2; color:#3f4843; font-size:13px; }
     .redact-info-strip:before { content:"i"; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:2px solid #3c6da8; color:#275c99; font-weight:950; font-family:ui-serif, Georgia, serif; }
-    .scrub-helper { margin:6px 0 0; color:#59635e; font-size:13px; }
+    .scrub-helper { margin:0; color:#59635e; font-size:13px; flex:0 1 520px; min-width:260px; }
     .scrub-helper strong { color:#28332e; }
     .redact-action-row { margin-top:12px; }
     .redact-action-row button { background:#be2e35; box-shadow:0 10px 18px rgba(190,46,53,.18); }
@@ -731,14 +731,15 @@ INDEX_HTML = r"""<!doctype html>
     .public-credit-option .hint { margin-left:26px; }
     .topline { color:var(--muted); max-width:760px; font-size:18px; }
     .actions { justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
+    .compact-input-row { flex-wrap:nowrap; align-items:center; }
     .compact-input-row label { margin:0; white-space:nowrap; }
-    .compact-input-row input { flex:1 1 520px; min-width:260px; }
+    .compact-input-row input { flex:1 1 360px; min-width:260px; }
     .privacy-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
     .privacy-card { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } .visibility-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -841,9 +842,9 @@ INDEX_HTML = r"""<!doctype html>
     <div class="redact-info-strip"><strong>Automatic redaction covers:</strong> paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</div>
     <label><input id="safeConfirm" type="checkbox" style="width:auto"> I confirm this session is safe to donate.</label>
     <div id="scrubRow" class="row compact-input-row" style="margin-top:12px">
-      <label>Private words to remove on the next redaction run <span class="muted">(optional)</span></label>
+      <label>Private words to redact <span class="muted">(optional)</span></label>
       <input id="scrub" placeholder="your name, Project Codename, private repo name" />
-      <div class="scrub-helper"><strong>Use this only if you still see a private word.</strong> Type the exact word or phrase here, then click Redact and Verify again.</div>
+      <div class="scrub-helper"><strong>Use this only if a private word remains.</strong> Type the exact word or phrase, then click Redact and Verify.</div>
     </div>
     <div class="row redact-action-row">
       <button id="redactBtn" disabled>Redact and Verify</button>

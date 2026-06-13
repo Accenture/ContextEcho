@@ -41,6 +41,11 @@ class WebTests(unittest.TestCase):
         self.assertIn("Redaction complete. The checked word is now found 0 times", INDEX_HTML)
         self.assertIn("Already redacted in this output", INDEX_HTML)
 
+    def test_private_word_input_uses_redact_language(self):
+        self.assertIn("Private words to redact", INDEX_HTML)
+        self.assertIn("Use this only if a private word remains", INDEX_HTML)
+        self.assertNotIn("Private words to remove on the next redaction run", INDEX_HTML)
+
     def test_auto_repair_removes_detect_secrets_value(self):
         with TemporaryDirectory() as td:
             path = Path(td) / "session.redacted.jsonl"
