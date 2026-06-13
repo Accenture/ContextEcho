@@ -236,6 +236,12 @@ Face staging token is never shipped to donors. See
 > donor-authored spans after redaction. See [`DONOR_PRIVACY.md`](DONOR_PRIVACY.md) and
 > [`DATA_USE_POLICY.md`](DATA_USE_POLICY.md).
 
+> **Public credit choice.** Donors can provide name/email/institute for
+> maintainer review while choosing to appear publicly as an anonymous donor.
+> Public leaderboard rank still counts, but the released leaderboard and
+> acknowledgments use an anonymous donor label. Maintainers can still see the
+> submitted identity fields for review, support, and duplicate checks.
+
 Maintainers convert accepted private staging submissions into the next public
 dataset candidate with:
 

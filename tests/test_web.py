@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 from donate.web import (
+    INDEX_HTML,
     _load_contributors_markdown,
     _parse_contributor_leaderboard,
     _parse_donated_sessions,
@@ -25,6 +26,12 @@ from donate.web import (
 
 
 class WebTests(unittest.TestCase):
+    def test_submit_step_explains_public_and_private_identity(self):
+        self.assertIn("What becomes public after maintainer acceptance?", INDEX_HTML)
+        self.assertIn("Private to maintainers", INDEX_HTML)
+        self.assertIn("Show me anonymously on the public leaderboard", INDEX_HTML)
+        self.assertIn("Your public rank still counts", INDEX_HTML)
+
     def test_parse_redacted_donor_sessions_from_readme(self):
         self.assertEqual(_parse_donated_sessions("3 redacted donor sessions"), 3)
         self.assertEqual(_parse_donated_sessions("1,234 donated sessions"), 1234)

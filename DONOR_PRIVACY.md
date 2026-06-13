@@ -14,5 +14,17 @@ The donation wizard supports two privacy tiers:
   private-life details, toxic language, and confidentiality markers. Coding
   task context, assistant behavior, and tool behavior remain available.
 
+The wizard also separates private maintainer identity from public credit:
+
+- Donors may enter a name or handle, email, and institute so maintainers can
+  review the submission, provide support, deduplicate donations, and assign
+  release credit correctly.
+- Donors may choose to appear publicly as an anonymous donor. In that mode, the
+  public leaderboard and release acknowledgments use an anonymous donor label,
+  while the donor's rank and accepted contribution still count.
+- Maintainers can still see the submitted identity fields for accepted and
+  pending donations. These fields are not intended for public dataset rows when
+  the donor selected anonymous public credit.
+
 Disallowed uses of donated data include donor profiling, psychological analysis,
 sentiment analysis of donors, employment evaluation, and deanonymization.
