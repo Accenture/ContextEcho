@@ -634,7 +634,7 @@ INDEX_HTML = r"""<!doctype html>
     .leaderboard-title { padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:10px; color:#12332a; font-size:16px; font-weight:950; border-bottom:1px solid #e6eadf; }
     .leaderboard-title-main { display:flex; gap:8px; align-items:center; }
     .leaderboard-rank-badge { border-radius:10px; padding:6px 10px; background:#eaf7e8; color:#13552f; font-size:12px; font-weight:950; white-space:nowrap; }
-    .leaderboard-head, .leaderboard-row { display:grid; grid-template-columns:48px minmax(0,1fr) 86px 60px; gap:10px; align-items:center; }
+    .leaderboard-head, .leaderboard-row { display:grid; grid-template-columns:48px minmax(180px,1fr) 120px 100px; gap:10px; align-items:center; }
     .leaderboard-head { padding:9px 16px; color:#5f6662; font-size:12px; font-weight:900; border-bottom:1px solid #eef1e8; }
     .leaderboard-row { padding:10px 16px; border-top:1px solid #eef1e8; font-size:13px; }
     .leaderboard-row.pending { margin:0 8px 8px; border:1px solid #d8ecce; border-radius:12px; background:#f1fbeb; color:#13552f; font-weight:900; }
@@ -1234,7 +1234,7 @@ function publicCreditLabel(creditName, publicAnonymous, publicId='pending'){
   const suffix = String(publicId || '').replace(/^submission-/, '') || 'pending';
   return `Anonymous donor ${suffix}`;
 }
-function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending = {}){
+function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending = {}, pendingDisplayName = ''){
   const highValue = Number(turns || 0) >= 100 || Number(compactions || 0) >= 1;
   const pendingPointsLow = highValue ? 3 : 2;
   const pendingPointsHigh = highValue ? 5 : 4;
@@ -1261,6 +1261,7 @@ function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compa
     };
     return {
       name: publicCreditName,
+      displayName: pendingDisplayName || publicCreditName,
       points: basePoints + localPendingLow,
       pointsLow: basePoints + localPendingLow,
       pointsHigh: basePoints + localPendingHigh,
@@ -1272,6 +1273,7 @@ function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compa
   });
   if(!mergedWithExisting) simulatedLeaders.push({
     name: publicCreditName,
+    displayName: pendingDisplayName || publicCreditName,
     points: localPendingLow,
     pointsLow: localPendingLow,
     pointsHigh: localPendingHigh,
@@ -1313,7 +1315,7 @@ function leaderboardPreviewHtml(model){
     return `
     <div class="leaderboard-row ${row.pending ? 'pending' : ''}">
       <span>${escapeHtml(displayRank(rank))}</span>
-      <span class="leader-person">${escapeHtml(row.name || 'anonymous')}</span>
+      <span class="leader-person">${escapeHtml(row.displayName || row.name || 'anonymous')}</span>
       <span>${escapeHtml(sessionText)}</span>
       <span>${escapeHtml(pointsText)}</span>
     </div>
@@ -1331,14 +1333,15 @@ function renderSubmitLeaderboardPreview(){
   const creditName = ($('contributorName').value || 'anonymous').trim();
   const publicAnonymous = !!$('publicAnonymous')?.checked;
   const publicName = publicCreditLabel(creditName, publicAnonymous, 'pending');
-  const model = pendingLeaderboardModel(publicName, publicAnonymous, selected?.turns || 0, selected?.compactions || 0);
+  const previewName = publicAnonymous ? 'You (anonymous)' : publicName;
+  const model = pendingLeaderboardModel(publicName, publicAnonymous, selected?.turns || 0, selected?.compactions || 0, {}, previewName);
   target.innerHTML = `
     <div class="leader-note"><span><strong>Pending score: ${model.localPendingLow}–${model.localPendingHigh} points if accepted.</strong> This preview shows the public leaderboard name before submission.</span></div>
     <div class="leaderboard-preview">
       ${leaderboardPreviewHtml(model)}
       <div class="public-credit-option">
         <label><input id="publicAnonymous" type="checkbox" ${publicAnonymous ? 'checked' : ''}> Show me anonymously on the public leaderboard</label>
-        <div class="hint">Default is public credit. If selected, your public rank still counts as ${escapeHtml(publicName)}; maintainers can still see the name, email, and institute above for review and support.</div>
+        <div class="hint">Default is public credit. If selected, your row appears as ${escapeHtml(previewName)} in this preview; maintainers can still see the name, email, and institute above for review and support.</div>
       </div>
     </div>
   `;
@@ -1358,7 +1361,7 @@ function renderSubmitResult(data){
   const turns = Number(receipt.turns || 0);
   const compactions = Number(receipt.compactions || 0);
   const localPending = data.local_pending || {};
-  const model = pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending);
+  const model = pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicAnonymous ? 'You (anonymous)' : publicCreditName);
   const highValue = model.highValue;
   const localPendingSessions = model.localPendingSessions;
   const localPendingLow = model.localPendingLow;

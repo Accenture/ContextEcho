@@ -33,6 +33,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("Leaderboard preview", INDEX_HTML)
         self.assertIn("Show me anonymously on the public leaderboard", INDEX_HTML)
         self.assertIn("Default is public credit", INDEX_HTML)
+        self.assertIn("You (anonymous)", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
 
     def test_search_panel_can_run_cleanup_directly(self):
@@ -44,6 +45,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("Automatic redaction", INDEX_HTML)
         self.assertIn("Private words you asked to redact", INDEX_HTML)
         self.assertIn("mergeRedactionStats", INDEX_HTML)
+        self.assertIn("minmax(180px,1fr) 120px 100px", INDEX_HTML)
 
     def test_private_word_input_uses_redact_language(self):
         self.assertIn("Private words to redact", INDEX_HTML)
