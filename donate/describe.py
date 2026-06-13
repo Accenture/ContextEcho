@@ -98,6 +98,7 @@ def write_manifest_and_consent(
     email: str = "",
     institute: str = "",
     privacy_tier: str = "full_redacted",
+    public_anonymous: bool = False,
 ) -> tuple[Path, Path, dict]:
     """Write the donation manifest and consent file next to a redacted session."""
     session_id = stable_session_id(session)
@@ -113,6 +114,7 @@ def write_manifest_and_consent(
         "compactions": count_value(auto.get("compactions", "")),
         "contributor": contributor or "anonymous",
         "credit_name": contributor or "anonymous",
+        "public_anonymous": bool(public_anonymous),
         "contributor_email": email,
         "contributor_institute": institute,
         "privacy_tier": privacy_tier,

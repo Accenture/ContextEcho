@@ -24,6 +24,10 @@ class UpdateContributorsTests(unittest.TestCase):
         fallback = anonymous_ledger_name({"submission_id": "submission-d51e3f33"}, "S4")
         self.assertEqual(display_name({"credit_name": "anonymous"}, fallback), "Anonymous donor d51e3f33")
 
+    def test_public_anonymous_donor_uses_submission_id(self):
+        fallback = anonymous_ledger_name({"submission_id": "submission-d51e3f33"}, "S4")
+        self.assertEqual(display_name({"credit_name": "Named Donor", "public_anonymous": True}, fallback), "Anonymous donor d51e3f33")
+
     def test_matching_name_email_and_institute_merge(self):
         sessions = [
             SessionEntry(sid="S4", contributor="Donor", email="d@example.com", institute="Lab", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="a"),

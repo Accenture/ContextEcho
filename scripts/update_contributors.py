@@ -126,6 +126,8 @@ def norm(value: Any) -> str:
 
 
 def display_name(record: dict[str, Any], fallback: str) -> str:
+    if bool(record.get("public_anonymous")):
+        return fallback
     name = norm(record.get("credit_name") or record.get("contributor"))
     if not name or name.lower() in {"anonymous", "anon", "donor"}:
         return fallback
@@ -158,7 +160,10 @@ def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
         if manifest_path.exists():
             manifest = read_json(manifest_path)
         sid = f"S{i}"
-        name = display_name(row, anonymous_ledger_name(row, sid))
+        public_record = dict(row)
+        if manifest.get("public_anonymous"):
+            public_record["public_anonymous"] = True
+        name = display_name(public_record, anonymous_ledger_name(row, sid))
         email = norm(manifest.get("contributor_email") or row.get("contributor_email"))
         institute = norm(row.get("institute") or manifest.get("contributor_institute"))
         source_key = norm(manifest.get("redacted_file")) or norm(row.get("session_sha256")) or norm(row.get("submission_id"))

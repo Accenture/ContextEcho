@@ -16,6 +16,13 @@ class MaintainerLabelTests(unittest.TestCase):
         self.assertEqual(review_default_label(manifest, submission), "Carlos-submission-abc12345")
         self.assertEqual(promote_default_label(manifest, submission), "Carlos-submission-abc12345")
 
+    def test_public_anonymous_default_labels_do_not_include_name(self):
+        manifest = {"credit_name": "Carlos", "public_anonymous": True}
+        submission = Path("hf_staging_download/pending/submission-abc12345")
+
+        self.assertEqual(review_default_label(manifest, submission), "anonymous-donor-submission-abc12345")
+        self.assertEqual(promote_default_label(manifest, submission), "anonymous-donor-submission-abc12345")
+
     def test_sha256_file_hashes_session_content(self):
         with TemporaryDirectory() as td:
             path = Path(td) / "session.redacted.jsonl"

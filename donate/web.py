@@ -162,6 +162,7 @@ def save_donation_record(source_path: str | Path = "", artifact_path: str | Path
         "submission": m.group(1) if m else "",
         "contributor_identity": contributor_identity(receipt),
         "credit_name": receipt.get("credit_name", ""),
+        "public_anonymous": bool(receipt.get("public_anonymous")),
         "contributor_email": receipt.get("contributor_email", ""),
         "institute": receipt.get("institute", ""),
         "turns": int(receipt.get("turns") or 0),
@@ -258,6 +259,7 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
         "redacted_file": str(session),
         "contributor": manifest.get("contributor", "anonymous"),
         "credit_name": manifest.get("credit_name", manifest.get("contributor", "anonymous")),
+        "public_anonymous": bool(manifest.get("public_anonymous")),
         "contributor_email": manifest.get("contributor_email", ""),
         "institute": manifest.get("contributor_institute", ""),
         "agent": manifest.get("agent", ""),
@@ -277,6 +279,7 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
         f"- Submitted UTC: {receipt['submitted_utc']}",
         f"- Submission: {receipt['submission'] or 'unknown'}",
         f"- Credit name: {receipt['credit_name']}",
+        f"- Public leaderboard: {'anonymous' if receipt['public_anonymous'] else receipt['credit_name']}",
         f"- Email: {receipt['contributor_email'] or 'not provided'}",
         f"- Institute: {receipt['institute'] or 'not provided'}",
         f"- Agent/model: {receipt['agent']} / {receipt['model']}",
@@ -657,6 +660,10 @@ INDEX_HTML = r"""<!doctype html>
     .hint { font-size:13px; color:var(--muted); margin-top:6px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
     .submit-grid { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:16px; align-items:start; }
+    .public-credit-option { margin-top:14px; border:1px solid #dfe6d8; background:#fbfff7; border-radius:14px; padding:12px 14px; color:#26332d; }
+    .public-credit-option label { margin:0; display:flex; gap:10px; align-items:flex-start; font-weight:900; }
+    .public-credit-option input { width:auto; margin-top:3px; }
+    .public-credit-option .hint { margin-left:26px; }
     .topline { color:var(--muted); max-width:760px; font-size:18px; }
     .actions { justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
     .compact-input-row label { margin:0; white-space:nowrap; }
@@ -806,6 +813,10 @@ INDEX_HTML = r"""<!doctype html>
       <div><label>Name or GitHub/HF handle <span class="muted">(for credit, optional)</span></label><input id="contributorName" placeholder="anonymous" /></div>
       <div><label>Email <span class="muted">(optional)</span></label><input id="contributorEmail" placeholder="you@example.com" /></div>
       <div><label>Institute <span class="muted">(optional)</span></label><input id="contributorInstitute" placeholder="University / company / independent" /></div>
+    </div>
+    <div class="public-credit-option">
+      <label><input id="publicAnonymous" type="checkbox"> Show me anonymously on the public leaderboard</label>
+      <div class="hint">Maintainers can still see the name, email, and institute you entered for review and support. Public leaderboard and release acknowledgments will use an anonymous donor label.</div>
     </div>
     <div class="row actions">
       <button id="submitPrev" class="secondary">Previous</button>
@@ -1096,6 +1107,7 @@ function receiptEmailHref(receipt, receiptPath){
     '',
     `Submission ID: ${publicId}`,
     `Credit name: ${receipt.credit_name || 'anonymous'}`,
+    `Public leaderboard: ${receipt.public_anonymous ? 'anonymous' : (receipt.credit_name || 'anonymous')}`,
     `Agent/model: ${(receipt.agent || '')} / ${(receipt.model || '')}`,
     `Privacy tier: ${receipt.privacy_tier || 'full_redacted'}`,
     `User turns: ${receipt.turns || ''}`,
@@ -1115,6 +1127,10 @@ function renderSubmitResult(data){
     ? 'Save this ID for support. Maintainers can use it to find your private staging submission.'
     : 'The receipt was saved locally, but no staging submission ID was returned.';
   const creditName = (receipt.credit_name || receipt.contributor || $('contributorName').value || 'Contributor').trim();
+  const publicAnonymous = !!receipt.public_anonymous;
+  const publicCreditName = publicAnonymous
+    ? `Anonymous donor ${publicId.replace(/^submission-/, '') || 'pending'}`
+    : creditName;
   const firstName = creditName.split(/\s+/)[0] || 'Contributor';
   const turns = Number(receipt.turns || 0);
   const compactions = Number(receipt.compactions || 0);
@@ -1129,7 +1145,7 @@ function renderSubmitResult(data){
   const localPendingTurns = Number(localPending.turns || turns);
   const localPendingRange = `${localPendingLow}–${localPendingHigh}`;
   const acceptedLeaders = publicStats.leaderboard || [];
-  const sameName = row => String(row.contributor || '').toLowerCase() === creditName.toLowerCase();
+  const sameName = row => !publicAnonymous && String(row.contributor || '').toLowerCase() === publicCreditName.toLowerCase();
   const mergedWithExisting = acceptedLeaders.some(sameName);
   const simulatedLeaders = acceptedLeaders.map(row => {
     const basePoints = Number(row.points_num || 0);
@@ -1146,7 +1162,7 @@ function renderSubmitResult(data){
       pendingExisting: false,
     };
     return {
-      name: creditName,
+      name: publicCreditName,
       points: basePoints + localPendingLow,
       pointsLow: basePoints + localPendingLow,
       pointsHigh: basePoints + localPendingHigh,
@@ -1157,7 +1173,7 @@ function renderSubmitResult(data){
     };
   });
   if(!mergedWithExisting) simulatedLeaders.push({
-    name: creditName,
+    name: publicCreditName,
     points: localPendingLow,
     pointsLow: localPendingLow,
     pointsHigh: localPendingHigh,
@@ -1207,7 +1223,7 @@ function renderSubmitResult(data){
           <div class="success-check">✓</div>
           <div>
             <div class="success-title">${duplicate ? 'Already received' : `Thank you, ${escapeHtml(firstName)}.`}</div>
-            <div class="success-subtitle">${duplicate ? 'This verified redacted session was already submitted. We marked it donated locally to prevent repeat uploads.' : 'Your verified redacted session is submitted for maintainer review and release credit.'}</div>
+            <div class="success-subtitle">${duplicate ? 'This verified redacted session was already submitted. We marked it donated locally to prevent repeat uploads.' : (publicAnonymous ? 'Your verified redacted session is submitted for maintainer review. Public credit will appear under an anonymous donor label.' : 'Your verified redacted session is submitted for maintainer review and release credit.')}</div>
           </div>
         </div>
         <div class="credit-scoreboard">
@@ -1229,8 +1245,9 @@ function renderSubmitResult(data){
           <div class="detail-chip">${duplicate ? 'Already submitted' : 'Pending maintainer review'}</div>
         </div>
         <div class="detail-section">
-          <div class="detail-heading"><span class="detail-icon">♙</span><span>Credit name</span></div>
-          <div class="detail-value">${escapeHtml(creditName)}</div>
+          <div class="detail-heading"><span class="detail-icon">♙</span><span>Public credit</span></div>
+          <div class="detail-value">${escapeHtml(publicCreditName)}</div>
+          ${publicAnonymous ? `<div class="hint">Maintainers can still see your submitted name, email, and institute for review and support.</div>` : ''}
         </div>
         <div class="detail-section">
           <div class="detail-heading"><span class="detail-icon">▧</span><span>Submission ID</span></div>
@@ -1563,7 +1580,8 @@ $('submitBtn').onclick = async () => {
       privacy_tier:redacted.privacy_tier || privacyTier(),
       contributor:$('contributorName').value,
       email:$('contributorEmail').value,
-      institute:$('contributorInstitute').value
+      institute:$('contributorInstitute').value,
+      public_anonymous:$('publicAnonymous').checked
     }, ev => {
       if(ev.event === 'progress'){
         setBusy('submitProgress', true, ev.percent || 45);
@@ -1833,6 +1851,7 @@ class Handler(BaseHTTPRequestHandler):
             email=str(data.get("email", "") or ""),
             institute=str(data.get("institute", "") or ""),
             privacy_tier=str(data.get("privacy_tier") or "full_redacted"),
+            public_anonymous=bool(data.get("public_anonymous")),
         )
         if emit:
             emit({"event": "progress", "percent": 80, "message": "Writing manifest and consent files..."})

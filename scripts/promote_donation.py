@@ -23,7 +23,7 @@ def safe_label(text: str) -> str:
 
 
 def default_label(manifest: dict, submission: Path) -> str:
-    base = manifest.get("credit_name") or manifest.get("contributor") or "donor"
+    base = "anonymous-donor" if manifest.get("public_anonymous") else (manifest.get("credit_name") or manifest.get("contributor") or "donor")
     return safe_label(f"{base}-{submission.name}")
 
 
@@ -162,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
         "promoted_utc": datetime.now(timezone.utc).isoformat(),
         "contributor": manifest.get("contributor"),
         "credit_name": manifest.get("credit_name"),
+        "public_anonymous": bool(manifest.get("public_anonymous")),
         "institute": manifest.get("contributor_institute"),
         "agent": manifest.get("agent"),
         "model": manifest.get("model"),

@@ -143,6 +143,7 @@ class WebTests(unittest.TestCase):
             session.write_text('{"type":"user"}\n')
             manifest.write_text(
                 '{"contributor":"donor","credit_name":"donor","contributor_email":"d@example.com",'
+                '"public_anonymous":true,'
                 '"agent":"Codex CLI","model":"gpt-5","turns":"42","records":"123","compactions":"1"}'
             )
             output = "\n".join([
@@ -155,11 +156,13 @@ class WebTests(unittest.TestCase):
             self.assertTrue(receipt_path.exists())
             self.assertEqual(receipt["submission"], "pending/submission-abc12345/")
             self.assertEqual(receipt["contributor_email"], "d@example.com")
+            self.assertTrue(receipt["public_anonymous"])
             self.assertEqual(receipt["turns"], "42")
             self.assertEqual(receipt["records"], "123")
             text = receipt_path.read_text()
             self.assertIn("pending/submission-abc12345/", text)
             self.assertIn("User turns: 42", text)
+            self.assertIn("Public leaderboard: anonymous", text)
             self.assertIn("Records: 123", text)
             self.assertIn("Context compactions: 1", text)
             self.assertNotIn("persona-drift-staging", text)
