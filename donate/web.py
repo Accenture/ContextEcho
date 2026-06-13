@@ -771,7 +771,7 @@ INDEX_HTML = r"""<!doctype html>
     <label><input id="safeConfirm" type="checkbox" style="width:auto"> I confirm this session is safe to donate.</label>
     <div id="scrubRow" class="row compact-input-row" style="margin-top:12px">
       <label>Private words to remove on the next redaction run <span class="muted">(optional)</span></label>
-      <input id="scrub" placeholder="xianzhong, Project Codename, private repo name" />
+      <input id="scrub" placeholder="your name, Project Codename, private repo name" />
       <div class="scrub-helper"><strong>Use this only if you still see a private word.</strong> Type the exact word or phrase here, then click Redact and Verify again.</div>
     </div>
     <div class="row redact-action-row">
