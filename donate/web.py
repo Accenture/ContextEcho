@@ -678,7 +678,8 @@ INDEX_HTML = r"""<!doctype html>
     .step-bubble.warn { background:#be2e35; box-shadow:0 10px 22px rgba(190,46,53,.18); }
     .step-headline h2 { margin:0; }
     .step-headline p { margin:6px 0 0; }
-    .redact-section-title { margin:12px 0 4px; font-weight:900; color:#111b18; }
+    .redact-section-title { margin:12px 0 4px; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; font-weight:900; color:#111b18; }
+    .redact-section-title .inline-note { color:var(--muted); font-weight:500; font-size:14px; }
     .privacy-card { position:relative; display:grid; grid-template-columns:auto 46px minmax(0,1fr); gap:14px; align-items:center; min-height:68px; }
     .privacy-card strong { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .privacy-icon { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:#eef3ed; color:#1f6f43; font-size:22px; }
@@ -831,8 +832,7 @@ INDEX_HTML = r"""<!doctype html>
     </div>
     <div id="selectedCard" class="selected-card"></div>
     <div class="danger">Only donate personal, internal tooling, or open-source sessions. <span style="font-weight:500">Do not donate client-confidential/NDA data.</span></div>
-    <div class="redact-section-title">Choose your redaction level</div>
-    <p class="muted" style="margin-top:0">ContextEcho analyzes assistant behavior, not donor personality. Choose how much of your own wording to keep.</p>
+    <div class="redact-section-title">Choose your redaction level <span class="inline-note">(ContextEcho analyzes assistant behavior, not donor personality. Choose how much of your own wording to keep.)</span></div>
     <div class="privacy-options">
       <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><div class="privacy-icon">✣</div><div><strong>Full redacted <span class="pill best">Recommended</span></strong><div class="hint">Default. Keeps task flow after PII/secrets/custom terms are removed.<br>Highest scientific fidelity.</div></div></label>
       <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><div class="privacy-icon">♢</div><div><strong>User-minimized</strong><div class="hint">Selectively masks sensitive donor text after redaction.<br>Coding task context remains; stronger privacy.</div></div></label>
