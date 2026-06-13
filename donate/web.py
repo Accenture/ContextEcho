@@ -1046,7 +1046,8 @@ async function loadProjectStats(){
 }
 function renderRedactResult(data){
   const stats = data.stats || {};
-  const displayStats = {};
+  const autoStats = {};
+  const privateStats = {};
   Object.entries(stats).forEach(([k,v]) => {
     const value = Number(v || 0);
     if(!value) return;
@@ -1054,16 +1055,20 @@ function renderRedactResult(data){
       const term = k.slice('private_word:'.length);
       const noisy = term.length > 24 || /PRIVATE KEY|BEGIN |[A-Z0-9]{20,}|[@=]/.test(term);
       const label = noisy ? 'credential/private patterns' : term;
-      displayStats[label] = (displayStats[label] || 0) + value;
+      privateStats[label] = (privateStats[label] || 0) + value;
       return;
     }
-    displayStats[k] = (displayStats[k] || 0) + value;
+    if(k === 'scrub_term' && Object.keys(stats).some(name => name.startsWith('private_word:'))) return;
+    autoStats[k] = (autoStats[k] || 0) + value;
   });
-  const entries = Object.entries(displayStats)
-    .filter(([k]) => k !== 'scrub_term' || !Object.keys(stats).some(name => name.startsWith('private_word:')))
-    .sort((a,b)=>b[1]-a[1]);
-  const metrics = entries.length
-    ? entries.map(([k,v]) => `<span class="metric">${escapeHtml(k)}: <strong>${v}</strong></span>`).join('')
+  const autoEntries = Object.entries(autoStats).sort((a,b)=>b[1]-a[1]);
+  const privateEntries = Object.entries(privateStats).sort((a,b)=>b[1]-a[1]);
+  const entries = [...autoEntries, ...privateEntries];
+  const autoMetrics = autoEntries.length
+    ? autoEntries.map(([k,v]) => `<span class="metric">${escapeHtml(k)}: <strong>${v}</strong></span>`).join('')
+    : '<span class="metric">No automatic detector matches</span>';
+  const privateMetrics = privateEntries.length
+    ? privateEntries.map(([k,v]) => `<span class="metric">${escapeHtml(k)}: <strong>${v}</strong></span>`).join('')
     : '<span class="metric">No detector matches</span>';
   const verify = data.verify_report || {};
   const blocking = verify.blocking || {};
@@ -1101,7 +1106,7 @@ function renderRedactResult(data){
     ${failureBox}
     <div class="field"><div class="field-label">Redacted file</div><div class="redacted-path-row"><div class="pathbox">${escapeHtml(data.redacted_file)}</div><button class="copy-file-btn" type="button" id="copyRedactedPath">Copy</button></div></div>
     <div class="row" style="margin-top:8px"><button class="secondary" id="revealRedactedFile">Reveal File</button></div>
-    <div class="field"><div class="field-label">Already redacted in this output ${removedCount ? `<span class="removed-count">(${removedCount})</span>` : ''}</div><div class="metrics">${metrics}</div><div class="removed-note">These chips are a summary of what the tool already redacted. They are not terms to type.</div></div>
+    <div class="field"><div class="field-label">Already redacted in this output ${removedCount ? `<span class="removed-count">(${removedCount})</span>` : ''}</div><div class="field-label" style="margin-top:10px">Automatic redaction</div><div class="metrics">${autoMetrics}</div>${privateEntries.length ? `<div class="field-label" style="margin-top:10px">Private words you asked to redact</div><div class="metrics">${privateMetrics}</div>` : ''}<div class="removed-note">These chips are a summary of what the tool already redacted. They are not terms to type.</div></div>
   `;
   $('redactResult').className = `result show redact-card ${data.verify_passed ? 'pass-card' : 'fail-card'}`;
   $('searchPanel').classList.add('show');
@@ -1119,6 +1124,13 @@ function renderRedactResult(data){
       refreshButtons();
     };
   }
+}
+function mergeRedactionStats(previousStats, nextStats){
+  const merged = {...(previousStats || {})};
+  Object.entries(nextStats || {}).forEach(([key, value]) => {
+    merged[key] = Number(merged[key] || 0) + Number(value || 0);
+  });
+  return merged;
 }
 function renderSelectedCard(s, idx){
   $('selectedCard').innerHTML = `
@@ -1656,6 +1668,7 @@ async function runRedactVerify(extraTerms = [], opts = {}){
       redacted.privacy_tier === privacyTier() &&
       (pendingScrubTerms.length || hasDetectSecretsFailure(redacted))
     );
+    const previousStats = canRepair ? {...(redacted.stats || {})} : null;
     const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : $('scrub').value;
     if(redacted && redacted.verify_passed && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
       status('redactStatus', 'No new private words to redact. Review the current redacted file or add another word.');
@@ -1695,8 +1708,9 @@ async function runRedactVerify(extraTerms = [], opts = {}){
         finalData = ev.result;
       }
     });
+    if(!finalData) throw new Error('redaction did not return a result');
+    if(previousStats) finalData.stats = mergeRedactionStats(previousStats, finalData.stats || {});
     redacted = finalData;
-    if(!redacted) throw new Error('redaction did not return a result');
     setBusy(progressId, true, 100);
     submitted = false;
     if(redacted.verify_passed){

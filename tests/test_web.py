@@ -41,6 +41,9 @@ class WebTests(unittest.TestCase):
         self.assertIn("Running Redact and Verify again for the matched word", INDEX_HTML)
         self.assertIn("Redaction complete. The checked word is now found 0 times", INDEX_HTML)
         self.assertIn("Already redacted in this output", INDEX_HTML)
+        self.assertIn("Automatic redaction", INDEX_HTML)
+        self.assertIn("Private words you asked to redact", INDEX_HTML)
+        self.assertIn("mergeRedactionStats", INDEX_HTML)
 
     def test_private_word_input_uses_redact_language(self):
         self.assertIn("Private words to redact", INDEX_HTML)
