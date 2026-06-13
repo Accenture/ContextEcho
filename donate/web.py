@@ -1601,14 +1601,16 @@ $('searchBtn').onclick = async () => {
 };
 async function runRedactVerify(extraTerms = [], opts = {}){
   if(!selected) return;
+  const progressId = opts.fromSearch ? 'searchProgress' : 'redactProgress';
   $('redactBtn').disabled = true;
   $('redactResult').classList.remove('show');
   if(!opts.fromSearch){
     $('searchPanel').classList.remove('show');
     $('searchResult').classList.remove('show');
   }
-  setBusy('redactProgress', true, 30);
-  status('redactStatus', opts.fromSearch ? 'Running cleanup for the checked private word...' : 'Starting local redaction...');
+  setBusy(opts.fromSearch ? 'redactProgress' : 'searchProgress', false);
+  setBusy(progressId, true, 30);
+  status('redactStatus', opts.fromSearch ? 'Running redaction for the checked private word...' : 'Starting local redaction...');
   try {
     let finalData = null;
     const directTerms = [...new Set((extraTerms || []).map(x => String(x || '').trim()).filter(Boolean))];
@@ -1636,23 +1638,23 @@ async function runRedactVerify(extraTerms = [], opts = {}){
       previous_redacted_file: canRepair ? redacted.redacted_file : ''
     }, ev => {
       if(ev.event === 'start'){
-        setBusy('redactProgress', true, 5);
+        setBusy(progressId, true, 5);
         status('redactStatus', `Preparing to redact ${ev.total || '?'} records locally...`);
       } else if(ev.event === 'repair'){
-        setBusy('redactProgress', true, ev.percent || 55);
+        setBusy(progressId, true, ev.percent || 55);
         status('redactStatus', ev.message || 'Applying new private words to the existing redacted file...');
       } else if(ev.event === 'engine'){
-        setBusy('redactProgress', true, 8);
+        setBusy(progressId, true, 8);
         status('redactStatus', 'Loading local redaction engine...');
       } else if(ev.event === 'progress'){
         const pct = Math.max(5, Math.min(92, ev.percent || 5));
-        setBusy('redactProgress', true, pct);
+        setBusy(progressId, true, pct);
         status('redactStatus', `Redacting locally: ${ev.current}/${ev.total} records (${Math.round(ev.percent || 0)}%).`);
       } else if(ev.event === 'minimize'){
-        setBusy('redactProgress', true, 94);
+        setBusy(progressId, true, 94);
         status('redactStatus', 'Applying user-minimized privacy mode...');
       } else if(ev.event === 'verify'){
-        setBusy('redactProgress', true, ev.percent || 96);
+        setBusy(progressId, true, ev.percent || 96);
         status('redactStatus', ev.message || 'Running verify gate on the redacted file...');
       } else if(ev.event === 'done'){
         finalData = ev.result;
@@ -1660,7 +1662,7 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     });
     redacted = finalData;
     if(!redacted) throw new Error('redaction did not return a result');
-    setBusy('redactProgress', true, 100);
+    setBusy(progressId, true, 100);
     submitted = false;
     if(redacted.verify_passed){
       appliedScrubTerms = canRepair
@@ -1672,7 +1674,7 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     status('redactStatus', redacted.verify_passed ? 'Review the result above. If a private word remains, add it to the removal box and rerun. Otherwise check the review box to continue.' : verifyFailureSummary(redacted));
     refreshButtons();
   } catch(e) { status('redactStatus','ERROR: '+e.message); }
-  finally { setBusy('redactProgress', false); refreshButtons(); }
+  finally { setBusy(progressId, false); refreshButtons(); }
 }
 $('redactBtn').onclick = () => runRedactVerify();
 $('submitBtn').onclick = async () => {
