@@ -39,7 +39,8 @@ class WebTests(unittest.TestCase):
     def test_search_panel_can_run_cleanup_directly(self):
         self.assertIn("Redact and Verify Again", INDEX_HTML)
         self.assertIn("redact-primary", INDEX_HTML)
-        self.assertIn("Running Redact and Verify again for the matched word", INDEX_HTML)
+        self.assertIn("Redacting checked word", INDEX_HTML)
+        self.assertNotIn("Running Redact and Verify again for the matched word", INDEX_HTML)
         self.assertIn("Redaction complete. The checked word is now found 0 times", INDEX_HTML)
         self.assertIn("Already redacted in this output", INDEX_HTML)
         self.assertIn("Automatic redaction", INDEX_HTML)
