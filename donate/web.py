@@ -1360,7 +1360,7 @@ function renderSubmitResult(data){
   const turns = Number(receipt.turns || 0);
   const compactions = Number(receipt.compactions || 0);
   const localPending = data.local_pending || {};
-  const model = pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicAnonymous ? 'You (anonymous)' : publicCreditName);
+  const model = pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicCreditName);
   const highValue = model.highValue;
   const localPendingSessions = model.localPendingSessions;
   const localPendingLow = model.localPendingLow;
