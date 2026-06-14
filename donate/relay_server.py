@@ -128,6 +128,65 @@ def _session_prefixes(files: list[str]) -> list[str]:
     return sorted(prefixes)
 
 
+def _release_ledger_rows(repo_id: str, files: list[str], token: str | None) -> list[dict]:
+    if "data/donations/ledger.jsonl" not in files:
+        return []
+    try:
+        local_ledger = hf_hub_download(
+            repo_id=repo_id,
+            repo_type="dataset",
+            filename="data/donations/ledger.jsonl",
+            token=token,
+        )
+    except Exception:
+        return []
+    rows = []
+    for line in Path(local_ledger).read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict) and row.get("session_path"):
+            rows.append(row)
+    return rows
+
+
+def _read_hf_file(repo_id: str, filename: str, token: str | None) -> bytes:
+    local_path = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=filename, token=token)
+    return Path(local_path).read_bytes()
+
+
+def _read_hf_json(repo_id: str, filename: str, token: str | None, files: list[str]) -> dict:
+    if filename not in files:
+        return {}
+    try:
+        data = _read_hf_file(repo_id, filename, token)
+        value = json.loads(data.decode("utf-8"))
+    except Exception:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _backfill_record_from_hf(
+    repo_id: str,
+    session_path: str,
+    manifest_path: str,
+    submission_id: str,
+    files: list[str],
+    token: str | None,
+) -> dict:
+    session_data = _read_hf_file(repo_id, session_path, token)
+    artifact_hash = _sha256(session_data)
+    manifest = _read_hf_json(repo_id, manifest_path, token, files) if manifest_path else {}
+    manifest.setdefault("conversation_fingerprint", _fingerprint_jsonl_bytes(session_data))
+    manifest.setdefault("fingerprint_version", "structure-v1")
+    manifest.setdefault("records", _count_jsonl_records(session_data))
+    manifest.setdefault("turns", 0)
+    return _seen_record(artifact_hash, submission_id, manifest)
+
+
 def _backfill_seen_hashes_from_hf() -> dict:
     token = os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
     api = HfApi(token=token)
@@ -147,28 +206,30 @@ def _backfill_seen_hashes_from_hf() -> dict:
             session_path = f"{prefix}/session.redacted.jsonl" if prefix else "session.redacted.jsonl"
             manifest_path = f"{prefix}/manifest.json" if prefix else "manifest.json"
             try:
-                local_session = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=session_path, token=token)
-                session_data = Path(local_session).read_bytes()
-                artifact_hash = _sha256(session_data)
-                if artifact_hash in seen_hashes:
-                    continue
-                manifest: dict = {}
-                if manifest_path in files:
-                    local_manifest = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=manifest_path, token=token)
-                    try:
-                        manifest = json.loads(Path(local_manifest).read_text(encoding="utf-8"))
-                    except json.JSONDecodeError:
-                        manifest = {}
-                manifest.setdefault("conversation_fingerprint", _fingerprint_jsonl_bytes(session_data))
-                manifest.setdefault("fingerprint_version", "structure-v1")
-                manifest.setdefault("records", _count_jsonl_records(session_data))
-                manifest.setdefault("turns", 0)
+                manifest = _read_hf_json(repo_id, manifest_path, token, files)
                 submission_id = str(manifest.get("reviewed_submission_id") or manifest.get("session_id") or _submission_id_from_prefix(prefix))
-                _append_seen_record(_seen_record(artifact_hash, submission_id, manifest))
-                seen_hashes.add(artifact_hash)
+                record = _backfill_record_from_hf(repo_id, session_path, manifest_path, submission_id, files, token)
+                if record["artifact_hash"] in seen_hashes:
+                    continue
+                _append_seen_record(record)
+                seen_hashes.add(record["artifact_hash"])
                 added += 1
             except Exception as exc:
                 errors.append(f"{repo_id}/{prefix}: {exc}")
+        for row in _release_ledger_rows(repo_id, files, token):
+            scanned += 1
+            session_path = str(row.get("session_path") or "")
+            manifest_path = str(row.get("manifest_path") or "")
+            submission_id = str(row.get("submission_id") or _submission_id_from_prefix(session_path))
+            try:
+                record = _backfill_record_from_hf(repo_id, session_path, manifest_path, submission_id, files, token)
+                if record["artifact_hash"] in seen_hashes:
+                    continue
+                _append_seen_record(record)
+                seen_hashes.add(record["artifact_hash"])
+                added += 1
+            except Exception as exc:
+                errors.append(f"{repo_id}/{session_path}: {exc}")
     return {"scanned": scanned, "added": added, "errors": errors[:20]}
 
 
