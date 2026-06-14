@@ -60,10 +60,11 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("Private words to remove on the next redaction run", INDEX_HTML)
 
     def test_duplicate_submit_view_explains_no_new_upload(self):
-        self.assertIn("This exact redacted session was submitted before", INDEX_HTML)
-        self.assertIn("No new submission was created", INDEX_HTML)
-        self.assertIn("No new upload", INDEX_HTML)
+        self.assertIn("This exact redacted session was already received by the maintainer relay", INDEX_HTML)
+        self.assertIn("No new donation was needed", INDEX_HTML)
+        self.assertIn("Already received", INDEX_HTML)
         self.assertIn("Local duplicate receipt", INDEX_HTML)
+        self.assertNotIn("new folder in Hugging Face", INDEX_HTML)
 
     def test_auto_repair_removes_detect_secrets_value(self):
         with TemporaryDirectory() as td:

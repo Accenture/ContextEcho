@@ -1392,11 +1392,11 @@ function renderSubmitResult(data){
             <div class="success-check">✓</div>
             <div>
               <div class="success-title">Already submitted</div>
-              <div class="success-subtitle">This exact redacted session was submitted before, so ContextEcho did not create a new Hugging Face upload. We marked it donated locally to prevent repeat uploads.</div>
+              <div class="success-subtitle">This exact redacted session was already received by the maintainer relay. We marked it donated locally to prevent repeat uploads.</div>
             </div>
           </div>
-          <div class="leader-note"><span><strong>No new submission was created.</strong> If you do not see a new folder in Hugging Face, that is expected for this duplicate attempt. Check the earlier submission for this same redacted artifact.</span></div>
-          ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Local duplicate receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">This receipt records that the duplicate was detected locally; it is not a new Hugging Face submission.</div></div>` : ''}
+          <div class="leader-note"><span><strong>No new donation was needed.</strong> The maintainer relay recognized this redacted artifact as already received, so this repeat attempt will not be counted again.</span></div>
+          ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Local duplicate receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">This receipt records that the duplicate was detected locally; it is not a new donation.</div></div>` : ''}
         </div>
         <aside class="success-detail-card">
           <div class="detail-section">
@@ -1404,9 +1404,9 @@ function renderSubmitResult(data){
             <div class="detail-chip">Duplicate detected</div>
           </div>
           <div class="detail-section">
-            <div class="detail-heading"><span class="detail-icon">▧</span><span>Hugging Face upload</span></div>
-            <div class="detail-value">No new upload</div>
-            <div class="hint">The relay rejected this artifact because it already has the same redacted session content.</div>
+            <div class="detail-heading"><span class="detail-icon">▧</span><span>Donation result</span></div>
+            <div class="detail-value">Already received</div>
+            <div class="hint">The maintainer relay recognized this redacted session content and skipped the repeat submission.</div>
           </div>
           ${data.receipt_path ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▤</span><span>Receipt</span></div><div class="row"><button id="revealReceipt" type="button">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary" type="button">Email Receipt</button></a>` : ''}</div><div class="hint">${emailHref ? 'Email opens your mail app with receipt details; no email is sent by the local tool.' : 'No email was provided, so the duplicate receipt was saved locally only.'}</div></div>` : ''}
           <button id="submitAnother" class="secondary" style="width:100%">＋ Submit another session</button>
