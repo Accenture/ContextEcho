@@ -1539,7 +1539,8 @@ function progressBreakdown(parts){
 function setBusy(id, on, pct=35, opts={}){
   const el = $(id);
   const previousPct = progressTimers[id] ? progressTimers[id].pct : undefined;
-  const clamped = Math.max(0, Math.min(100, pct));
+  let clamped = Math.max(0, Math.min(100, pct));
+  if(on && Number.isFinite(previousPct)) clamped = Math.max(clamped, previousPct);
   el.style.display = on ? 'block' : 'none';
   el.firstElementChild.style.width = on ? clamped + '%' : '0%';
   if(on && !progressTimers[id]){
