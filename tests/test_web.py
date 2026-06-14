@@ -49,6 +49,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("progress-time", INDEX_HTML)
         self.assertIn("progressBreakdown", INDEX_HTML)
         self.assertIn("Elapsed", INDEX_HTML)
+        self.assertIn("${Math.round(pct)}% · ", INDEX_HTML)
 
     def test_private_word_input_uses_redact_language(self):
         self.assertIn("Private words to redact", INDEX_HTML)

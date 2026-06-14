@@ -1438,8 +1438,10 @@ function resetSessionArtifacts(){
   refreshButtons();
 }
 function setProgress(pct){
+  const clamped = Math.max(0, Math.min(100, pct));
   $('discoverProgress').style.display = 'block';
-  $('discoverProgress').firstElementChild.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  $('discoverProgress').firstElementChild.style.width = clamped + '%';
+  if(progressTimers.discoverProgress) progressTimers.discoverProgress.pct = clamped;
   updateProgressTime('discoverProgress');
 }
 const progressTimers = {};
@@ -1462,9 +1464,11 @@ function progressTimeEl(id){
 function updateProgressTime(id, text='', opts={}){
   const timer = progressTimers[id];
   const el = progressTimeEl(id);
+  const pct = timer ? timer.pct : opts.percent;
+  const prefix = Number.isFinite(pct) ? `${Math.round(pct)}% · ` : '';
   if(!timer){
     if(opts.keep && text){
-      el.textContent = text;
+      el.textContent = prefix + text;
       el.style.display = 'block';
     } else {
       el.style.display = 'none';
@@ -1473,7 +1477,7 @@ function updateProgressTime(id, text='', opts={}){
     return;
   }
   const elapsed = fmtElapsed(Date.now() - timer.start);
-  el.textContent = text || `Elapsed ${elapsed}`;
+  el.textContent = prefix + (text || `Elapsed ${elapsed}`);
   el.style.display = 'block';
 }
 function progressBreakdown(parts){
@@ -1484,11 +1488,14 @@ function progressBreakdown(parts){
 }
 function setBusy(id, on, pct=35, opts={}){
   const el = $(id);
+  const previousPct = progressTimers[id] ? progressTimers[id].pct : undefined;
+  const clamped = Math.max(0, Math.min(100, pct));
   el.style.display = on ? 'block' : 'none';
-  el.firstElementChild.style.width = on ? pct + '%' : '0%';
+  el.firstElementChild.style.width = on ? clamped + '%' : '0%';
   if(on && !progressTimers[id]) progressTimers[id] = {start: Date.now()};
+  if(on && progressTimers[id]) progressTimers[id].pct = clamped;
   if(!on) delete progressTimers[id];
-  updateProgressTime(id, opts.finalText || '', {keep:opts.keepTime});
+  updateProgressTime(id, opts.finalText || '', {keep:opts.keepTime, percent:opts.percent ?? previousPct});
 }
 async function post(url, body){
   const r = await fetch(url, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
@@ -1699,6 +1706,7 @@ $('searchBtn').onclick = async () => {
   let searchTiming = '';
   try {
     const data = await post('/api/search_redacted', {redacted_file:redacted.redacted_file, terms:$('searchTerms').value});
+    setBusy('searchProgress', true, 100);
     searchTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.searchProgress.start)}`;
     updateProgressTime('searchProgress', searchTiming);
     renderSearchResult(data);
