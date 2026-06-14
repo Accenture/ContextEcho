@@ -1370,6 +1370,41 @@ function renderSubmitResult(data){
     .map(m => `<div class="file-pill">${escapeHtml(m.source)}</div>`)
     .join('');
   const emailHref = receipt.contributor_email ? receiptEmailHref(receipt, data.receipt_path) : '';
+  if(duplicate){
+    $('submitResult').innerHTML = `
+      <div class="success-layout">
+        <div class="success-main">
+          <div class="success-hero">
+            <div class="success-check">✓</div>
+            <div>
+              <div class="success-title">Already submitted</div>
+              <div class="success-subtitle">This exact redacted session was submitted before, so ContextEcho did not create a new Hugging Face upload. We marked it donated locally to prevent repeat uploads.</div>
+            </div>
+          </div>
+          <div class="leader-note"><span><strong>No new submission was created.</strong> If you do not see a new folder in Hugging Face, that is expected for this duplicate attempt. Check the earlier submission for this same redacted artifact.</span></div>
+          ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Local duplicate receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">This receipt records that the duplicate was detected locally; it is not a new Hugging Face submission.</div></div>` : ''}
+        </div>
+        <aside class="success-detail-card">
+          <div class="detail-section">
+            <div class="detail-heading"><span class="detail-icon">◷</span><span>Status</span></div>
+            <div class="detail-chip">Duplicate detected</div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-heading"><span class="detail-icon">▧</span><span>Hugging Face upload</span></div>
+            <div class="detail-value">No new upload</div>
+            <div class="hint">The relay rejected this artifact because it already has the same redacted session content.</div>
+          </div>
+          ${data.receipt_path ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▤</span><span>Receipt</span></div><div class="row"><button id="revealReceipt" type="button">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary" type="button">Email Receipt</button></a>` : ''}</div><div class="hint">${emailHref ? 'Email opens your mail app with receipt details; no email is sent by the local tool.' : 'No email was provided, so the duplicate receipt was saved locally only.'}</div></div>` : ''}
+          <button id="submitAnother" class="secondary" style="width:100%">＋ Submit another session</button>
+        </aside>
+      </div>
+    `;
+    $('submitResult').classList.add('show', 'success-panel');
+    if(data.receipt_path && $('revealReceipt')) $('revealReceipt').onclick = () => post('/api/open_path', {path:data.receipt_path, reveal:true}).catch(e => status('submitStatus','ERROR: '+e.message));
+    if($('copyReceiptPath') && data.receipt_path) $('copyReceiptPath').onclick = () => navigator.clipboard?.writeText(data.receipt_path).catch(()=>{});
+    $('submitAnother').onclick = () => { resetSessionArtifacts(); goStep(1); };
+    return;
+  }
   $('submitResult').innerHTML = `
     <div class="success-layout">
       <div class="success-main">
