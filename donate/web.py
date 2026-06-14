@@ -34,6 +34,11 @@ from donate.adapters.base import is_redacted_artifact
 DONATION_ROOT = Path.home() / "Downloads" / "ContextEcho_donations"
 DONATION_REGISTRY = DONATION_ROOT / ".donated_sessions.json"
 MAX_AUTO_REPAIR_PASSES = 3
+CLIENT_DISCONNECT_ERRNOS = {errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED}
+
+
+class ClientDisconnected(Exception):
+    """Browser closed or navigated away while a local stream was active."""
 
 
 def create_server(host: str, port: int, attempts: int = 20) -> tuple[ThreadingHTTPServer, int]:
@@ -1958,27 +1963,57 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         sys.stderr.write("[web] " + (fmt % args) + "\n")
 
+    def _write_body(self, body: bytes, *, stream: bool = False) -> bool:
+        try:
+            self.wfile.write(body)
+            if stream:
+                self.wfile.flush()
+            return True
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError) as exc:
+            if stream:
+                raise ClientDisconnected() from exc
+            return False
+        except OSError as exc:
+            if exc.errno in CLIENT_DISCONNECT_ERRNOS:
+                if stream:
+                    raise ClientDisconnected() from exc
+                return False
+            raise
+
     def _json(self, payload: dict, status: int = 200) -> None:
         body = json.dumps(payload, indent=2).encode()
-        self.send_response(status)
-        self.send_header("content-type", "application/json")
-        self.send_header("content-length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            return
+        except OSError as exc:
+            if exc.errno in CLIENT_DISCONNECT_ERRNOS:
+                return
+            raise
+        self._write_body(body)
 
     def _read_json(self) -> dict:
         n = int(self.headers.get("content-length", "0"))
         return json.loads(self.rfile.read(n).decode() or "{}")
 
     def _start_ndjson(self) -> None:
-        self.send_response(200)
-        self.send_header("content-type", "application/x-ndjson")
-        self.send_header("cache-control", "no-store")
-        self.end_headers()
+        try:
+            self.send_response(200)
+            self.send_header("content-type", "application/x-ndjson")
+            self.send_header("cache-control", "no-store")
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError) as exc:
+            raise ClientDisconnected() from exc
+        except OSError as exc:
+            if exc.errno in CLIENT_DISCONNECT_ERRNOS:
+                raise ClientDisconnected() from exc
+            raise
 
     def _event(self, payload: dict) -> None:
-        self.wfile.write((json.dumps(payload) + "\n").encode())
-        self.wfile.flush()
+        self._write_body((json.dumps(payload) + "\n").encode(), stream=True)
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
@@ -1988,7 +2023,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("content-type", "text/html; charset=utf-8")
             self.send_header("content-length", str(len(body)))
             self.end_headers()
-            self.wfile.write(body)
+            self._write_body(body)
             return
         if parsed.path == "/api/discover":
             qs = parse_qs(parsed.query)
@@ -2008,12 +2043,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("content-type", "application/x-ndjson")
             self.send_header("cache-control", "no-store")
             self.end_headers()
-            for event in discover_mod.discover_iter(max_per_agent=max_per_agent):
-                if event.get("event") == "done":
-                    event = dict(event)
-                    event["sessions"] = annotate_donated(list(event.get("sessions") or []))
-                self.wfile.write((json.dumps(event) + "\n").encode())
-                self.wfile.flush()
+            try:
+                for event in discover_mod.discover_iter(max_per_agent=max_per_agent):
+                    if event.get("event") == "done":
+                        event = dict(event)
+                        event["sessions"] = annotate_donated(list(event.get("sessions") or []))
+                    self._write_body((json.dumps(event) + "\n").encode(), stream=True)
+            except ClientDisconnected:
+                return
             return
         self._json({"error": "not found"}, 404)
 
@@ -2039,8 +2076,13 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_clear_donated_labels()
             else:
                 self._json({"error": "not found"}, 404)
+        except ClientDisconnected:
+            return
         except Exception as e:
-            self._json({"error": str(e)}, 400)
+            try:
+                self._json({"error": str(e)}, 400)
+            except ClientDisconnected:
+                return
 
     def _handle_redact(self) -> None:
         data = self._read_json()
@@ -2184,6 +2226,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             result = self._redact_payload(data, emit=self._event)
             self._event({"event": "done", "result": result})
+        except ClientDisconnected:
+            return
         except Exception as exc:
             self._event({"event": "error", "error": str(exc)})
 
@@ -2222,6 +2266,8 @@ class Handler(BaseHTTPRequestHandler):
             result = self._describe_payload(data, emit=self._event)
             self._event({"event": "progress", "percent": 100, "message": "Manifest and consent ready."})
             self._event({"event": "done", "result": result})
+        except ClientDisconnected:
+            return
         except Exception as exc:
             self._event({"event": "error", "error": str(exc)})
 
@@ -2298,6 +2344,8 @@ class Handler(BaseHTTPRequestHandler):
             result = self._submit_payload(data, emit=self._event)
             self._event({"event": "progress", "percent": 100, "message": "Submission complete."})
             self._event({"event": "done", "result": result})
+        except ClientDisconnected:
+            return
         except Exception as exc:
             self._event({"event": "error", "error": str(exc)})
 
