@@ -82,6 +82,8 @@ CONTEXTECHO_STAGING_REPO=contextecho2026/persona-drift-staging
 CONTEXTECHO_RELAY_MAX_SESSION_BYTES=52428800
 CONTEXTECHO_RELAY_MAX_META_BYTES=262144
 CONTEXTECHO_RELAY_STATE_DIR=.relay_state
+CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO=0.20
+CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS=50
 CONTEXTECHO_RELAY_ADMIN_TOKEN=<random maintainer-only reset token>
 ```
 
@@ -110,6 +112,8 @@ The relay currently enforces:
 - Manifest has required metadata fields.
 - Consent file looks complete.
 - Exact duplicate redacted session artifacts are rejected by SHA-256 hash.
+- Same-source session updates are rejected until they grow by at least 20% or
+  50 new turns by default.
 - Upload size limits are enforced before creating the staging PR.
 
 The maintainer intake still performs the full technical review, PII/secrets

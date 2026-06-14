@@ -28,6 +28,8 @@ MAX_META_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_META_BYTES", str(256 
 STATE_DIR = Path(os.environ.get("CONTEXTECHO_RELAY_STATE_DIR", ".relay_state"))
 SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
 ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
+MIN_SESSION_GROWTH_RATIO = float(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO", "0.20"))
+MIN_SESSION_GROWTH_TURNS = int(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS", "50"))
 
 REQUIRED_MANIFEST_FIELDS = {
     "session_id",
@@ -51,28 +53,66 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _read_seen_hashes() -> set[str]:
+def _read_seen_records() -> list[dict]:
     if not SEEN_HASHES.exists():
-        return set()
-    out = set()
+        return []
+    out = []
     for line in SEEN_HASHES.read_text(encoding="utf-8").splitlines():
         try:
             row = json.loads(line)
         except json.JSONDecodeError:
             continue
-        artifact_hash = row.get("artifact_hash")
-        if isinstance(artifact_hash, str):
-            out.add(artifact_hash)
+        if isinstance(row, dict):
+            out.append(row)
     return out
 
 
-def _record_seen_hash(artifact_hash: str, submission_id: str) -> None:
+def _record_seen_hash(artifact_hash: str, submission_id: str, manifest: dict) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     with SEEN_HASHES.open("a", encoding="utf-8") as f:
         f.write(json.dumps({
             "artifact_hash": artifact_hash,
             "submission_id": submission_id,
+            "source_session_id": manifest.get("source_session_id", ""),
+            "records": manifest.get("records", 0),
+            "turns": manifest.get("turns", 0),
         }, sort_keys=True) + "\n")
+
+
+def _count_value(value: object) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _near_duplicate_detail(manifest: dict, seen_records: list[dict]) -> str | None:
+    source_id = str(manifest.get("source_session_id") or "").strip()
+    if not source_id:
+        return None
+    new_turns = _count_value(manifest.get("turns"))
+    new_records = _count_value(manifest.get("records"))
+    for row in seen_records:
+        if str(row.get("source_session_id") or "") != source_id:
+            continue
+        old_turns = _count_value(row.get("turns"))
+        old_records = _count_value(row.get("records"))
+        turn_delta = max(0, new_turns - old_turns)
+        record_delta = max(0, new_records - old_records)
+        turn_growth = (turn_delta / old_turns) if old_turns else (1.0 if turn_delta else 0.0)
+        record_growth = (record_delta / old_records) if old_records else (1.0 if record_delta else 0.0)
+        if (
+            turn_growth < MIN_SESSION_GROWTH_RATIO
+            and record_growth < MIN_SESSION_GROWTH_RATIO
+            and turn_delta < MIN_SESSION_GROWTH_TURNS
+        ):
+            pct = int(MIN_SESSION_GROWTH_RATIO * 100)
+            return (
+                "same source session changed too little since prior submission "
+                f"(turns +{turn_delta}, records +{record_delta}; require >= {pct}% growth "
+                f"or >= {MIN_SESSION_GROWTH_TURNS} new turns)"
+            )
+    return None
 
 
 def _reset_seen_hashes() -> int:
@@ -204,12 +244,16 @@ async def donate(
     _validate_consent(consent_data)
 
     artifact_hash = _sha256(session_data)
-    if artifact_hash in _read_seen_hashes():
+    seen_records = _read_seen_records()
+    if artifact_hash in {row.get("artifact_hash") for row in seen_records}:
         raise HTTPException(status_code=409, detail="duplicate redacted session artifact")
+    near_duplicate = _near_duplicate_detail(manifest, seen_records)
+    if near_duplicate:
+        raise HTTPException(status_code=409, detail=near_duplicate)
 
     submission_id = _submission_id()
     pr_url = _upload_to_hf(submission_id, session_data, manifest_data, consent_data)
-    _record_seen_hash(artifact_hash, submission_id)
+    _record_seen_hash(artifact_hash, submission_id, manifest)
 
     return {
         "ok": True,

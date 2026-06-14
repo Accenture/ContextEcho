@@ -223,7 +223,11 @@ def parse_submit_output(output: str) -> dict:
 
 def is_duplicate_submit_output(output: str) -> bool:
     text = output.lower()
-    return "duplicate redacted session artifact" in text or "http 409" in text and "duplicate" in text
+    return (
+        "duplicate redacted session artifact" in text
+        or "same source session changed too little" in text
+        or "http 409" in text and "duplicate" in text
+    )
 
 
 def friendly_submit_error(output: str) -> str:

@@ -64,6 +64,13 @@ def stable_session_id(session: Path) -> str:
     return f"donation-{session_fingerprint(session)}"
 
 
+def source_session_id(auto: dict) -> str:
+    source = str(auto.get("path") or "").strip()
+    if not source:
+        return ""
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()[:16]
+
+
 def count_value(value: object) -> int | str:
     if value in {None, ""}:
         return ""
@@ -104,6 +111,7 @@ def write_manifest_and_consent(
     session_id = stable_session_id(session)
     manifest = {
         "session_id": session_id,
+        "source_session_id": source_session_id(auto),
         "agent": auto.get("agent", "unknown"),
         "model": auto.get("model", "unknown"),
         "org": auto.get("org", "unknown"),

@@ -264,6 +264,9 @@ class WebTests(unittest.TestCase):
         self.assertTrue(is_duplicate_submit_output(
             '[submit] relay upload failed: HTTP 409 {"detail":"duplicate redacted session artifact"}'
         ))
+        self.assertTrue(is_duplicate_submit_output(
+            '[submit] relay upload failed: HTTP 409 {"detail":"same source session changed too little since prior submission"}'
+        ))
         self.assertFalse(is_duplicate_submit_output("[submit] relay upload failed: HTTP 500"))
 
     def test_friendly_submit_error_explains_missing_relay_or_token(self):
