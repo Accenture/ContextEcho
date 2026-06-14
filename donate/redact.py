@@ -346,29 +346,31 @@ def redact_file_with_progress(
 ) -> dict:
     analyzer = build_analyzer()
     stats: dict = {}
-    lines = src.read_text(encoding="utf-8", errors="replace").splitlines()
-    lines_out = []
-    total = len(lines)
-    for i, line in enumerate(_progress_iter(lines, total, progress), 1):
-        if not line.strip():
-            lines_out.append(line)
+    total = 0
+    if progress or progress_callback:
+        with src.open("r", encoding="utf-8", errors="replace") as f:
+            total = sum(1 for _ in f)
+    with src.open("r", encoding="utf-8", errors="replace") as fin, dst.open("w", encoding="utf-8") as fout:
+        for i, raw_line in enumerate(_progress_iter(fin, total, progress), 1):
+            line = raw_line.rstrip("\n")
+            if not line.strip():
+                fout.write(line + "\n")
+                if progress_callback:
+                    progress_callback(i, total)
+                continue
+            usernames = discover_usernames(line)
+            try:
+                obj = json.loads(line)
+            except Exception:
+                # Unknown/non-JSON logs are still handled as raw text.
+                fout.write(redact_text(line, analyzer, scrub_terms, stats, known_usernames=usernames) + "\n")
+                if progress_callback:
+                    progress_callback(i, total)
+                continue
+            redacted_obj = redact_json_value(obj, analyzer, scrub_terms, stats, usernames)
+            fout.write(json.dumps(redacted_obj, ensure_ascii=False, separators=(",", ":")) + "\n")
             if progress_callback:
                 progress_callback(i, total)
-            continue
-        usernames = discover_usernames(line)
-        try:
-            obj = json.loads(line)
-        except Exception:
-            # Unknown/non-JSON logs are still handled as raw text.
-            lines_out.append(redact_text(line, analyzer, scrub_terms, stats, known_usernames=usernames))
-            if progress_callback:
-                progress_callback(i, total)
-            continue
-        redacted_obj = redact_json_value(obj, analyzer, scrub_terms, stats, usernames)
-        lines_out.append(json.dumps(redacted_obj, ensure_ascii=False, separators=(",", ":")))
-        if progress_callback:
-            progress_callback(i, total)
-    dst.write_text("\n".join(lines_out) + "\n", encoding="utf-8")
     return stats
 
 

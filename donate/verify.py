@@ -127,6 +127,27 @@ def verify_text(text: str) -> dict[str, list[str]]:
     return findings
 
 
+def _merge_findings(target: dict[str, set[str]], findings: dict[str, list[str]]) -> None:
+    for category, samples in findings.items():
+        if not samples:
+            continue
+        target.setdefault(category, set()).update(str(sample) for sample in samples)
+
+
+def verify_text_stream(path: Path) -> dict[str, list[str]]:
+    """Run ContextEcho's built-in residual checks without loading huge logs."""
+    merged: dict[str, set[str]] = {}
+    entropy_hits: set[str] = set()
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            _merge_findings(merged, verify_text(line))
+            if len(entropy_hits) < 100:
+                entropy_hits.update(find_high_entropy(line))
+    findings = {category: sorted(samples)[:10] for category, samples in merged.items() if samples}
+    findings["high_entropy"] = [mask_token(tok) for tok in sorted(entropy_hits)[:10]]
+    return findings
+
+
 # Categories that BLOCK submission (genuine PII / named credentials) vs.
 # categories that are ADVISORY (shown for the user to eyeball, but don't fail —
 # entropy can't tell a base64 secret from a base64 content fragment in an LLM
@@ -155,14 +176,21 @@ def detect_secret_findings(path: Path) -> list[dict[str, str | int]]:
     except Exception:
         return []
     try:
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        cached_lines: list[str] | None = None
+
+        def line_at(line_number: int) -> str:
+            nonlocal cached_lines
+            if cached_lines is None:
+                cached_lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+            return cached_lines[line_number - 1] if 0 < line_number <= len(cached_lines) else ""
+
         with default_settings():
             findings: list[dict[str, str | int]] = []
             for s in scan.scan_file(str(path)):
                 if s.type in _NOISY_DS_TYPES:
                     continue
                 if s.type == "Private Key":
-                    line = lines[s.line_number - 1] if 0 < s.line_number <= len(lines) else ""
+                    line = line_at(s.line_number)
                     # detect-secrets flags prose like "BEGIN RSA PRIVATE KEY".
                     # Only block real PEM delimiters that still expose key data.
                     if "-----BEGIN" not in line or "PRIVATE KEY-----" not in line:
@@ -184,9 +212,7 @@ def run_detect_secrets(path: Path) -> list[str]:
 
 
 def verify_session(path: Path) -> dict:
-    text = path.read_text(encoding="utf-8", errors="replace")
-    findings = verify_text(text)
-    findings["high_entropy"] = [mask_token(tok) for tok in sorted(set(find_high_entropy(text)))[:10]]
+    findings = verify_text_stream(path)
     ds = run_detect_secrets(path)
     if ds:
         findings["detect_secrets"] = sorted(set(ds))

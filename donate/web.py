@@ -2109,7 +2109,8 @@ class Handler(BaseHTTPRequestHandler):
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / redacted_output_name(src)
         try:
-            total = len(src.read_text(encoding="utf-8", errors="replace").splitlines())
+            with src.open("r", encoding="utf-8", errors="replace") as f:
+                total = sum(1 for _ in f)
         except Exception:
             total = 0
         if emit:
