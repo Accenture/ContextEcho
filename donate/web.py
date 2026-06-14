@@ -1524,7 +1524,10 @@ function updateProgressTime(id, text='', opts={}){
     return;
   }
   const elapsed = fmtElapsed(Date.now() - timer.start);
-  el.textContent = prefix + (text || `Elapsed ${elapsed}`);
+  const displayText = text || (timer.refreshText ? timer.refreshText() : timer.text) || `Elapsed ${elapsed}`;
+  const longNote = Date.now() - timer.start > 120000 ? ' · still running on a large session' : '';
+  timer.text = displayText;
+  el.textContent = prefix + displayText.replace(/Elapsed \d+m? ?\d*s?/, `Elapsed ${elapsed}`) + longNote;
   el.style.display = 'block';
 }
 function progressBreakdown(parts){
@@ -1539,9 +1542,15 @@ function setBusy(id, on, pct=35, opts={}){
   const clamped = Math.max(0, Math.min(100, pct));
   el.style.display = on ? 'block' : 'none';
   el.firstElementChild.style.width = on ? clamped + '%' : '0%';
-  if(on && !progressTimers[id]) progressTimers[id] = {start: Date.now()};
+  if(on && !progressTimers[id]){
+    progressTimers[id] = {start: Date.now(), text: ''};
+    progressTimers[id].interval = setInterval(() => updateProgressTime(id), 1000);
+  }
   if(on && progressTimers[id]) progressTimers[id].pct = clamped;
-  if(!on) delete progressTimers[id];
+  if(!on && progressTimers[id]){
+    if(progressTimers[id].interval) clearInterval(progressTimers[id].interval);
+    delete progressTimers[id];
+  }
   updateProgressTime(id, opts.finalText || '', {keep:opts.keepTime, percent:opts.percent ?? previousPct});
 }
 async function post(url, body){
@@ -1780,6 +1789,14 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     const total = progressTimers[progressId] ? fmtElapsed(Date.now() - progressTimers[progressId].start) : '0s';
     const breakdown = progressBreakdown(live);
     progressTimingText = breakdown ? `${stageLabel} · ${label} ${total} · ${breakdown}` : `${stageLabel} · ${label} ${total}`;
+    if(progressTimers[progressId]){
+      progressTimers[progressId].refreshText = () => {
+        const liveNow = {...stageTimes, [stageName]: (stageTimes[stageName] || 0) + (Date.now() - stageStart)};
+        const totalNow = fmtElapsed(Date.now() - progressTimers[progressId].start);
+        const breakdownNow = progressBreakdown(liveNow);
+        return breakdownNow ? `${stageLabel} · ${label} ${totalNow} · ${breakdownNow}` : `${stageLabel} · ${label} ${totalNow}`;
+      };
+    }
     updateProgressTime(progressId, progressTimingText);
   };
   $('redactBtn').disabled = true;
@@ -1835,7 +1852,7 @@ async function runRedactVerify(extraTerms = [], opts = {}){
         markStage('minimizing', 'Applying user-minimized mode');
         setBusy(progressId, true, 94);
       } else if(ev.event === 'verify'){
-        markStage('verifying', 'Verifying redacted file');
+        markStage('verifying', ev.message || 'Verifying redacted file');
         setBusy(progressId, true, ev.percent || 96);
       } else if(ev.event === 'done'){
         markStage('done', 'Redaction complete');
