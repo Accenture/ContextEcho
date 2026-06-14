@@ -15,12 +15,15 @@ import io
 import json
 import os
 import re
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
-from huggingface_hub import CommitOperationAdd, HfApi
+from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
+
+from donate.adapters.base import conversation_fingerprint
 
 STAGING_REPO = os.environ.get("CONTEXTECHO_STAGING_REPO", "contextecho2026/persona-drift-staging")
 MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(50 * 1024 * 1024)))
@@ -30,6 +33,14 @@ SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
 ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
 MIN_SESSION_GROWTH_RATIO = float(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO", "0.20"))
 MIN_SESSION_GROWTH_TURNS = int(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS", "50"))
+BACKFILL_REPOS = [
+    repo.strip()
+    for repo in os.environ.get(
+        "CONTEXTECHO_RELAY_BACKFILL_REPOS",
+        f"{STAGING_REPO},contextecho2026/persona-drift-contextecho",
+    ).split(",")
+    if repo.strip()
+]
 
 REQUIRED_MANIFEST_FIELDS = {
     "session_id",
@@ -68,17 +79,97 @@ def _read_seen_records() -> list[dict]:
 
 
 def _record_seen_hash(artifact_hash: str, submission_id: str, manifest: dict) -> None:
+    _append_seen_record(_seen_record(artifact_hash, submission_id, manifest))
+
+
+def _append_seen_record(record: dict) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     with SEEN_HASHES.open("a", encoding="utf-8") as f:
-        f.write(json.dumps({
-            "artifact_hash": artifact_hash,
-            "conversation_fingerprint": manifest.get("conversation_fingerprint", ""),
-            "fingerprint_version": manifest.get("fingerprint_version", ""),
-            "submission_id": submission_id,
-            "source_session_id": manifest.get("source_session_id", ""),
-            "records": manifest.get("records", 0),
-            "turns": manifest.get("turns", 0),
-        }, sort_keys=True) + "\n")
+        f.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def _seen_record(artifact_hash: str, submission_id: str, manifest: dict) -> dict:
+    return {
+        "artifact_hash": artifact_hash,
+        "conversation_fingerprint": manifest.get("conversation_fingerprint", ""),
+        "fingerprint_version": manifest.get("fingerprint_version", ""),
+        "submission_id": submission_id,
+        "source_session_id": manifest.get("source_session_id", ""),
+        "records": manifest.get("records", 0),
+        "turns": manifest.get("turns", 0),
+    }
+
+
+def _fingerprint_jsonl_bytes(data: bytes) -> str:
+    with tempfile.NamedTemporaryFile(suffix=".jsonl") as tmp:
+        tmp.write(data)
+        tmp.flush()
+        return conversation_fingerprint(Path(tmp.name))
+
+
+def _count_jsonl_records(data: bytes) -> int:
+    return sum(1 for line in data.splitlines() if line.strip())
+
+
+def _submission_id_from_prefix(prefix: str) -> str:
+    parts = [p for p in prefix.strip("/").split("/") if p]
+    for part in reversed(parts):
+        if part.startswith("submission-"):
+            return part
+    return re.sub(r"[^A-Za-z0-9_-]+", "-", prefix.strip("/")) or "backfilled"
+
+
+def _session_prefixes(files: list[str]) -> list[str]:
+    prefixes = set()
+    for filename in files:
+        if filename.endswith("session.redacted.jsonl"):
+            parent = str(Path(filename).parent)
+            prefixes.add("" if parent == "." else parent)
+    return sorted(prefixes)
+
+
+def _backfill_seen_hashes_from_hf() -> dict:
+    token = os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
+    api = HfApi(token=token)
+    seen = _read_seen_records()
+    seen_hashes = {row.get("artifact_hash") for row in seen}
+    added = 0
+    scanned = 0
+    errors: list[str] = []
+    for repo_id in BACKFILL_REPOS:
+        try:
+            files = api.list_repo_files(repo_id=repo_id, repo_type="dataset")
+        except Exception as exc:
+            errors.append(f"{repo_id}: list failed: {exc}")
+            continue
+        for prefix in _session_prefixes(files):
+            scanned += 1
+            session_path = f"{prefix}/session.redacted.jsonl" if prefix else "session.redacted.jsonl"
+            manifest_path = f"{prefix}/manifest.json" if prefix else "manifest.json"
+            try:
+                local_session = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=session_path, token=token)
+                session_data = Path(local_session).read_bytes()
+                artifact_hash = _sha256(session_data)
+                if artifact_hash in seen_hashes:
+                    continue
+                manifest: dict = {}
+                if manifest_path in files:
+                    local_manifest = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=manifest_path, token=token)
+                    try:
+                        manifest = json.loads(Path(local_manifest).read_text(encoding="utf-8"))
+                    except json.JSONDecodeError:
+                        manifest = {}
+                manifest.setdefault("conversation_fingerprint", _fingerprint_jsonl_bytes(session_data))
+                manifest.setdefault("fingerprint_version", "structure-v1")
+                manifest.setdefault("records", _count_jsonl_records(session_data))
+                manifest.setdefault("turns", 0)
+                submission_id = str(manifest.get("reviewed_submission_id") or manifest.get("session_id") or _submission_id_from_prefix(prefix))
+                _append_seen_record(_seen_record(artifact_hash, submission_id, manifest))
+                seen_hashes.add(artifact_hash)
+                added += 1
+            except Exception as exc:
+                errors.append(f"{repo_id}/{prefix}: {exc}")
+    return {"scanned": scanned, "added": added, "errors": errors[:20]}
 
 
 def _count_value(value: object) -> int:
@@ -232,6 +323,15 @@ def reset_seen_hashes(
     _require_admin_token(x_admin_token)
     removed = _reset_seen_hashes()
     return {"ok": True, "removed": removed}
+
+
+@app.post("/api/admin/backfill-seen-hashes")
+def backfill_seen_hashes(
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    result = _backfill_seen_hashes_from_hf()
+    return {"ok": True, "repos": BACKFILL_REPOS, **result}
 
 
 @app.post("/api/donate")

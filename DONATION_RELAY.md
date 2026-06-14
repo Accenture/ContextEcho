@@ -84,10 +84,11 @@ CONTEXTECHO_RELAY_MAX_META_BYTES=262144
 CONTEXTECHO_RELAY_STATE_DIR=.relay_state
 CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO=0.20
 CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS=50
+CONTEXTECHO_RELAY_BACKFILL_REPOS=contextecho2026/persona-drift-staging,contextecho2026/persona-drift-contextecho
 CONTEXTECHO_RELAY_ADMIN_TOKEN=<random maintainer-only reset token>
 ```
 
-## Testing Reset
+## Testing Reset And Backfill
 
 The relay rejects exact duplicate redacted artifacts by SHA-256 hash. For
 maintainer testing only, enable the admin reset endpoint by setting
@@ -102,6 +103,18 @@ curl -X DELETE "$CONTEXTECHO_RELAY_URL/api/admin/seen-hashes" \
 Do not share this token with donors. Clearing the seen hashes allows the same
 redacted artifact to be submitted again for testing; it does not delete files or
 pull requests already uploaded to Hugging Face staging.
+
+After deploying lineage checks, seed the relay with already staged/released
+donations so repeat attempts against older sessions are detected:
+
+```bash
+curl -X POST "$CONTEXTECHO_RELAY_URL/api/admin/backfill-seen-hashes" \
+  -H "X-Admin-Token: $CONTEXTECHO_RELAY_ADMIN_TOKEN"
+```
+
+The backfill scans `CONTEXTECHO_RELAY_BACKFILL_REPOS`, computes exact artifact
+hashes and structural `conversation_fingerprint` values from existing
+`session.redacted.jsonl` files, and appends missing entries to the relay state.
 
 ## Security Checks
 
