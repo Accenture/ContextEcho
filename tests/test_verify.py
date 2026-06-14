@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from donate.verify import verify_session
+from donate.verify import _write_detect_secrets_candidate_file, verify_session
 
 
 class VerifyTests(unittest.TestCase):
@@ -43,6 +43,28 @@ class VerifyTests(unittest.TestCase):
         self.assertIn("detect_secrets", report["blocking"])
         self.assertIn("AWS Access Key", report["blocking"]["detect_secrets"])
         self.assertNotIn(secret, str(report))
+
+    def test_detect_secrets_prefilter_keeps_only_suspicious_lines(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "session.redacted.jsonl"
+            path.write_text(
+                "\n".join([
+                    '{"text":"ordinary coding discussion"}',
+                    '{"text":"still ordinary"}',
+                    'aws_secret_access_key = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"',
+                    '{"text":"another normal line"}',
+                ])
+                + "\n",
+                encoding="utf-8",
+            )
+
+            candidate, line_map = _write_detect_secrets_candidate_file(path)
+            self.addCleanup(lambda: candidate and candidate.unlink(missing_ok=True))
+
+        self.assertIsNotNone(candidate)
+        self.assertEqual(line_map, {1: 3})
+        self.assertIn("aws_secret_access_key", candidate.read_text(encoding="utf-8"))
+        self.assertNotIn("ordinary coding discussion", candidate.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

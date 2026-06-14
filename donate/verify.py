@@ -21,6 +21,7 @@ import hashlib
 import math
 import re
 import sys
+import tempfile
 from collections import Counter
 from pathlib import Path
 
@@ -163,6 +164,51 @@ _NOISY_DS_TYPES = {
     "Secret Keyword",  # keyword heuristic — too noisy on prose
 }
 
+_DETECT_SECRETS_HINT_RE = re.compile(
+    r"(?i)(secret|api[_-]?key|access[_-]?key|private[_ -]?key|authorization|"
+    r"bearer|token|password|passwd|credential|client[_-]?secret|aws_|github|"
+    r"stripe|slack|huggingface|sk-ant-|sk-|ghp_|gho_|akia|aiza|xox[baprs]-|hf_)"
+)
+
+
+def _should_scan_with_detect_secrets(line: str) -> bool:
+    if _DETECT_SECRETS_HINT_RE.search(line):
+        return True
+    return any(rx.search(line) for rx in API_KEY_RES)
+
+
+def _write_detect_secrets_candidate_file(path: Path) -> tuple[Path | None, dict[int, int]]:
+    line_map: dict[int, int] = {}
+    candidate_no = 0
+    tmp = tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        prefix="contextecho-detect-secrets-",
+        suffix=".txt",
+        delete=False,
+    )
+    tmp_path = Path(tmp.name)
+    try:
+        with tmp, path.open("r", encoding="utf-8", errors="replace") as f:
+            for original_no, line in enumerate(f, 1):
+                if not _should_scan_with_detect_secrets(line):
+                    continue
+                candidate_no += 1
+                line_map[candidate_no] = original_no
+                tmp.write(line)
+                if not line.endswith("\n"):
+                    tmp.write("\n")
+    except Exception:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise
+    if not line_map:
+        tmp_path.unlink(missing_ok=True)
+        return None, {}
+    return tmp_path, line_map
+
 
 def detect_secret_findings(path: Path) -> list[dict[str, str | int]]:
     """Independent second opinion via Yelp detect-secrets, if available.
@@ -177,31 +223,37 @@ def detect_secret_findings(path: Path) -> list[dict[str, str | int]]:
         return []
     try:
         cached_lines: list[str] | None = None
+        scan_path, line_map = _write_detect_secrets_candidate_file(path)
+        if scan_path is None:
+            return []
 
         def line_at(line_number: int) -> str:
             nonlocal cached_lines
             if cached_lines is None:
-                cached_lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+                cached_lines = scan_path.read_text(encoding="utf-8", errors="replace").splitlines()
             return cached_lines[line_number - 1] if 0 < line_number <= len(cached_lines) else ""
 
-        with default_settings():
-            findings: list[dict[str, str | int]] = []
-            for s in scan.scan_file(str(path)):
-                if s.type in _NOISY_DS_TYPES:
-                    continue
-                if s.type == "Private Key":
-                    line = line_at(s.line_number)
-                    # detect-secrets flags prose like "BEGIN RSA PRIVATE KEY".
-                    # Only block real PEM delimiters that still expose key data.
-                    if "-----BEGIN" not in line or "PRIVATE KEY-----" not in line:
+        try:
+            with default_settings():
+                findings: list[dict[str, str | int]] = []
+                for s in scan.scan_file(str(scan_path)):
+                    if s.type in _NOISY_DS_TYPES:
                         continue
-                findings.append({
-                    "type": s.type,
-                    "line_number": s.line_number,
-                    "secret_value": getattr(s, "secret_value", "") or "",
-                    "secret_hash": getattr(s, "secret_hash", "") or "",
-                })
-            return findings
+                    if s.type == "Private Key":
+                        line = line_at(s.line_number)
+                        # detect-secrets flags prose like "BEGIN RSA PRIVATE KEY".
+                        # Only block real PEM delimiters that still expose key data.
+                        if "-----BEGIN" not in line or "PRIVATE KEY-----" not in line:
+                            continue
+                    findings.append({
+                        "type": s.type,
+                        "line_number": line_map.get(s.line_number, s.line_number),
+                        "secret_value": getattr(s, "secret_value", "") or "",
+                        "secret_hash": getattr(s, "secret_hash", "") or "",
+                    })
+                return findings
+        finally:
+            scan_path.unlink(missing_ok=True)
     except Exception:
         return []
 
