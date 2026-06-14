@@ -82,7 +82,24 @@ CONTEXTECHO_STAGING_REPO=contextecho2026/persona-drift-staging
 CONTEXTECHO_RELAY_MAX_SESSION_BYTES=52428800
 CONTEXTECHO_RELAY_MAX_META_BYTES=262144
 CONTEXTECHO_RELAY_STATE_DIR=.relay_state
+CONTEXTECHO_RELAY_ADMIN_TOKEN=<random maintainer-only reset token>
 ```
+
+## Testing Reset
+
+The relay rejects exact duplicate redacted artifacts by SHA-256 hash. For
+maintainer testing only, enable the admin reset endpoint by setting
+`CONTEXTECHO_RELAY_ADMIN_TOKEN` as a server-side secret, then clear the relay's
+seen-artifact hash file:
+
+```bash
+curl -X DELETE "$CONTEXTECHO_RELAY_URL/api/admin/seen-hashes" \
+  -H "X-Admin-Token: $CONTEXTECHO_RELAY_ADMIN_TOKEN"
+```
+
+Do not share this token with donors. Clearing the seen hashes allows the same
+redacted artifact to be submitted again for testing; it does not delete files or
+pull requests already uploaded to Hugging Face staging.
 
 ## Security Checks
 

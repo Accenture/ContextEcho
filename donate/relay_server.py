@@ -19,7 +19,7 @@ import uuid
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from huggingface_hub import CommitOperationAdd, HfApi
 
 STAGING_REPO = os.environ.get("CONTEXTECHO_STAGING_REPO", "contextecho2026/persona-drift-staging")
@@ -27,6 +27,7 @@ MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", st
 MAX_META_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_META_BYTES", str(256 * 1024)))
 STATE_DIR = Path(os.environ.get("CONTEXTECHO_RELAY_STATE_DIR", ".relay_state"))
 SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
+ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
 
 REQUIRED_MANIFEST_FIELDS = {
     "session_id",
@@ -72,6 +73,21 @@ def _record_seen_hash(artifact_hash: str, submission_id: str) -> None:
             "artifact_hash": artifact_hash,
             "submission_id": submission_id,
         }, sort_keys=True) + "\n")
+
+
+def _reset_seen_hashes() -> int:
+    if not SEEN_HASHES.exists():
+        return 0
+    count = sum(1 for line in SEEN_HASHES.read_text(encoding="utf-8").splitlines() if line.strip())
+    SEEN_HASHES.unlink()
+    return count
+
+
+def _require_admin_token(token: str | None) -> None:
+    if not ADMIN_TOKEN:
+        raise HTTPException(status_code=404, detail="admin endpoint is not enabled")
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="invalid admin token")
 
 
 async def _read_limited(upload: UploadFile, limit: int, label: str) -> bytes:
@@ -162,6 +178,15 @@ def health() -> dict:
         "staging_repo": STAGING_REPO,
         "has_token": bool(os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")),
     }
+
+
+@app.delete("/api/admin/seen-hashes")
+def reset_seen_hashes(
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    removed = _reset_seen_hashes()
+    return {"ok": True, "removed": removed}
 
 
 @app.post("/api/donate")
