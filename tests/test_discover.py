@@ -62,6 +62,38 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["last_active"], "2026-01-04")
         self.assertEqual(info["modified"], "2026-01-04")
         self.assertEqual(info["project"], "work-agent-project")
+        self.assertTrue(info["conversation_fingerprint"].startswith("conv-"))
+        self.assertEqual(info["fingerprint_version"], "structure-v1")
+
+    def test_conversation_fingerprint_is_stable_when_session_is_appended(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".codex" / "sessions" / "rollout.jsonl"
+            rows = [
+                {
+                    "timestamp": "2026-01-02T03:04:05.000Z",
+                    "type": "session_meta",
+                    "payload": {"cwd": "/Users/alice/Documents/work/agent-project"},
+                }
+            ] + [
+                {
+                    "timestamp": f"2026-01-03T03:{i:02d}:05.000Z",
+                    "type": "event_msg",
+                    "payload": {"type": "user_message", "message": f"please help with bug {i}"},
+                }
+                for i in range(50)
+            ]
+            write_jsonl(path, rows)
+            first = inspect_session(path)["conversation_fingerprint"]
+            write_jsonl(path, rows + [
+                {
+                    "timestamp": "2026-01-04T03:04:05.000Z",
+                    "type": "event_msg",
+                    "payload": {"type": "user_message", "message": "now add more tests"},
+                },
+            ])
+            second = inspect_session(path)["conversation_fingerprint"]
+
+        self.assertEqual(first, second)
 
     def test_codex_does_not_count_generic_compact_text_as_compaction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

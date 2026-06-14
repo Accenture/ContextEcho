@@ -27,6 +27,8 @@ class DescribeTests(unittest.TestCase):
                 "compactions": 0,
                 "source_format": "codex-cli-jsonl",
                 "path": str(root / "source.jsonl"),
+                "conversation_fingerprint": "conv-abc123",
+                "fingerprint_version": "structure-v1",
             }), encoding="utf-8")
 
             answers = iter(["agentic-coding", "Python", "donor-handle"])
@@ -49,6 +51,8 @@ class DescribeTests(unittest.TestCase):
         self.assertEqual(manifest["contributor"], "donor-handle")
         self.assertTrue(manifest["session_id"].startswith("donation-"))
         self.assertEqual(manifest["source_session_id"], describe.source_session_id({"path": str(root / "source.jsonl")}))
+        self.assertEqual(manifest["conversation_fingerprint"], "conv-abc123")
+        self.assertEqual(manifest["fingerprint_version"], "structure-v1")
         self.assertEqual(manifest["turns"], 42)
         self.assertEqual(manifest["records"], 123)
         self.assertEqual(manifest["source_format"], "codex-cli-jsonl")

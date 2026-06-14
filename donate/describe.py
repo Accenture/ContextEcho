@@ -112,6 +112,8 @@ def write_manifest_and_consent(
     manifest = {
         "session_id": session_id,
         "source_session_id": source_session_id(auto),
+        "conversation_fingerprint": auto.get("conversation_fingerprint", ""),
+        "fingerprint_version": auto.get("fingerprint_version", ""),
         "agent": auto.get("agent", "unknown"),
         "model": auto.get("model", "unknown"),
         "org": auto.get("org", "unknown"),

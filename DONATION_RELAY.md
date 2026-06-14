@@ -112,7 +112,8 @@ The relay currently enforces:
 - Manifest has required metadata fields.
 - Consent file looks complete.
 - Exact duplicate redacted session artifacts are rejected by SHA-256 hash.
-- Same-source session updates are rejected until they grow by at least 20% or
+- Same-conversation updates are linked by a privacy-preserving structural
+  `conversation_fingerprint` and rejected until they grow by at least 20% or
   50 new turns by default.
 - Upload size limits are enforced before creating the staging PR.
 

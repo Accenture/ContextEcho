@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Any, Iterable, Protocol
 
 
 MODEL_RE = re.compile(r'"model"\s*:\s*"([^"]+)"')
+FINGERPRINT_ROWS = 48
 
 
 class SessionAdapter(Protocol):
@@ -138,6 +140,15 @@ def walk_values(obj: Any) -> Iterable[tuple[str | None, Any]]:
             yield from walk_values(value)
 
 
+def first_value_for_keys(obj: Any | None, keys: set[str]) -> str:
+    if obj is None:
+        return ""
+    for key, value in walk_values(obj):
+        if key and key.lower() in keys and isinstance(value, str) and value:
+            return value[:128]
+    return ""
+
+
 def collect_model_counts(line: str, obj: Any | None, models: dict[str, int]) -> None:
     if obj is not None:
         for key, value in walk_values(obj):
@@ -146,6 +157,62 @@ def collect_model_counts(line: str, obj: Any | None, models: dict[str, int]) -> 
     if not models:
         for model in MODEL_RE.findall(line):
             models[model] = models.get(model, 0) + 1
+
+
+def content_size(value: Any) -> int:
+    if isinstance(value, str):
+        return len(value)
+    if isinstance(value, dict):
+        return sum(content_size(v) for v in value.values())
+    if isinstance(value, list):
+        return sum(content_size(v) for v in value)
+    return 0
+
+
+def content_bucket(value: Any) -> str:
+    size = content_size(value)
+    if size <= 0:
+        return "0"
+    if size < 64:
+        return "s"
+    if size < 512:
+        return "m"
+    if size < 4096:
+        return "l"
+    return "xl"
+
+
+def structural_record_signature(line: str, obj: Any | None) -> str:
+    if not isinstance(obj, dict):
+        return f"raw:{len(line) // 256}"
+    payload = obj.get("payload") if isinstance(obj.get("payload"), dict) else {}
+    message = obj.get("message") if isinstance(obj.get("message"), dict) else {}
+    record_type = str(obj.get("type") or payload.get("type") or message.get("type") or "")[:48]
+    role = str(obj.get("role") or payload.get("role") or message.get("role") or "")[:24]
+    model = first_value_for_keys(obj, {"model"})
+    timestamp = first_value_for_keys(obj, {"timestamp", "created_at", "createdat", "time"})[:32]
+    content = obj.get("content") or obj.get("text") or payload.get("content") or payload.get("message") or message.get("content")
+    turn = "u" if looks_like_human_turn(obj) else "n"
+    compact = "c" if looks_like_compaction(line, obj) else "n"
+    return "|".join([record_type, role, model, timestamp, content_bucket(content), turn, compact])
+
+
+def conversation_fingerprint(path: Path, max_rows: int = FINGERPRINT_ROWS) -> str:
+    h = hashlib.sha256()
+    rows = 0
+    for line, obj in iter_jsonl(path):
+        h.update(structural_record_signature(line, obj).encode("utf-8"))
+        h.update(b"\n")
+        rows += 1
+        if rows >= max_rows:
+            break
+    if rows == 0:
+        try:
+            fallback = f"{path.name}|{path.stat().st_size}"
+        except OSError:
+            fallback = str(path)
+        h.update(fallback.encode("utf-8"))
+    return f"conv-{h.hexdigest()[:16]}"
 
 
 def dominant_model(models: dict[str, int]) -> str:
@@ -279,6 +346,8 @@ class GenericJsonlAdapter:
         return {
             "path": str(path),
             "project": safe_project_name_from_path(project_hint or path),
+            "conversation_fingerprint": conversation_fingerprint(path),
+            "fingerprint_version": "structure-v1",
             "modified": last_active,
             "started": started,
             "last_active": last_active,

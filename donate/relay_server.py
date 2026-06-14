@@ -72,6 +72,8 @@ def _record_seen_hash(artifact_hash: str, submission_id: str, manifest: dict) ->
     with SEEN_HASHES.open("a", encoding="utf-8") as f:
         f.write(json.dumps({
             "artifact_hash": artifact_hash,
+            "conversation_fingerprint": manifest.get("conversation_fingerprint", ""),
+            "fingerprint_version": manifest.get("fingerprint_version", ""),
             "submission_id": submission_id,
             "source_session_id": manifest.get("source_session_id", ""),
             "records": manifest.get("records", 0),
@@ -87,13 +89,16 @@ def _count_value(value: object) -> int:
 
 
 def _near_duplicate_detail(manifest: dict, seen_records: list[dict]) -> str | None:
+    fingerprint = str(manifest.get("conversation_fingerprint") or "").strip()
     source_id = str(manifest.get("source_session_id") or "").strip()
-    if not source_id:
+    if not (fingerprint or source_id):
         return None
     new_turns = _count_value(manifest.get("turns"))
     new_records = _count_value(manifest.get("records"))
     for row in seen_records:
-        if str(row.get("source_session_id") or "") != source_id:
+        same_conversation = fingerprint and str(row.get("conversation_fingerprint") or "") == fingerprint
+        same_source = source_id and str(row.get("source_session_id") or "") == source_id
+        if not (same_conversation or same_source):
             continue
         old_turns = _count_value(row.get("turns"))
         old_records = _count_value(row.get("records"))
