@@ -71,7 +71,14 @@ def donation_output_dir(info: dict) -> Path:
 
 
 def session_key(path: str | Path) -> str:
-    return hashlib.sha256(str(Path(path).expanduser()).encode("utf-8")).hexdigest()[:16]
+    p = Path(path).expanduser()
+    parts = [str(p)]
+    try:
+        st = p.stat()
+        parts.extend([str(st.st_size), str(st.st_mtime_ns)])
+    except OSError:
+        pass
+    return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:16]
 
 
 def artifact_key(path: str | Path) -> str:
@@ -912,11 +919,14 @@ const statIcons = {
 };
 function iconSvg(name){ return statIcons[name] || ''; }
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
+function sessionLocalKey(s){
+  return [s?.path || '', s?.records || '', s?.turns || '', s?.compactions || '', s?.last_active || s?.modified || ''].join('|');
+}
 function annotateCachedDonations(rows){
-  return (rows || []).map(s => ({...s, donated: !!(s.donated || donatedPaths.has(s.path))}));
+  return (rows || []).map(s => ({...s, donated: !!(s.donated || donatedPaths.has(sessionLocalKey(s)))}));
 }
 function allSessionsDonated(){
-  return sessions.length > 0 && sessions.every(s => !!s.donated || donatedPaths.has(s.path));
+  return sessions.length > 0 && sessions.every(s => !!s.donated || donatedPaths.has(sessionLocalKey(s)));
 }
 function allSessionsDonatedMessage(){
   return `Thank you for donating all your scanned session data. ${sessions.length} session${sessions.length === 1 ? '' : 's'} on this machine are marked donated.`;
@@ -971,7 +981,7 @@ function goStep(n){
   if(n === 3) renderSubmitLeaderboardPreview();
 }
 function refreshButtons(){
-  const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(selected.path)));
+  const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(sessionLocalKey(selected))));
   $('pickNext').disabled = !selected || allSessionsDonated();
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
@@ -1585,7 +1595,7 @@ function renderSessions(){
   rows.forEach((s,i) => {
     const idx = start + i;
     const row = document.createElement('div');
-    const donated = !!s.donated || donatedPaths.has(s.path);
+    const donated = !!s.donated || donatedPaths.has(sessionLocalKey(s));
     row.className = donated ? 'session-row donated-row' : 'session-row';
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
@@ -1900,7 +1910,7 @@ $('submitBtn').onclick = async () => {
     if(!data) throw new Error('submit did not return a result');
     setBusy('submitProgress', true, 100);
     submitted = true;
-    if(selected && selected.path){ selected.donated = true; donatedPaths.add(selected.path); saveDonatedPaths(); saveDiscoveryCache(); renderSessions(); }
+    if(selected && selected.path){ selected.donated = true; donatedPaths.add(sessionLocalKey(selected)); saveDonatedPaths(); saveDiscoveryCache(); renderSessions(); }
     renderSubmitResult(data);
     status('submitStatus', allSessionsDonated() ? allSessionsDonatedMessage() : (data.duplicate ? 'This session was already received. It is now marked donated locally.' : 'Submission marked donated locally. Pick another session to submit more.'));
     refreshButtons();

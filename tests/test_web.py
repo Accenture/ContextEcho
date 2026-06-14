@@ -52,6 +52,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("progressBreakdown", INDEX_HTML)
         self.assertIn("Elapsed", INDEX_HTML)
         self.assertIn("${Math.round(pct)}% · ", INDEX_HTML)
+        self.assertIn("sessionLocalKey", INDEX_HTML)
 
     def test_private_word_input_uses_redact_language(self):
         self.assertIn("Private words to redact", INDEX_HTML)
@@ -167,6 +168,16 @@ class WebTests(unittest.TestCase):
                 self.assertTrue(clear_donation_registry())
                 self.assertFalse(already_submitted(source))
                 self.assertFalse(clear_donation_registry())
+
+    def test_session_key_changes_when_source_log_changes(self):
+        with TemporaryDirectory() as td:
+            source = Path(td) / "source.jsonl"
+            source.write_text('{"type":"user","message":"one"}\n')
+            first = session_key(source)
+            source.write_text('{"type":"user","message":"one"}\n{"type":"user","message":"two"}\n')
+            second = session_key(source)
+
+        self.assertNotEqual(first, second)
 
     def test_local_pending_summary_merges_full_identity(self):
         with TemporaryDirectory() as td:
