@@ -128,6 +128,38 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(records[0]["submission_id"], "submission-public")
         self.assertTrue(records[0]["conversation_fingerprint"].startswith("conv-"))
 
+    def test_backfill_seen_hashes_reads_public_session_files_without_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            state_dir = root / "state"
+            session = root / "session_chainassemble.jsonl"
+            session.write_text(
+                '{"timestamp":"2026-01-01T00:00:00Z","type":"event_msg","payload":{"type":"user_message","message":"<REDACTED>"}}\n',
+                encoding="utf-8",
+            )
+
+            api = mock.Mock()
+            api.list_repo_files.return_value = ["data/sessions/session_chainassemble.jsonl"]
+
+            def fake_download(*, filename: str, **_kwargs: object) -> str:
+                self.assertEqual(filename, "data/sessions/session_chainassemble.jsonl")
+                return str(session)
+
+            with (
+                mock.patch("donate.relay_server.HfApi", return_value=api),
+                mock.patch("donate.relay_server.hf_hub_download", side_effect=fake_download),
+                mock.patch("donate.relay_server.BACKFILL_REPOS", ["owner/public"]),
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+            ):
+                result = relay_server._backfill_seen_hashes_from_hf()
+                records = relay_server._read_seen_records()
+
+        self.assertEqual(result["scanned"], 1)
+        self.assertEqual(result["added"], 1)
+        self.assertEqual(records[0]["submission_id"], "public-session-chainassemble")
+        self.assertTrue(records[0]["conversation_fingerprint"].startswith("conv-"))
+
 
 if __name__ == "__main__":
     unittest.main()

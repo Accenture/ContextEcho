@@ -153,6 +153,14 @@ def _release_ledger_rows(repo_id: str, files: list[str], token: str | None) -> l
     return rows
 
 
+def _release_session_paths(files: list[str]) -> list[str]:
+    return sorted(
+        filename
+        for filename in files
+        if filename.startswith("data/sessions/session_") and filename.endswith(".jsonl")
+    )
+
+
 def _read_hf_file(repo_id: str, filename: str, token: str | None) -> bytes:
     local_path = hf_hub_download(repo_id=repo_id, repo_type="dataset", filename=filename, token=token)
     return Path(local_path).read_bytes()
@@ -223,6 +231,18 @@ def _backfill_seen_hashes_from_hf() -> dict:
             submission_id = str(row.get("submission_id") or _submission_id_from_prefix(session_path))
             try:
                 record = _backfill_record_from_hf(repo_id, session_path, manifest_path, submission_id, files, token)
+                if record["artifact_hash"] in seen_hashes:
+                    continue
+                _append_seen_record(record)
+                seen_hashes.add(record["artifact_hash"])
+                added += 1
+            except Exception as exc:
+                errors.append(f"{repo_id}/{session_path}: {exc}")
+        for session_path in _release_session_paths(files):
+            scanned += 1
+            submission_id = Path(session_path).stem.replace("session_", "public-session-", 1)
+            try:
+                record = _backfill_record_from_hf(repo_id, session_path, "", submission_id, files, token)
                 if record["artifact_hash"] in seen_hashes:
                     continue
                 _append_seen_record(record)
