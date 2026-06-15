@@ -1594,6 +1594,14 @@ async function postStream(url, body, onEvent){
     if(ev.event === 'error') throw new Error(ev.error || 'redaction failed');
   }
 }
+function friendlyRequestError(e, action='operation'){
+  const msg = String(e && e.message || e || '');
+  const low = msg.toLowerCase();
+  if(low.includes('network error') || low.includes('failed to fetch') || low.includes('load failed')){
+    return `The local browser connection was interrupted during this ${action}. Keep this tab open and the computer awake, then click the button again.`;
+  }
+  return msg;
+}
 function renderSessions(){
   const list = $('sessionList');
   list.innerHTML = '';
@@ -1702,7 +1710,7 @@ $('discoverBtn').onclick = async () => {
     status('discoverStatus', sessions.length === 0 ? noSessionsMessage() : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} usable sessions. Click a row to select.`));
     renderSessions();
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
-  } catch(e) { status('discoverStatus','ERROR: '+e.message); }
+  } catch(e) { status('discoverStatus','ERROR: '+friendlyRequestError(e, 'discovery scan')); }
   finally {
     if(!discoverTiming && progressTimers.discoverProgress) discoverTiming = `Stopped after ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
     $('discoverBtn').disabled = false;
@@ -1772,7 +1780,7 @@ $('searchBtn').onclick = async () => {
     searchTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.searchProgress.start)}`;
     updateProgressTime('searchProgress', searchTiming);
     renderSearchResult(data);
-  } catch(e) { status('redactStatus','ERROR: '+e.message); }
+  } catch(e) { status('redactStatus','ERROR: '+friendlyRequestError(e, 'private-word check')); }
   finally { setBusy('searchProgress', false, 35, {keepTime:!!searchTiming, finalText:searchTiming}); }
 };
 async function runRedactVerify(extraTerms = [], opts = {}){
@@ -1880,7 +1888,7 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     renderRedactResult(redacted);
     status('redactStatus', redacted.verify_passed ? 'Review the result above. If a private word remains, add it to the removal box and rerun. Otherwise check the review box to continue.' : verifyFailureSummary(redacted));
     refreshButtons();
-  } catch(e) { status('redactStatus','ERROR: '+e.message); }
+  } catch(e) { status('redactStatus','ERROR: '+friendlyRequestError(e, 'redaction and verification')); }
   finally {
     if(progressTimers[progressId]) showTiming(progressTimingText ? 'Completed in' : 'Stopped after');
     setBusy(progressId, false, 35, {keepTime:!!progressTimingText, finalText:progressTimingText});
@@ -1942,7 +1950,7 @@ $('submitBtn').onclick = async () => {
     status('submitStatus', allSessionsDonated() ? allSessionsDonatedMessage() : (data.duplicate ? 'This session was already received. It is now marked donated locally.' : 'Submission marked donated locally. Pick another session to submit more.'));
     refreshButtons();
   }
-  catch(e) { status('submitStatus','ERROR: '+e.message); }
+  catch(e) { status('submitStatus','ERROR: '+friendlyRequestError(e, 'submission')); }
   finally {
     if(progressTimers.submitProgress) showSubmitTiming(submitTimingText ? 'Completed in' : 'Stopped after');
     setBusy('submitProgress', false, 35, {keepTime:!!submitTimingText, finalText:submitTimingText});

@@ -52,6 +52,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("progressBreakdown", INDEX_HTML)
         self.assertIn("Elapsed", INDEX_HTML)
         self.assertIn("${Math.round(pct)}% · ", INDEX_HTML)
+        self.assertIn("The local browser connection was interrupted", INDEX_HTML)
+        self.assertIn("Keep this tab open and the computer awake", INDEX_HTML)
         self.assertIn("sessionLocalKey", INDEX_HTML)
 
     def test_private_word_input_uses_redact_language(self):
