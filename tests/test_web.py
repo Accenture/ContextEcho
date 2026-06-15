@@ -81,6 +81,9 @@ class WebTests(unittest.TestCase):
         self.assertIn("/api/clear_donated_label", INDEX_HTML)
         self.assertIn("Use Clear label on this row only if the previous submission failed", INDEX_HTML)
 
+    def test_pick_session_explains_research_value_threshold(self):
+        self.assertIn("20+ user turns or detected context compactions", INDEX_HTML)
+
     def test_auto_repair_removes_detect_secrets_value(self):
         with TemporaryDirectory() as td:
             path = Path(td) / "session.redacted.jsonl"

@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from donate.discover import discover, discover_iter, inspect_session
+from donate.discover import MIN_RESEARCH_TURNS, discover, discover_iter, inspect_session, is_research_candidate
 from donate.adapters.base import is_redacted_artifact
 
 
@@ -193,6 +193,11 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["records"], 2)
         self.assertEqual(info["turns"], 0)
         self.assertEqual(info["compactions"], 1)
+
+    def test_research_candidate_requires_turns_or_compaction(self) -> None:
+        self.assertFalse(is_research_candidate({"turns": MIN_RESEARCH_TURNS - 1, "compactions": 0, "records": 500}))
+        self.assertTrue(is_research_candidate({"turns": MIN_RESEARCH_TURNS, "compactions": 0}))
+        self.assertTrue(is_research_candidate({"turns": 1, "compactions": 1}))
 
     def test_discover_progress_can_be_disabled_for_json_callers(self) -> None:
         buf = io.StringIO()

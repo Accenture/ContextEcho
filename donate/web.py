@@ -984,7 +984,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="folder-icon"></div>
           <div>
             <h2>1. Pick a Session</h2>
-            <p class="muted">Choose a real session. More user turns with context compactions provide the most benchmark value.</p>
+            <p class="muted">Choose a real session. Discovery shows sessions with 20+ user turns or detected context compactions.</p>
           </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">

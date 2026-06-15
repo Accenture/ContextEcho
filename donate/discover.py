@@ -24,6 +24,8 @@ from donate.adapters import ADAPTERS, GenericJsonlAdapter
 from donate.adapters.base import guess_org as guess_org
 from donate.adapters.base import safe_project_name_from_path as project_hint
 
+MIN_RESEARCH_TURNS = 20
+
 
 def adapter_for_path(path: Path):
     """Pick the best adapter for a manually supplied session path."""
@@ -46,6 +48,13 @@ def _progress(msg: str, enabled: bool) -> None:
     if not enabled:
         return
     print(f"\r[discover] {msg}", end="", flush=True)
+
+
+def is_research_candidate(info: dict, min_turns: int = MIN_RESEARCH_TURNS) -> bool:
+    """Return whether a discovered session has enough signal to request donation."""
+    turns = int(info.get("turns") or 0)
+    compactions = int(info.get("compactions") or 0)
+    return turns >= min_turns or compactions >= 1
 
 
 def discover_iter(max_per_agent: int | None = 50):
@@ -75,8 +84,10 @@ def discover_iter(max_per_agent: int | None = 50):
                 "path": str(resolved),
             }
             info = adapter.inspect(resolved)
-            # Skip trivial / empty logs using exact line count, not estimated turns.
-            if info.get("records", info.get("turns", 0)) < 20:
+            # Skip sessions with too little benchmark signal. Compactions are
+            # accepted because they indicate long-context behavior even when
+            # the visible user-turn count is modest.
+            if not is_research_candidate(info):
                 continue
             found.append(info)
         yield {
