@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from donate.verify import _write_detect_secrets_candidate_file, verify_session
 
@@ -65,6 +66,35 @@ class VerifyTests(unittest.TestCase):
         self.assertEqual(line_map, {1: 3})
         self.assertIn("aws_secret_access_key", candidate.read_text(encoding="utf-8"))
         self.assertNotIn("ordinary coding discussion", candidate.read_text(encoding="utf-8"))
+
+    def test_verify_session_reads_source_once_for_large_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "session.redacted.jsonl"
+            path.write_text(
+                '{"text":"ordinary redacted coding discussion"}\n' * 500
+                + 'aws_secret_access_key = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"\n'
+                + '{"text":"more ordinary redacted coding discussion"}\n' * 500,
+                encoding="utf-8",
+            )
+            source_opens = []
+            original_open = Path.open
+
+            def counted_open(self, *args, **kwargs):
+                if self == path:
+                    source_opens.append(args[0] if args else kwargs.get("mode", "r"))
+                return original_open(self, *args, **kwargs)
+
+            with (
+                mock.patch("pathlib.Path.open", counted_open),
+                mock.patch(
+                    "donate.verify._detect_secret_findings_in_candidate",
+                    return_value=[{"type": "AWS Access Key"}],
+                ),
+            ):
+                report = verify_session(path)
+
+        self.assertIn("detect_secrets", report["blocking"])
+        self.assertEqual(source_opens, ["r"])
 
 
 if __name__ == "__main__":
