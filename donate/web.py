@@ -13,9 +13,12 @@ import datetime as dt
 import errno
 import hashlib
 import json
+import queue
 import re
 import subprocess
 import sys
+import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -255,6 +258,49 @@ def friendly_submit_error(output: str) -> str:
             "Your verified redacted files are still saved locally."
         )
     return output or "submit failed"
+
+
+def run_submit_with_heartbeats(session: Path, emit=None) -> tuple[int, str]:
+    """Run the blocking submit command while keeping the browser stream alive."""
+    results: queue.Queue[tuple[str, int, str, str]] = queue.Queue(maxsize=1)
+
+    def worker() -> None:
+        import contextlib
+        import io
+
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                rc = submit_mod.main([str(session)])
+            results.put(("done", rc, buf.getvalue(), ""))
+        except Exception as exc:
+            results.put(("error", 1, buf.getvalue(), str(exc)))
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    last_emit = time.monotonic()
+    stream_open = True
+    while True:
+        try:
+            kind, rc, output, error_text = results.get(timeout=5)
+            if kind == "error":
+                raise RuntimeError(error_text or "submit failed")
+            return rc, output
+        except queue.Empty:
+            if not emit or not stream_open:
+                continue
+            now = time.monotonic()
+            if now - last_emit < 15:
+                continue
+            last_emit = now
+            try:
+                emit({
+                    "event": "progress",
+                    "percent": 72,
+                    "message": "Uploading donation; large sessions can take several minutes...",
+                })
+            except ClientDisconnected:
+                stream_open = False
 
 
 def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[Path, dict]:
@@ -2307,16 +2353,9 @@ class Handler(BaseHTTPRequestHandler):
         describe_result = self._describe_payload(data)
         if emit:
             emit({"event": "progress", "percent": 50, "message": "Manifest and consent ready."})
-        # Capture submit's terminal-style output for the browser.
-        import contextlib
-        import io
-
-        buf = io.StringIO()
         if emit:
             emit({"event": "progress", "percent": 65, "message": "Confirming verified artifact, then uploading donation..."})
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            rc = submit_mod.main([str(session)])
-        output = buf.getvalue()
+        rc, output = run_submit_with_heartbeats(session, emit=emit)
         if rc != 0 and is_duplicate_submit_output(output):
             if emit:
                 emit({"event": "progress", "percent": 85, "message": "This redacted session was already received. Saving local donated label..."})
