@@ -237,6 +237,51 @@ def clear_donation_registry() -> bool:
     return existed
 
 
+def clear_donation_record(source_path: str | Path = "", artifact_path: str | Path = "") -> bool:
+    data = load_donation_registry()
+    if not data:
+        return False
+
+    source = str(source_path or "")
+    artifact = str(artifact_path or "")
+    skey = session_key(source) if source else ""
+    akey = artifact_key(artifact) if artifact and Path(artifact).expanduser().exists() else ""
+    if not skey and not akey:
+        return False
+
+    source_keys = {str(x) for x in data.get("source_keys", [])}
+    artifact_keys = {str(x) for x in data.get("artifact_keys", [])}
+    submissions = [x for x in data.get("submissions", []) if isinstance(x, dict)]
+
+    changed = False
+    if skey and skey in source_keys:
+        source_keys.remove(skey)
+        changed = True
+    if akey and akey in artifact_keys:
+        artifact_keys.remove(akey)
+        changed = True
+
+    kept_submissions = []
+    for item in submissions:
+        if (skey and item.get("source_key") == skey) or (akey and item.get("artifact_key") == akey):
+            changed = True
+            continue
+        kept_submissions.append(item)
+
+    if not changed:
+        return False
+
+    payload = {
+        "updated_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "source_keys": sorted(source_keys),
+        "artifact_keys": sorted(artifact_keys),
+        "submissions": kept_submissions,
+    }
+    DONATION_ROOT.mkdir(parents=True, exist_ok=True)
+    DONATION_REGISTRY.write_text(json.dumps(payload, indent=2) + "\n")
+    return True
+
+
 def already_submitted(source_path: str | Path = "", artifact_path: str | Path = "") -> bool:
     if source_path and session_key(source_path) in load_donated_keys():
         return True
@@ -745,6 +790,8 @@ INDEX_HTML = r"""<!doctype html>
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
     .session-row.donated-row { cursor:not-allowed; opacity:.72; background:#f7f9f4; }
     .session-row.donated-row:hover { background:#f7f9f4; }
+    .session-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .clear-session-donated { padding:4px 8px; font-size:11px; box-shadow:none; background:#e8eddc; color:var(--ink); }
     .all-donated-note { margin:12px; border:1px solid #b9d6b0; background:#f2fbef; border-radius:14px; padding:14px 16px; color:#145832; font-weight:900; }
     .all-donated-note span { display:block; margin-top:4px; color:#52605a; font-weight:650; }
     .empty-sessions.thanks { color:#145832; font-weight:900; background:#f8fcf4; }
@@ -948,7 +995,7 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
         <div class="row reset-donated">
-          <button id="clearDonatedBtn" class="secondary">Clear local donated labels</button>
+          <button id="clearDonatedBtn" class="secondary">Clear all local donated labels</button>
         </div>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
@@ -1782,7 +1829,7 @@ function renderSessions(){
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
-        <div class="session-title">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.project || 'unknown project')} ${donated ? '<span class="pill donated">donated</span>' : ''}</div>
+        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.project || 'unknown project')} ${donated ? '<span class="pill donated">donated</span><button type="button" class="clear-session-donated" title="Clear only this local donated label">Clear label</button>' : ''}</div>
       </div>
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
@@ -1790,9 +1837,31 @@ function renderSessions(){
       <div class="session-fit"><span class="pill ${fit(s)}">${fit(s)}</span></div>
     `;
     if (selected && selected.path === s.path && !donated) row.classList.add('selected');
+    const clearOne = row.querySelector('.clear-session-donated');
+    if(clearOne){
+      clearOne.onclick = async (event) => {
+        event.stopPropagation();
+        const ok = confirm('Clear the local donated label for this session only? This does not delete or retract submitted data. Use this only if the previous submission failed.');
+        if(!ok) return;
+        try {
+          await post('/api/clear_donated_label', {source_path:s.path || ''});
+          donatedPaths.delete(sessionLocalKey(s));
+          s.donated = false;
+          if(selected && selected.path === s.path) selected.donated = false;
+          submitted = false;
+          saveDonatedPaths();
+          saveDiscoveryCache();
+          renderSessions();
+          refreshButtons();
+          status('discoverStatus', 'Local donated label cleared for this session. Submitted data and maintainer records are unchanged.');
+        } catch(e) {
+          status('discoverStatus','ERROR: '+e.message);
+        }
+      };
+    }
     row.onclick = () => {
       if(donated){
-        status('discoverStatus', 'This session is already marked donated locally. Use Clear local donated labels only if the previous submission failed.');
+        status('discoverStatus', 'This session is already marked donated locally. Use Clear label on this row only if the previous submission failed.');
         return;
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
@@ -1812,7 +1881,7 @@ function renderSessions(){
     $('selectedCard').innerHTML = '';
     $('selectedCard').classList.remove('show');
     $('reviewConfirm').checked = false;
-    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated on this machine. You can close the wizard or clear local donated labels only if a previous submission failed.</span></div>`);
+    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated on this machine. Use Clear label on an individual row only if that submission failed.</span></div>`);
   }
   const totalPages = Math.max(1, Math.ceil(sessions.length / pageSize));
   $('pageInfo').textContent = `Page ${page + 1} of ${totalPages} · showing ${sessions.length ? start + 1 : 0}-${Math.min(start + pageSize, sessions.length)} of ${sessions.length}`;
@@ -2253,6 +2322,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_open_path()
             elif self.path == "/api/search_redacted":
                 self._handle_search_redacted()
+            elif self.path == "/api/clear_donated_label":
+                self._handle_clear_donated_label()
             elif self.path == "/api/clear_donated_labels":
                 self._handle_clear_donated_labels()
             else:
@@ -2578,6 +2649,18 @@ class Handler(BaseHTTPRequestHandler):
             "cleared": True,
             "server_registry_existed": existed,
             "message": "Local donated labels cleared. Submitted data and maintainer records are unchanged.",
+        })
+
+    def _handle_clear_donated_label(self) -> None:
+        data = self._read_json()
+        source_path = str(data.get("source_path") or "")
+        artifact_path = str(data.get("artifact_path") or "")
+        if not source_path and not artifact_path:
+            raise ValueError("source_path or artifact_path is required")
+        cleared = clear_donation_record(source_path=source_path, artifact_path=artifact_path)
+        self._json({
+            "cleared": cleared,
+            "message": "Local donated label cleared for this session. Submitted data and maintainer records are unchanged.",
         })
 
     def _handle_open_path(self) -> None:

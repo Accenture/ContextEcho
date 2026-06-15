@@ -14,6 +14,7 @@ from donate.web import (
     already_submitted,
     annotate_donated,
     artifact_key,
+    clear_donation_record,
     clear_donation_registry,
     create_server,
     friendly_submit_error,
@@ -73,6 +74,12 @@ class WebTests(unittest.TestCase):
         self.assertIn("Already received", INDEX_HTML)
         self.assertIn("Local duplicate receipt", INDEX_HTML)
         self.assertNotIn("new folder in Hugging Face", INDEX_HTML)
+
+    def test_donated_sessions_can_be_cleared_one_at_a_time(self):
+        self.assertIn("Clear all local donated labels", INDEX_HTML)
+        self.assertIn("Clear label", INDEX_HTML)
+        self.assertIn("/api/clear_donated_label", INDEX_HTML)
+        self.assertIn("Use Clear label on this row only if the previous submission failed", INDEX_HTML)
 
     def test_auto_repair_removes_detect_secrets_value(self):
         with TemporaryDirectory() as td:
@@ -197,6 +204,25 @@ class WebTests(unittest.TestCase):
                 self.assertTrue(clear_donation_registry())
                 self.assertFalse(already_submitted(source))
                 self.assertFalse(clear_donation_registry())
+
+    def test_clear_donation_record_removes_only_one_local_duplicate(self):
+        with TemporaryDirectory() as td:
+            registry = Path(td) / ".donated_sessions.json"
+            source1 = Path(td) / "source1.jsonl"
+            source2 = Path(td) / "source2.jsonl"
+            artifact1 = Path(td) / "session1.redacted.jsonl"
+            artifact2 = Path(td) / "session2.redacted.jsonl"
+            for path in [source1, source2, artifact1, artifact2]:
+                path.write_text('{"type":"user"}\n')
+
+            with mock.patch("donate.web.DONATION_ROOT", Path(td)), mock.patch("donate.web.DONATION_REGISTRY", registry):
+                save_donation_record(source1, artifact1, "[submit] Submission ID: submission-a")
+                save_donation_record(source2, artifact2, "[submit] Submission ID: submission-b")
+
+                self.assertTrue(clear_donation_record(source_path=source1, artifact_path=artifact1))
+                self.assertFalse(already_submitted(source1, artifact1))
+                self.assertTrue(already_submitted(source2, artifact2))
+                self.assertFalse(clear_donation_record(source_path=source1, artifact_path=artifact1))
 
     def test_session_key_changes_when_source_log_changes(self):
         with TemporaryDirectory() as td:
