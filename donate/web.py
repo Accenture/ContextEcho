@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -38,6 +39,8 @@ DONATION_ROOT = Path.home() / "Downloads" / "ContextEcho_donations"
 DONATION_REGISTRY = DONATION_ROOT / ".donated_sessions.json"
 MAX_AUTO_REPAIR_PASSES = 3
 CLIENT_DISCONNECT_ERRNOS = {errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED}
+SUBMIT_JOBS: dict[str, dict] = {}
+SUBMIT_JOBS_LOCK = threading.Lock()
 
 
 class ClientDisconnected(Exception):
@@ -301,6 +304,18 @@ def run_submit_with_heartbeats(session: Path, emit=None) -> tuple[int, str]:
                 })
             except ClientDisconnected:
                 stream_open = False
+
+
+def update_submit_job(job_id: str, **updates) -> None:
+    with SUBMIT_JOBS_LOCK:
+        job = SUBMIT_JOBS.setdefault(job_id, {})
+        job.update(updates)
+        job["updated_at"] = time.time()
+
+
+def get_submit_job(job_id: str) -> dict:
+    with SUBMIT_JOBS_LOCK:
+        return dict(SUBMIT_JOBS.get(job_id) or {})
 
 
 def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[Path, dict]:
@@ -1994,8 +2009,7 @@ $('submitBtn').onclick = async () => {
     updateProgressTime('submitProgress', submitTimingText);
   };
   try {
-    let data = null;
-    await postStream('/api/submit_stream', {
+    const payload = {
       redacted_file:redacted.redacted_file,
       source_path:selected ? selected.path : '',
       auto:selected,
@@ -2004,18 +2018,23 @@ $('submitBtn').onclick = async () => {
       email:$('contributorEmail').value,
       institute:$('contributorInstitute').value,
       public_anonymous:$('publicAnonymous').checked
-    }, ev => {
-      if(ev.event === 'progress'){
-        markSubmitStage('uploading', ev.message || 'Submitting donation');
-        setBusy('submitProgress', true, ev.percent || 45);
-        status('submitStatus', '');
+    };
+    const started = await post('/api/submit_job', payload);
+    let data = null;
+    while(true){
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const job = await post('/api/submit_status', {job_id: started.job_id});
+      if(job.status === 'error') throw new Error(job.error || job.message || 'submit failed');
+      markSubmitStage(job.status === 'done' ? 'done' : 'uploading', job.message || 'Submitting donation');
+      setBusy('submitProgress', true, job.percent || 45);
+      status('submitStatus', '');
+      showSubmitTiming();
+      if(job.status === 'done'){
+        data = job.result;
         showSubmitTiming();
-      } else if(ev.event === 'done'){
-        markSubmitStage('done', 'Submission complete');
-        data = ev.result;
-        showSubmitTiming();
+        break;
       }
-    });
+    }
     if(!data) throw new Error('submit did not return a result');
     setBusy('submitProgress', true, 100);
     submitted = true;
@@ -2151,6 +2170,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_submit()
             elif self.path == "/api/submit_stream":
                 self._handle_submit_stream()
+            elif self.path == "/api/submit_job":
+                self._handle_submit_job()
+            elif self.path == "/api/submit_status":
+                self._handle_submit_status()
             elif self.path == "/api/open_path":
                 self._handle_open_path()
             elif self.path == "/api/search_redacted":
@@ -2384,8 +2407,6 @@ class Handler(BaseHTTPRequestHandler):
             emit({"event": "progress", "percent": 65, "message": "Confirming verified artifact, then uploading donation..."})
         rc, output = run_submit_with_heartbeats(session, emit=emit)
         if rc != 0 and is_duplicate_submit_output(output):
-            if emit:
-                emit({"event": "progress", "percent": 85, "message": "This redacted session was already received. Saving local donated label..."})
             receipt_path, receipt = write_receipt(session, source_path or "", "[submit] Submission ID: submission-already-received")
             receipt["duplicate"] = True
             save_donation_record(source_path=source_path or "", artifact_path=session, output="[submit] Submission ID: submission-already-received", receipt=receipt)
@@ -2402,8 +2423,6 @@ class Handler(BaseHTTPRequestHandler):
             }
         if rc != 0:
             raise ValueError(friendly_submit_error(output or f"submit failed with code {rc}"))
-        if emit:
-            emit({"event": "progress", "percent": 85, "message": "Upload accepted. Saving local receipt..."})
         receipt_path, receipt = write_receipt(session, source_path or "", output)
         save_donation_record(source_path=source_path or "", artifact_path=session, output=output, receipt=receipt)
         if emit:
@@ -2428,6 +2447,55 @@ class Handler(BaseHTTPRequestHandler):
             return
         except Exception as exc:
             self._event({"event": "error", "error": str(exc)})
+
+    def _handle_submit_job(self) -> None:
+        data = self._read_json()
+        job_id = uuid.uuid4().hex[:12]
+        update_submit_job(
+            job_id,
+            id=job_id,
+            status="running",
+            percent=5,
+            message="Preparing submission...",
+            started_at=time.time(),
+        )
+
+        def emit_job(event: dict) -> None:
+            if event.get("event") == "progress":
+                update_submit_job(
+                    job_id,
+                    percent=int(event.get("percent") or 0),
+                    message=str(event.get("message") or ""),
+                )
+
+        def worker() -> None:
+            try:
+                result = self._submit_payload(data, emit=emit_job)
+                update_submit_job(
+                    job_id,
+                    status="done",
+                    percent=100,
+                    message="Submission complete.",
+                    result=result,
+                )
+            except Exception as exc:
+                update_submit_job(
+                    job_id,
+                    status="error",
+                    error=str(exc),
+                    message=str(exc),
+                )
+
+        threading.Thread(target=worker, daemon=True).start()
+        self._json({"job_id": job_id})
+
+    def _handle_submit_status(self) -> None:
+        data = self._read_json()
+        job_id = str(data.get("job_id") or "")
+        job = get_submit_job(job_id)
+        if not job:
+            raise ValueError("submit job not found")
+        self._json(job)
 
     def _handle_clear_donated_labels(self) -> None:
         existed = clear_donation_registry()
