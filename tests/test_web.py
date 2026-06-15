@@ -62,6 +62,11 @@ class WebTests(unittest.TestCase):
         self.assertIn("Use this only if a private word remains", INDEX_HTML)
         self.assertNotIn("Private words to remove on the next redaction run", INDEX_HTML)
 
+    def test_malformed_jsonl_failure_uses_regenerate_language(self):
+        self.assertIn("not a private word", INDEX_HTML)
+        self.assertIn("Click Redact and Verify again to regenerate or normalize", INDEX_HTML)
+        self.assertIn("category === 'detect_secrets' || category === 'malformed_jsonl'", INDEX_HTML)
+
     def test_duplicate_submit_view_explains_no_new_upload(self):
         self.assertIn("This exact redacted session was already received by the maintainer relay", INDEX_HTML)
         self.assertIn("No new donation was needed", INDEX_HTML)
@@ -91,6 +96,23 @@ class WebTests(unittest.TestCase):
         self.assertIn("redacting residual private patterns", " ".join(str(e.get("message", "")) for e in events))
         self.assertIn("Verifying after auto-repair", " ".join(str(e.get("message", "")) for e in events))
         self.assertNotIn(secret, repaired_text)
+
+    def test_auto_repair_wraps_malformed_jsonl(self):
+        with TemporaryDirectory() as td:
+            path = Path(td) / "session.redacted.jsonl"
+            path.write_text('{"text":"bad escape \\s but already <REDACTED>"}\n', encoding="utf-8")
+            report = verify_session(path)
+            events = []
+
+            repaired_report, stats, passes = _auto_repair_until_verified(path, report, {}, emit=events.append)
+            repaired_lines = path.read_text(encoding="utf-8").splitlines()
+
+        self.assertGreaterEqual(passes, 1)
+        self.assertTrue(repaired_report["passed"])
+        self.assertEqual(stats.get("malformed_jsonl_wrapped"), 1)
+        self.assertEqual(len(repaired_lines), 1)
+        self.assertIn('"type":"redacted_raw_line"', repaired_lines[0])
+        self.assertIn("normalizing malformed redacted JSONL lines", " ".join(str(e.get("message", "")) for e in events))
 
     def test_parse_redacted_donor_sessions_from_readme(self):
         self.assertEqual(_parse_donated_sessions("3 redacted donor sessions"), 3)

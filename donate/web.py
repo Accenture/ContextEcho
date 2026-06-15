@@ -557,6 +557,30 @@ def _safe_repair_terms_from_report(path: Path, verify_report: dict) -> dict[str,
     return terms
 
 
+def _repair_malformed_jsonl_lines(path: Path) -> int:
+    """Wrap malformed redacted lines so the donation remains valid JSONL."""
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    repaired = 0
+    out: list[str] = []
+    for line_no, line in enumerate(lines, 1):
+        if not line.strip():
+            out.append(line)
+            continue
+        try:
+            json.loads(line)
+            out.append(line)
+        except json.JSONDecodeError:
+            out.append(json.dumps(
+                {"type": "redacted_raw_line", "line_number": line_no, "text": line},
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ))
+            repaired += 1
+    if repaired:
+        path.write_text("\n".join(out) + "\n", encoding="utf-8")
+    return repaired
+
+
 def _auto_repair_until_verified(
     path: Path,
     verify_report: dict,
@@ -569,6 +593,26 @@ def _auto_repair_until_verified(
     for pass_no in range(1, MAX_AUTO_REPAIR_PASSES + 1):
         if current_report.get("passed"):
             break
+        blocking = current_report.get("blocking") or {}
+        if blocking.get("malformed_jsonl"):
+            repair_passes += 1
+            if emit:
+                emit({
+                    "event": "repair",
+                    "percent": min(98, 90 + pass_no),
+                    "message": f"Auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}: normalizing malformed redacted JSONL lines...",
+                })
+            repaired = _repair_malformed_jsonl_lines(path)
+            if repaired:
+                stats["malformed_jsonl_wrapped"] = int(stats.get("malformed_jsonl_wrapped", 0) or 0) + repaired
+            if emit:
+                emit({
+                    "event": "verify",
+                    "percent": min(99, 93 + pass_no),
+                    "message": f"Verifying after auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}...",
+                })
+            current_report = verify_mod.verify_session(path)
+            continue
         repair_terms = _safe_repair_terms_from_report(path, current_report)
         if not repair_terms:
             break
@@ -1143,16 +1187,19 @@ function verifyFailureSummary(data){
   const entries = Object.entries(blocking);
   if(!entries.length) return 'Verify failed. Re-run redaction; if it repeats, inspect the redacted file with Test search.';
   const labels = entries.map(([k,v]) => `${k} (${(v || []).length})`).join(', ');
-  if(blocking.detect_secrets){
-    return `Verify failed: residual ${labels}. Automatic cleanup could not safely remove every credential-shaped finding. Reveal the redacted file, remove the flagged line or token, then run Redact and Verify again.`;
-  }
-  return `Verify failed: residual ${labels}. Add the shown private word(s) to the removal box, then click Redact and Verify again.`;
-}
+	  if(blocking.detect_secrets){
+	    return `Verify failed: residual ${labels}. Automatic cleanup could not safely remove every credential-shaped finding. Reveal the redacted file, remove the flagged line or token, then run Redact and Verify again.`;
+	  }
+	  if(blocking.malformed_jsonl){
+	    return `Verify failed: ${labels}. The redacted output has a formatting issue, not a private word. Click Redact and Verify again to regenerate or normalize the redacted file.`;
+	  }
+	  return `Verify failed: residual ${labels}. Add the shown private word(s) to the removal box, then click Redact and Verify again.`;
+	}
 function suggestedScrubTerms(data){
   const blocking = ((data || {}).verify_report || {}).blocking || {};
   const terms = [];
   Object.entries(blocking).forEach(([category, values]) => {
-    if(category === 'detect_secrets') return;
+	    if(category === 'detect_secrets' || category === 'malformed_jsonl') return;
     (values || []).forEach(v => {
       const term = String(v || '').trim();
       if(term) terms.push(term);
