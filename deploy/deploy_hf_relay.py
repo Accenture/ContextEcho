@@ -40,6 +40,7 @@ def main() -> None:
     api.add_space_secret(SPACE_REPO_ID, "HF_STAGING_TOKEN", staging_token)
     api.add_space_variable(SPACE_REPO_ID, "CONTEXTECHO_STAGING_REPO", STAGING_REPO)
     api.add_space_variable(SPACE_REPO_ID, "CONTEXTECHO_RELAY_STATE_DIR", "/data/.relay_state")
+    api.add_space_variable(SPACE_REPO_ID, "CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(200 * 1024 * 1024))
     with tempfile.TemporaryDirectory(prefix="contextecho-relay-space-") as td:
         bundle = Path(td)
         shutil.copytree(SPACE_TEMPLATE_DIR, bundle, dirs_exist_ok=True)

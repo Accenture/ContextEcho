@@ -26,7 +26,7 @@ from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 from donate.adapters.base import conversation_fingerprint
 
 STAGING_REPO = os.environ.get("CONTEXTECHO_STAGING_REPO", "contextecho2026/persona-drift-staging")
-MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(50 * 1024 * 1024)))
+MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(200 * 1024 * 1024)))
 MAX_META_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_META_BYTES", str(256 * 1024)))
 STATE_DIR = Path(os.environ.get("CONTEXTECHO_RELAY_STATE_DIR", ".relay_state"))
 SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
