@@ -23,6 +23,7 @@ from donate.web import (
     parse_submit_output,
     save_donation_record,
     session_key,
+    submit_auto_metadata,
     write_receipt,
 )
 
@@ -72,7 +73,10 @@ class WebTests(unittest.TestCase):
         with TemporaryDirectory() as td:
             path = Path(td) / "session.redacted.jsonl"
             secret = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
-            path.write_text(f'aws_secret_access_key = "{secret}"\n', encoding="utf-8")
+            path.write_text(
+                f'{{"text":"-----BEGIN PRIVATE KEY----- {secret} -----END PRIVATE KEY-----"}}\n',
+                encoding="utf-8",
+            )
             report = verify_session(path)
             events = []
 
@@ -181,6 +185,25 @@ class WebTests(unittest.TestCase):
             second = session_key(source)
 
         self.assertNotEqual(first, second)
+
+    def test_submit_auto_metadata_falls_back_to_source_path(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "source.jsonl"
+            session = root / "session.redacted.jsonl"
+            source.write_text('{"type":"user"}\n', encoding="utf-8")
+            session.write_text('{"type":"user","message":"<PERSON>"}\n', encoding="utf-8")
+
+            with mock.patch(
+                "donate.web.discover_mod.inspect_session",
+                return_value={"agent": "Codex CLI", "model": "gpt-5", "turns": 42},
+            ) as inspect_session:
+                auto = submit_auto_metadata({"source_path": str(source)}, session)
+
+        self.assertEqual(auto["agent"], "Codex CLI")
+        self.assertEqual(auto["model"], "gpt-5")
+        self.assertEqual(auto["turns"], 42)
+        inspect_session.assert_called_once_with(source)
 
     def test_local_pending_summary_merges_full_identity(self):
         with TemporaryDirectory() as td:

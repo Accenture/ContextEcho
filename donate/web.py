@@ -81,6 +81,34 @@ def donation_output_dir(info: dict) -> Path:
     return DONATION_ROOT / f"{stamp}-{agent}-{project}"
 
 
+def _auto_from_existing_manifest(session: Path) -> dict:
+    stem = session.stem.replace(".redacted", "")
+    manifest_path = session.with_name(f"{stem}.manifest.json")
+    if not manifest_path.exists():
+        return {}
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    auto = dict(manifest)
+    if "metadata_confidence" in auto and "confidence" not in auto:
+        auto["confidence"] = auto.get("metadata_confidence") or {}
+    return auto
+
+
+def submit_auto_metadata(data: dict, session: Path) -> dict:
+    auto = data.get("auto")
+    if isinstance(auto, dict) and auto:
+        return auto
+    source_path = Path(data.get("source_path", "")).expanduser()
+    if source_path.exists() and not is_redacted_artifact(source_path):
+        try:
+            return discover_mod.inspect_session(source_path)
+        except Exception:
+            pass
+    return _auto_from_existing_manifest(session)
+
+
 def session_key(path: str | Path) -> str:
     p = Path(path).expanduser()
     parts = [str(p)]
@@ -2351,7 +2379,7 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError(f"not found: {session}")
         if emit:
             emit({"event": "progress", "percent": 20, "message": "Checking verified redacted file..."})
-        auto = data.get("auto") or {}
+        auto = submit_auto_metadata(data, session)
         if emit:
             emit({"event": "progress", "percent": 45, "message": "Inferring manifest metadata..."})
         manifest, consent, _ = describe_mod.write_manifest_and_consent(
