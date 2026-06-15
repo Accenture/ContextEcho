@@ -135,6 +135,16 @@ def _merge_findings(target: dict[str, set[str]], findings: dict[str, list[str]])
         target.setdefault(category, set()).update(str(sample) for sample in samples)
 
 
+def _new_candidate_file():
+    return tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        prefix="contextecho-detect-secrets-",
+        suffix=".txt",
+        delete=False,
+    )
+
+
 def verify_text_stream(path: Path) -> dict[str, list[str]]:
     """Run ContextEcho's built-in residual checks without loading huge logs."""
     merged: dict[str, set[str]] = {}
@@ -147,6 +157,38 @@ def verify_text_stream(path: Path) -> dict[str, list[str]]:
     findings = {category: sorted(samples)[:10] for category, samples in merged.items() if samples}
     findings["high_entropy"] = [mask_token(tok) for tok in sorted(entropy_hits)[:10]]
     return findings
+
+
+def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, list[str]], Path | None, dict[int, int]]:
+    """Single pass for built-in checks and detect-secrets candidate extraction."""
+    merged: dict[str, set[str]] = {}
+    entropy_hits: set[str] = set()
+    line_map: dict[int, int] = {}
+    candidate_no = 0
+    tmp = _new_candidate_file()
+    tmp_path = Path(tmp.name)
+    try:
+        with tmp, path.open("r", encoding="utf-8", errors="replace") as f:
+            for original_no, line in enumerate(f, 1):
+                _merge_findings(merged, verify_text(line))
+                if len(entropy_hits) < 100:
+                    entropy_hits.update(find_high_entropy(line))
+                if not _should_scan_with_detect_secrets(line):
+                    continue
+                candidate_no += 1
+                line_map[candidate_no] = original_no
+                tmp.write(line)
+                if not line.endswith("\n"):
+                    tmp.write("\n")
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+    findings = {category: sorted(samples)[:10] for category, samples in merged.items() if samples}
+    findings["high_entropy"] = [mask_token(tok) for tok in sorted(entropy_hits)[:10]]
+    if not line_map:
+        tmp_path.unlink(missing_ok=True)
+        return findings, None, {}
+    return findings, tmp_path, line_map
 
 
 # Categories that BLOCK submission (genuine PII / named credentials) vs.
@@ -180,13 +222,7 @@ def _should_scan_with_detect_secrets(line: str) -> bool:
 def _write_detect_secrets_candidate_file(path: Path) -> tuple[Path | None, dict[int, int]]:
     line_map: dict[int, int] = {}
     candidate_no = 0
-    tmp = tempfile.NamedTemporaryFile(
-        "w",
-        encoding="utf-8",
-        prefix="contextecho-detect-secrets-",
-        suffix=".txt",
-        delete=False,
-    )
+    tmp = _new_candidate_file()
     tmp_path = Path(tmp.name)
     try:
         with tmp, path.open("r", encoding="utf-8", errors="replace") as f:
@@ -210,12 +246,7 @@ def _write_detect_secrets_candidate_file(path: Path) -> tuple[Path | None, dict[
     return tmp_path, line_map
 
 
-def detect_secret_findings(path: Path) -> list[dict[str, str | int]]:
-    """Independent second opinion via Yelp detect-secrets, if available.
-
-    Keeps only NAMED-provider detectors (AWS, GitHub, Stripe, etc.); drops the
-    pure-entropy detectors that flag every base64/hex string and message ID.
-    """
+def _detect_secret_findings_in_candidate(scan_path: Path, line_map: dict[int, int]) -> list[dict[str, str | int]]:
     try:
         from detect_secrets.settings import default_settings
         from detect_secrets.core import scan
@@ -223,9 +254,6 @@ def detect_secret_findings(path: Path) -> list[dict[str, str | int]]:
         return []
     try:
         cached_lines: list[str] | None = None
-        scan_path, line_map = _write_detect_secrets_candidate_file(path)
-        if scan_path is None:
-            return []
 
         def line_at(line_number: int) -> str:
             nonlocal cached_lines
@@ -233,29 +261,41 @@ def detect_secret_findings(path: Path) -> list[dict[str, str | int]]:
                 cached_lines = scan_path.read_text(encoding="utf-8", errors="replace").splitlines()
             return cached_lines[line_number - 1] if 0 < line_number <= len(cached_lines) else ""
 
-        try:
-            with default_settings():
-                findings: list[dict[str, str | int]] = []
-                for s in scan.scan_file(str(scan_path)):
-                    if s.type in _NOISY_DS_TYPES:
+        with default_settings():
+            findings: list[dict[str, str | int]] = []
+            for s in scan.scan_file(str(scan_path)):
+                if s.type in _NOISY_DS_TYPES:
+                    continue
+                if s.type == "Private Key":
+                    line = line_at(s.line_number)
+                    # detect-secrets flags prose like "BEGIN RSA PRIVATE KEY".
+                    # Only block real PEM delimiters that still expose key data.
+                    if "-----BEGIN" not in line or "PRIVATE KEY-----" not in line:
                         continue
-                    if s.type == "Private Key":
-                        line = line_at(s.line_number)
-                        # detect-secrets flags prose like "BEGIN RSA PRIVATE KEY".
-                        # Only block real PEM delimiters that still expose key data.
-                        if "-----BEGIN" not in line or "PRIVATE KEY-----" not in line:
-                            continue
-                    findings.append({
-                        "type": s.type,
-                        "line_number": line_map.get(s.line_number, s.line_number),
-                        "secret_value": getattr(s, "secret_value", "") or "",
-                        "secret_hash": getattr(s, "secret_hash", "") or "",
-                    })
-                return findings
-        finally:
-            scan_path.unlink(missing_ok=True)
+                findings.append({
+                    "type": s.type,
+                    "line_number": line_map.get(s.line_number, s.line_number),
+                    "secret_value": getattr(s, "secret_value", "") or "",
+                    "secret_hash": getattr(s, "secret_hash", "") or "",
+                })
+            return findings
     except Exception:
         return []
+
+
+def detect_secret_findings(path: Path) -> list[dict[str, str | int]]:
+    """Independent second opinion via Yelp detect-secrets, if available.
+
+    Keeps only NAMED-provider detectors (AWS, GitHub, Stripe, etc.); drops the
+    pure-entropy detectors that flag every base64/hex string and message ID.
+    """
+    scan_path, line_map = _write_detect_secrets_candidate_file(path)
+    if scan_path is None:
+        return []
+    try:
+        return _detect_secret_findings_in_candidate(scan_path, line_map)
+    finally:
+        scan_path.unlink(missing_ok=True)
 
 
 def run_detect_secrets(path: Path) -> list[str]:
@@ -264,10 +304,14 @@ def run_detect_secrets(path: Path) -> list[str]:
 
 
 def verify_session(path: Path) -> dict:
-    findings = verify_text_stream(path)
-    ds = run_detect_secrets(path)
-    if ds:
-        findings["detect_secrets"] = sorted(set(ds))
+    findings, scan_path, line_map = _scan_builtin_and_write_detect_candidates(path)
+    if scan_path is not None:
+        try:
+            ds = [str(item["type"]) for item in _detect_secret_findings_in_candidate(scan_path, line_map)]
+            if ds:
+                findings["detect_secrets"] = sorted(set(ds))
+        finally:
+            scan_path.unlink(missing_ok=True)
 
     blocking = {k: v for k, v in findings.items() if k in BLOCKING and v}
     advisory = {k: v for k, v in findings.items() if k not in BLOCKING and v}
