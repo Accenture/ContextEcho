@@ -891,7 +891,7 @@ INDEX_HTML = r"""<!doctype html>
   <section id="step3" class="card step">
     <h2>3. Submit</h2>
     <p class="muted">Contributor info is used for credit, leaderboard accounting, and release acknowledgments. Leave blank to stay anonymous.</p>
-    <p class="muted">The tool writes manifest + consent, runs a final verify gate, uploads the verified redacted session, and saves a local receipt.</p>
+    <p class="muted">The tool writes manifest + consent, confirms the verified redacted artifact, uploads it, and saves a local receipt.</p>
     <div class="submit-grid">
       <div><label>Name or GitHub/HF handle <span class="muted">(for credit, optional)</span></label><input id="contributorName" placeholder="anonymous" /></div>
       <div><label>Email <span class="muted">(optional)</span></label><input id="contributorEmail" placeholder="you@example.com" /></div>
@@ -1904,19 +1904,21 @@ $('submitBtn').onclick = async () => {
   status('submitStatus','Preparing upload...');
   const submitStages = {};
   let submitStage = 'preparing';
+  let submitStageLabel = 'Preparing upload';
   let submitStageStart = Date.now();
   let submitTimingText = '';
-  const markSubmitStage = next => {
+  const markSubmitStage = (next, label) => {
     const now = Date.now();
     submitStages[submitStage] = (submitStages[submitStage] || 0) + (now - submitStageStart);
     submitStage = next;
+    submitStageLabel = label || next;
     submitStageStart = now;
   };
   const showSubmitTiming = (label='Elapsed') => {
     const live = {...submitStages, [submitStage]: (submitStages[submitStage] || 0) + (Date.now() - submitStageStart)};
     const total = progressTimers.submitProgress ? fmtElapsed(Date.now() - progressTimers.submitProgress.start) : '0s';
     const breakdown = progressBreakdown(live);
-    submitTimingText = breakdown ? `${label} ${total} · ${breakdown}` : `${label} ${total}`;
+    submitTimingText = breakdown ? `${submitStageLabel} · ${label} ${total} · ${breakdown}` : `${submitStageLabel} · ${label} ${total}`;
     updateProgressTime('submitProgress', submitTimingText);
   };
   try {
@@ -1932,12 +1934,12 @@ $('submitBtn').onclick = async () => {
       public_anonymous:$('publicAnonymous').checked
     }, ev => {
       if(ev.event === 'progress'){
-        markSubmitStage('uploading');
+        markSubmitStage('uploading', ev.message || 'Submitting donation');
         setBusy('submitProgress', true, ev.percent || 45);
-        status('submitStatus', ev.message || 'Submitting donation...');
+        status('submitStatus', '');
         showSubmitTiming();
       } else if(ev.event === 'done'){
-        markSubmitStage('done');
+        markSubmitStage('done', 'Submission complete');
         data = ev.result;
         showSubmitTiming();
       }
@@ -2138,6 +2140,8 @@ class Handler(BaseHTTPRequestHandler):
                     "percent": 99,
                     "message": "Verify 2/2: checking final result...",
                 })
+            if verify_report.get("passed"):
+                submit_mod.write_verify_cache(previous, verify_report)
             return {
                 "redacted_file": str(previous),
                 "output_dir": str(previous.parent),
@@ -2216,6 +2220,8 @@ class Handler(BaseHTTPRequestHandler):
                 "message": "Verify 2/2: checking final result...",
             })
         verify_ok = bool(verify_report.get("passed"))
+        if verify_ok:
+            submit_mod.write_verify_cache(out, verify_report)
         return {
             "redacted_file": str(out),
             "output_dir": str(out_dir),
@@ -2307,7 +2313,7 @@ class Handler(BaseHTTPRequestHandler):
 
         buf = io.StringIO()
         if emit:
-            emit({"event": "progress", "percent": 65, "message": "Running final verify gate, then uploading donation..."})
+            emit({"event": "progress", "percent": 65, "message": "Confirming verified artifact, then uploading donation..."})
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             rc = submit_mod.main([str(session)])
         output = buf.getvalue()

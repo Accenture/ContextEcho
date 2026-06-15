@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -29,10 +30,50 @@ from pathlib import Path
 from urllib import error, request
 
 STAGING_REPO = "contextecho2026/persona-drift-staging"
+VERIFY_CACHE_VERSION = 1
+
+
+def session_sha256(session: Path) -> str:
+    h = hashlib.sha256()
+    with session.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify_cache_path(session: Path) -> Path:
+    stem = session.stem.replace(".redacted", "")
+    return session.with_name(f"{stem}.verify.json")
+
+
+def write_verify_cache(session: Path, report: dict) -> None:
+    if not report.get("passed"):
+        return
+    payload = {
+        "version": VERIFY_CACHE_VERSION,
+        "session_sha256": session_sha256(session),
+        "verify_passed": True,
+    }
+    verify_cache_path(session).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def cached_verify_passed(session: Path) -> bool:
+    try:
+        data = json.loads(verify_cache_path(session).read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return (
+        data.get("version") == VERIFY_CACHE_VERSION
+        and data.get("verify_passed") is True
+        and data.get("session_sha256") == session_sha256(session)
+    )
 
 
 def verify_passed(session: Path) -> bool:
     """Re-run the fail-closed verifier; only a clean exit (0) allows submit."""
+    if cached_verify_passed(session):
+        print("[submit] verify cache matched current redacted artifact ✓")
+        return True
     here = Path(__file__).resolve().parent.parent
     r = subprocess.run(
         [sys.executable, "-m", "donate.verify", str(session)],
@@ -41,7 +82,10 @@ def verify_passed(session: Path) -> bool:
     sys.stdout.write(r.stdout)
     if r.returncode != 0:
         sys.stdout.write(r.stderr)
-    return r.returncode == 0
+    ok = r.returncode == 0
+    if ok:
+        write_verify_cache(session, {"passed": True})
+    return ok
 
 
 def resolve_token(cli_token: str | None) -> str | None:
@@ -67,6 +111,9 @@ def gather_artifacts(session: Path) -> list[tuple[Path, str]]:
         artifacts.append((manifest, "manifest.json"))
     else:
         print(f"[submit] WARNING: no manifest ({manifest.name}). Run `donate.describe` first.")
+    verify_cache = verify_cache_path(session)
+    if verify_cache.exists():
+        artifacts.append((verify_cache, "verify.json"))
     if consent.exists():
         artifacts.append((consent, "CONSENT.md"))
     else:
