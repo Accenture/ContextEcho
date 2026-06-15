@@ -52,6 +52,7 @@ class VerifyTests(unittest.TestCase):
                 "\n".join([
                     '{"text":"ordinary coding discussion"}',
                     '{"text":"still ordinary"}',
+                    '{"text":"discuss token handling, secret scanning, and password reset UI"}',
                     'aws_secret_access_key = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"',
                     '{"text":"another normal line"}',
                 ])
@@ -63,9 +64,10 @@ class VerifyTests(unittest.TestCase):
             self.addCleanup(lambda: candidate and candidate.unlink(missing_ok=True))
 
         self.assertIsNotNone(candidate)
-        self.assertEqual(line_map, {1: 3})
+        self.assertEqual(line_map, {1: 4})
         self.assertIn("aws_secret_access_key", candidate.read_text(encoding="utf-8"))
         self.assertNotIn("ordinary coding discussion", candidate.read_text(encoding="utf-8"))
+        self.assertNotIn("secret scanning", candidate.read_text(encoding="utf-8"))
 
     def test_verify_session_reads_source_once_for_large_logs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -95,6 +97,32 @@ class VerifyTests(unittest.TestCase):
 
         self.assertIn("detect_secrets", report["blocking"])
         self.assertEqual(source_opens, ["r"])
+
+    def test_long_record_windowing_preserves_blocking_detections(self) -> None:
+        padding = " ordinary redacted coding discussion " * 2500
+        long_record = (
+            padding
+            + "/Users/alice/project "
+            + padding
+            + "alice@example.com "
+            + padding
+            + "hf_gRdux2IUk42ASAx0GGFKHighABP1Fe1Ep0V2fdTBJ96Y43F4JVH9XD1hhNq3 "
+            + padding
+            + "-----BEGIN PRIVATE KEY----- abc -----END PRIVATE KEY-----"
+            + padding
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "session.redacted.jsonl"
+            path.write_text(long_record + "\n", encoding="utf-8")
+
+            report = verify_session(path)
+
+        self.assertIn("home_path", report["blocking"])
+        self.assertIn("/Users/alice", report["blocking"]["home_path"])
+        self.assertIn("email", report["blocking"])
+        self.assertIn("alice@example.com", report["blocking"]["email"])
+        self.assertIn("api_key", report["blocking"])
+        self.assertIn("detect_secrets", report["blocking"])
 
 
 if __name__ == "__main__":

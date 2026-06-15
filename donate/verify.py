@@ -107,23 +107,73 @@ def mask_token(tok: str) -> str:
     return f"<HIGH_ENTROPY len={len(tok)} sha256={digest}>"
 
 
+_LONG_TEXT_THRESHOLD = 20000
+_VERIFY_WINDOW = 4096
+
+
+def _windows_around_literals(text: str, literals: tuple[str, ...], *, window: int = _VERIFY_WINDOW) -> list[str]:
+    low = text.lower()
+    spans: list[tuple[int, int]] = []
+    for literal in literals:
+        start = 0
+        needle = literal.lower()
+        while True:
+            idx = low.find(needle, start)
+            if idx < 0:
+                break
+            spans.append((max(0, idx - window), min(len(text), idx + len(literal) + window)))
+            start = idx + max(1, len(literal))
+            if len(spans) >= 100:
+                break
+        if len(spans) >= 100:
+            break
+    if not spans:
+        return []
+    spans.sort()
+    merged: list[tuple[int, int]] = []
+    for start, end in spans:
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return [text[start:end] for start, end in merged]
+
+
+def _texts_for_literals(text: str, literals: tuple[str, ...]) -> list[str]:
+    if len(text) <= _LONG_TEXT_THRESHOLD:
+        return [text]
+    return _windows_around_literals(text, literals) or []
+
+
 def verify_text(text: str) -> dict[str, list[str]]:
     findings: dict[str, list[str]] = {}
 
-    emails = [e for e in EMAIL_RE.findall(text)
-              if e.rsplit(".", 1)[-1].lower() not in _CODE_TAILS]
-    if emails:
-        findings["email"] = sorted(set(emails))[:10]
+    if "@" in text:
+        emails = []
+        for sample in _texts_for_literals(text, ("@",)):
+            emails.extend(e for e in EMAIL_RE.findall(sample)
+                          if e.rsplit(".", 1)[-1].lower() not in _CODE_TAILS)
+        if emails:
+            findings["email"] = sorted(set(emails))[:10]
 
-    homes = RESIDUAL_HOME_RE.findall(text) + RESIDUAL_SLUG_RE.findall(text)
-    if homes:
-        findings["home_path"] = sorted(set("".join(h) if isinstance(h, tuple) else h for h in homes))[:10]
+    if "/Users/" in text or "/home/" in text or "\\Users\\" in text or "-Users-" in text:
+        homes = []
+        for sample in _texts_for_literals(text, ("/Users/", "/home/", "\\Users\\", "-Users-")):
+            homes.extend(RESIDUAL_HOME_RE.findall(sample) + RESIDUAL_SLUG_RE.findall(sample))
+        if homes:
+            findings["home_path"] = sorted(set("".join(h) if isinstance(h, tuple) else h for h in homes))[:10]
 
-    keys = []
-    for rx in API_KEY_RES:
-        keys.extend(rx.findall(text))
-    if keys:
-        findings["api_key"] = sorted(set(keys))[:10]
+    if _has_any_indicator(text, _API_KEY_INDICATORS):
+        keys = []
+        for sample in _texts_for_literals(text, _API_KEY_INDICATORS + ("://",)):
+            if not _API_KEY_PREFILTER_RE.search(sample):
+                continue
+            for rx in API_KEY_RES:
+                keys.extend(rx.findall(sample))
+            if "private key" in sample.lower() and _PRIVATE_KEY_DELIMITER_RE.search(sample):
+                keys.append("-----BEGIN PRIVATE KEY-----")
+        if keys:
+            findings["api_key"] = sorted(set(keys))[:10]
 
     return findings
 
@@ -173,12 +223,10 @@ def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, lis
                 _merge_findings(merged, verify_text(line))
                 if len(entropy_hits) < 100:
                     entropy_hits.update(find_high_entropy(line))
-                if not _should_scan_with_detect_secrets(line):
-                    continue
-                candidate_no += 1
-                line_map[candidate_no] = original_no
-                tmp.write(line)
-                if not line.endswith("\n"):
+                for snippet in _detect_secret_candidate_snippets(line):
+                    candidate_no += 1
+                    line_map[candidate_no] = original_no
+                    tmp.write(snippet)
                     tmp.write("\n")
     except Exception:
         tmp_path.unlink(missing_ok=True)
@@ -211,12 +259,90 @@ _DETECT_SECRETS_HINT_RE = re.compile(
     r"bearer|token|password|passwd|credential|client[_-]?secret|aws_|github|"
     r"stripe|slack|huggingface|sk-ant-|sk-|ghp_|gho_|akia|aiza|xox[baprs]-|hf_)"
 )
+_DETECT_SECRETS_VALUE_RE = re.compile(
+    r"(?i)(?:secret|api[_-]?key|access[_-]?key|authorization|bearer|token|password|"
+    r"passwd|credential|client[_-]?secret)\s*[=:]\s*['\"]?[A-Za-z0-9_./+\-=]{16,}"
+)
+_PRIVATE_KEY_DELIMITER_RE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")
+_KNOWN_SECRET_PREFIX_RE = re.compile(
+    r"(?i)(sk-ant-|sk-[A-Za-z0-9]{16,}|ghp_|gho_|akia[0-9a-z]{12,}|aiza[0-9a-z_-]{20,}|"
+    r"xox[baprs]-|hf_[A-Za-z0-9]{16,})"
+)
+_API_KEY_PREFILTER_RE = re.compile(
+    r"(?i)(sk-|sk-ant-|ghp_|gho_|akia|aiza|xox[baprs]-|bearer\s+|hf_|"
+    r"authorization:\s*basic|://[^/\s:@]+:[^/\s:@]+@|private key)"
+)
+_API_KEY_INDICATORS = (
+    "sk-", "sk-ant-", "ghp_", "gho_", "akia", "aiza", "xoxb-", "xoxa-",
+    "xoxp-", "xoxr-", "xoxs-", "bearer ", "hf_", "authorization: basic",
+    "private key",
+)
+_DETECT_SECRETS_INDICATORS = _API_KEY_INDICATORS + (
+    "secret", "api_key", "api-key", "access_key", "access-key", "token",
+    "password", "passwd", "credential", "client_secret", "client-secret",
+    "aws_", "github", "stripe", "slack", "huggingface",
+)
+_DETECT_SECRETS_WINDOW = 2048
+
+
+def _has_any_indicator(text: str, indicators: tuple[str, ...]) -> bool:
+    low = text.lower()
+    if any(indicator in low for indicator in indicators):
+        return True
+    return "://" in text and "@" in text and ":" in text
+
+
+def _candidate_window(line: str, start: int, end: int) -> str:
+    left = max(0, start - _DETECT_SECRETS_WINDOW)
+    right = min(len(line), end + _DETECT_SECRETS_WINDOW)
+    return line[left:right].replace("\n", " ")
+
+
+def _detect_secret_candidate_snippets(line: str) -> list[str]:
+    if not _has_any_indicator(line, _DETECT_SECRETS_INDICATORS):
+        return []
+    spans: list[tuple[int, int]] = []
+    offset_samples: list[tuple[int, str]]
+    if len(line) <= _LONG_TEXT_THRESHOLD:
+        offset_samples = [(0, line)]
+    else:
+        offset_samples = []
+        low = line.lower()
+        for literal in _DETECT_SECRETS_INDICATORS + ("://",):
+            start = 0
+            needle = literal.lower()
+            while True:
+                idx = low.find(needle, start)
+                if idx < 0:
+                    break
+                left = max(0, idx - _VERIFY_WINDOW)
+                right = min(len(line), idx + len(literal) + _VERIFY_WINDOW)
+                offset_samples.append((left, line[left:right]))
+                start = idx + max(1, len(literal))
+                if len(offset_samples) >= 100:
+                    break
+            if len(offset_samples) >= 100:
+                break
+    for offset, sample in offset_samples:
+        for rx in (_PRIVATE_KEY_DELIMITER_RE, _KNOWN_SECRET_PREFIX_RE, _DETECT_SECRETS_VALUE_RE):
+            spans.extend((offset + m.start(), offset + m.end()) for m in rx.finditer(sample))
+        for rx in API_KEY_RES:
+            spans.extend((offset + m.start(), offset + m.end()) for m in rx.finditer(sample))
+    if not spans:
+        return []
+    snippets: list[str] = []
+    seen: set[str] = set()
+    for start, end in sorted(spans):
+        snippet = _candidate_window(line, start, end)
+        if snippet in seen:
+            continue
+        seen.add(snippet)
+        snippets.append(snippet)
+    return snippets
 
 
 def _should_scan_with_detect_secrets(line: str) -> bool:
-    if _DETECT_SECRETS_HINT_RE.search(line):
-        return True
-    return any(rx.search(line) for rx in API_KEY_RES)
+    return bool(_detect_secret_candidate_snippets(line))
 
 
 def _write_detect_secrets_candidate_file(path: Path) -> tuple[Path | None, dict[int, int]]:
@@ -227,12 +353,10 @@ def _write_detect_secrets_candidate_file(path: Path) -> tuple[Path | None, dict[
     try:
         with tmp, path.open("r", encoding="utf-8", errors="replace") as f:
             for original_no, line in enumerate(f, 1):
-                if not _should_scan_with_detect_secrets(line):
-                    continue
-                candidate_no += 1
-                line_map[candidate_no] = original_no
-                tmp.write(line)
-                if not line.endswith("\n"):
+                for snippet in _detect_secret_candidate_snippets(line):
+                    candidate_no += 1
+                    line_map[candidate_no] = original_no
+                    tmp.write(snippet)
                     tmp.write("\n")
     except Exception:
         try:

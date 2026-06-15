@@ -598,6 +598,7 @@ INDEX_HTML = r"""<!doctype html>
     button.secondary { background:#e8eddc; color:var(--ink); box-shadow:none; }
     button:hover:not(:disabled) { transform:translateY(-1px); }
     button:disabled { opacity:.5; cursor:not-allowed; }
+    body.is-processing button { opacity:.5; cursor:not-allowed; pointer-events:none; }
     input, textarea { width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:14px; padding:11px 13px; background:white; color:var(--ink); font:inherit; }
     input:focus, textarea:focus { outline:3px solid rgba(31,111,67,.16); border-color:#7cb67d; }
     label { display:block; font-weight:700; margin:12px 0 6px; }
@@ -959,6 +960,7 @@ let selected = null;
 let redacted = null;
 let appliedScrubTerms = [];
 let submitted = false;
+let activeOperation = false;
 let page = 0;
 const pageSize = 5;
 const $ = id => document.getElementById(id);
@@ -1036,12 +1038,29 @@ function goStep(n){
   if(n === 3) renderSubmitLeaderboardPreview();
 }
 function refreshButtons(){
+  if(activeOperation) return;
   const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(sessionLocalKey(selected))));
   $('pickNext').disabled = !selected || allSessionsDonated();
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
   $('submitBtn').disabled = !(redacted && redacted.verify_passed) || submitted || selectedDonated;
+}
+function setUiProcessing(on){
+  activeOperation = !!on;
+  document.body.classList.toggle('is-processing', activeOperation);
+  document.querySelectorAll('button').forEach(btn => {
+    if(activeOperation){
+      btn.dataset.wasDisabled = btn.disabled ? '1' : '0';
+      btn.disabled = true;
+    } else if(btn.dataset.wasDisabled === '0'){
+      btn.disabled = false;
+      delete btn.dataset.wasDisabled;
+    } else {
+      delete btn.dataset.wasDisabled;
+    }
+  });
+  if(!activeOperation) refreshButtons();
 }
 function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>0?'best':(t>=100?'long':'short'); }
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
@@ -1818,6 +1837,7 @@ $('submitPrev').onclick = () => goStep(2);
 });
 $('searchBtn').onclick = async () => {
   if(!redacted) return;
+  setUiProcessing(true);
   setBusy('searchProgress', true, 55);
   let searchTiming = '';
   try {
@@ -1827,10 +1847,14 @@ $('searchBtn').onclick = async () => {
     updateProgressTime('searchProgress', searchTiming);
     renderSearchResult(data);
   } catch(e) { status('redactStatus','ERROR: '+friendlyRequestError(e, 'private-word check')); }
-  finally { setBusy('searchProgress', false, 35, {keepTime:!!searchTiming, finalText:searchTiming}); }
+  finally {
+    setBusy('searchProgress', false, 35, {keepTime:!!searchTiming, finalText:searchTiming});
+    setUiProcessing(false);
+  }
 };
 async function runRedactVerify(extraTerms = [], opts = {}){
   if(!selected) return;
+  setUiProcessing(true);
   const progressId = opts.fromSearch ? 'searchProgress' : 'redactProgress';
   const stageTimes = {};
   let stageName = 'starting';
@@ -1938,12 +1962,14 @@ async function runRedactVerify(extraTerms = [], opts = {}){
   finally {
     if(progressTimers[progressId]) showTiming(progressTimingText ? 'Completed in' : 'Stopped after');
     setBusy(progressId, false, 35, {keepTime:!!progressTimingText, finalText:progressTimingText});
+    setUiProcessing(false);
     refreshButtons();
   }
 }
 $('redactBtn').onclick = () => runRedactVerify();
 $('submitBtn').onclick = async () => {
   if(!redacted || !confirm('Upload verified redacted artifacts as a PR?')) return;
+  setUiProcessing(true);
   $('submitBtn').disabled = true;
   $('submitResult').classList.remove('show');
   setBusy('submitProgress', true, 10);
@@ -2002,6 +2028,7 @@ $('submitBtn').onclick = async () => {
   finally {
     if(progressTimers.submitProgress) showSubmitTiming(submitTimingText ? 'Completed in' : 'Stopped after');
     setBusy('submitProgress', false, 35, {keepTime:!!submitTimingText, finalText:submitTimingText});
+    setUiProcessing(false);
     refreshButtons();
   }
 };
