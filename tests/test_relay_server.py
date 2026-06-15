@@ -25,6 +25,25 @@ class RelayServerTests(unittest.TestCase):
 
         self.assertEqual(relay_server._session_prefixes(files), ["", "pending/submission-abc"])
 
+    def test_ensure_lfs_jsonl_rule_adds_stable_gitattributes_rule(self) -> None:
+        api = mock.Mock()
+
+        with mock.patch("donate.relay_server._read_staging_gitattributes", return_value="*.zip filter=lfs diff=lfs merge=lfs -text\n"):
+            relay_server._ensure_lfs_jsonl_rule(api, "hf_token")
+
+        api.create_commit.assert_called_once()
+        op = api.create_commit.call_args.kwargs["operations"][0]
+        self.assertEqual(op.path_in_repo, ".gitattributes")
+        self.assertIn(relay_server.LFS_JSONL_RULE.encode("utf-8"), op.path_or_fileobj)
+
+    def test_ensure_lfs_jsonl_rule_noops_when_present(self) -> None:
+        api = mock.Mock()
+
+        with mock.patch("donate.relay_server._read_staging_gitattributes", return_value=relay_server.LFS_JSONL_RULE + "\n"):
+            relay_server._ensure_lfs_jsonl_rule(api, "hf_token")
+
+        api.create_commit.assert_not_called()
+
     def test_copy_upload_limited_writes_temp_file_and_enforces_limit(self) -> None:
         class FakeUpload:
             def __init__(self, chunks):

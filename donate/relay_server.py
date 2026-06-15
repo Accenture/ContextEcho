@@ -27,6 +27,7 @@ from donate.adapters.base import conversation_fingerprint
 STAGING_REPO = os.environ.get("CONTEXTECHO_STAGING_REPO", "contextecho2026/persona-drift-staging")
 MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(1024 * 1024 * 1024)))
 MAX_META_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_META_BYTES", str(256 * 1024)))
+LFS_JSONL_RULE = "*.jsonl filter=lfs diff=lfs merge=lfs -text"
 STATE_DIR = Path(os.environ.get("CONTEXTECHO_RELAY_STATE_DIR", ".relay_state"))
 SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
 ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
@@ -392,6 +393,44 @@ def _validate_consent(data: bytes) -> None:
         raise HTTPException(status_code=400, detail="CONSENT.md does not look complete")
 
 
+def _read_staging_gitattributes(token: str) -> str:
+    try:
+        local_path = hf_hub_download(
+            repo_id=STAGING_REPO,
+            repo_type="dataset",
+            filename=".gitattributes",
+            token=token,
+        )
+    except Exception:
+        return ""
+    return Path(local_path).read_text(encoding="utf-8", errors="replace")
+
+
+def _ensure_lfs_jsonl_rule(api: HfApi, token: str) -> None:
+    existing = _read_staging_gitattributes(token)
+    if LFS_JSONL_RULE in {line.strip() for line in existing.splitlines()}:
+        return
+    lines = [line.rstrip() for line in existing.splitlines() if line.strip()]
+    lines.append(LFS_JSONL_RULE)
+    content = ("\n".join(lines) + "\n").encode("utf-8")
+    try:
+        api.create_commit(
+            repo_id=STAGING_REPO,
+            repo_type="dataset",
+            operations=[
+                CommitOperationAdd(path_in_repo=".gitattributes", path_or_fileobj=content),
+            ],
+            commit_message="Configure JSONL donations for LFS",
+        )
+    except Exception:
+        # Another relay worker may have added the rule concurrently. Re-check
+        # before failing the donor upload for a shared repository housekeeping
+        # race.
+        latest = _read_staging_gitattributes(token)
+        if LFS_JSONL_RULE not in {line.strip() for line in latest.splitlines()}:
+            raise
+
+
 def _submission_id() -> str:
     return f"submission-{uuid.uuid4().hex[:8]}"
 
@@ -406,6 +445,7 @@ def _upload_to_hf(submission_id: str, session_path: Path, manifest_data: bytes, 
         raise HTTPException(status_code=500, detail="relay missing HF_STAGING_TOKEN")
 
     api = HfApi(token=token)
+    _ensure_lfs_jsonl_rule(api, token)
     operations = [
         CommitOperationAdd(
             path_in_repo=f"pending/{submission_id}/session.redacted.jsonl",
