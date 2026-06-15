@@ -314,6 +314,22 @@ def is_duplicate_submit_output(output: str) -> bool:
     )
 
 
+def duplicate_submit_detail(output: str) -> str:
+    for match in re.finditer(r"\{[^\n]*\"detail\"[^\n]*\}", output):
+        try:
+            data = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            continue
+        detail = str(data.get("detail") or "").strip()
+        if detail:
+            return detail
+    if "same source session changed too little" in output.lower():
+        return "same source session changed too little since prior submission"
+    if "duplicate redacted session artifact" in output.lower():
+        return "duplicate redacted session artifact"
+    return ""
+
+
 def friendly_submit_error(output: str) -> str:
     text = output.lower()
     if (
@@ -1570,6 +1586,10 @@ function renderSubmitLeaderboardPreview(){
 function renderSubmitResult(data){
   const receipt = data.receipt || {};
   const duplicate = !!data.duplicate || !!receipt.duplicate;
+  const duplicateDetail = (data.duplicate_detail || receipt.duplicate_detail || '').trim();
+  const duplicateText = duplicateDetail
+    ? `The maintainer relay rejected this repeat attempt: ${duplicateDetail}.`
+    : 'The maintainer relay recognized this redacted artifact or source session as already received.';
   const publicId = (receipt.submission || '').replace(/^pending\//, '').replace(/\/$/, '') || 'not available';
   const idHint = receipt.submission
     ? 'Save this ID for support. Maintainers can use it to find your private staging submission.'
@@ -1599,10 +1619,10 @@ function renderSubmitResult(data){
             <div class="success-check">✓</div>
             <div>
               <div class="success-title">Already submitted</div>
-              <div class="success-subtitle">This exact redacted session was already received by the maintainer relay. We marked it donated locally to prevent repeat uploads.</div>
+              <div class="success-subtitle">${escapeHtml(duplicateText)} We marked it donated locally to prevent repeat uploads.</div>
             </div>
           </div>
-          <div class="leader-note"><span><strong>No new donation was needed.</strong> The maintainer relay recognized this redacted artifact as already received, so this repeat attempt will not be counted again.</span></div>
+          <div class="leader-note"><span><strong>No new donation was needed.</strong> This repeat attempt will not be counted again until the same source session has enough new research signal.</span></div>
           ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Local duplicate receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">This receipt records that the duplicate was detected locally; it is not a new donation.</div></div>` : ''}
         </div>
         <aside class="success-detail-card">
@@ -2553,13 +2573,16 @@ class Handler(BaseHTTPRequestHandler):
             emit({"event": "progress", "percent": 65, "message": "Confirming verified artifact, then uploading donation..."})
         rc, output = run_submit_with_heartbeats(session, emit=emit)
         if rc != 0 and is_duplicate_submit_output(output):
+            duplicate_detail = duplicate_submit_detail(output)
             receipt_path, receipt = write_receipt(session, source_path or "", "[submit] Submission ID: submission-already-received")
             receipt["duplicate"] = True
+            receipt["duplicate_detail"] = duplicate_detail
             save_donation_record(source_path=source_path or "", artifact_path=session, output="[submit] Submission ID: submission-already-received", receipt=receipt)
             if emit:
                 emit({"event": "progress", "percent": 95, "message": "Local duplicate receipt saved."})
             return {
                 "duplicate": True,
+                "duplicate_detail": duplicate_detail,
                 "output": output,
                 "receipt_path": str(receipt_path),
                 "receipt": receipt,

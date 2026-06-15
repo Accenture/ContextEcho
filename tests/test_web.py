@@ -17,6 +17,7 @@ from donate.web import (
     clear_donation_record,
     clear_donation_registry,
     create_server,
+    duplicate_submit_detail,
     friendly_submit_error,
     is_duplicate_submit_output,
     load_donated_artifact_keys,
@@ -69,7 +70,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("category === 'detect_secrets' || category === 'malformed_jsonl'", INDEX_HTML)
 
     def test_duplicate_submit_view_explains_no_new_upload(self):
-        self.assertIn("This exact redacted session was already received by the maintainer relay", INDEX_HTML)
+        self.assertIn("The maintainer relay rejected this repeat attempt", INDEX_HTML)
         self.assertIn("No new donation was needed", INDEX_HTML)
         self.assertIn("Already received", INDEX_HTML)
         self.assertIn("Local duplicate receipt", INDEX_HTML)
@@ -345,6 +346,18 @@ class WebTests(unittest.TestCase):
             '[submit] relay upload failed: HTTP 409 {"detail":"same source session changed too little since prior submission"}'
         ))
         self.assertFalse(is_duplicate_submit_output("[submit] relay upload failed: HTTP 500"))
+
+    def test_duplicate_submit_detail_extracts_relay_reason(self):
+        output = (
+            '[submit] relay upload failed: HTTP 409\n'
+            '{"detail":"same source session changed too little since prior submission '
+            '(turns +5, records +220; require >= 20% growth or >= 50 new turns)"}'
+        )
+        self.assertEqual(
+            duplicate_submit_detail(output),
+            "same source session changed too little since prior submission "
+            "(turns +5, records +220; require >= 20% growth or >= 50 new turns)",
+        )
 
     def test_friendly_submit_error_explains_missing_relay_or_token(self):
         msg = friendly_submit_error(
