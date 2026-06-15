@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import math
 import re
 import sys
@@ -220,6 +221,11 @@ def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, lis
     try:
         with tmp, path.open("r", encoding="utf-8", errors="replace") as f:
             for original_no, line in enumerate(f, 1):
+                if line.strip():
+                    try:
+                        json.loads(line)
+                    except json.JSONDecodeError as exc:
+                        merged.setdefault("malformed_jsonl", set()).add(f"line {original_no}: {exc.msg}")
                 _merge_findings(merged, verify_text(line))
                 if len(entropy_hits) < 100:
                     entropy_hits.update(find_high_entropy(line))
@@ -243,7 +249,7 @@ def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, lis
 # categories that are ADVISORY (shown for the user to eyeball, but don't fail —
 # entropy can't tell a base64 secret from a base64 content fragment in an LLM
 # log, so blocking on it makes verify never pass).
-BLOCKING = {"email", "home_path", "api_key", "detect_secrets"}
+BLOCKING = {"email", "home_path", "api_key", "detect_secrets", "malformed_jsonl"}
 
 
 # detect-secrets plugins that fire on ANY high-entropy/encoded string. In LLM

@@ -76,6 +76,24 @@ class RedactTests(unittest.TestCase):
 
         self.assertEqual(events, [(1, 3), (2, 3), (3, 3)])
 
+    def test_redact_wraps_non_json_lines_as_valid_jsonl(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "session.jsonl"
+            dst = root / "session.redacted.jsonl"
+            src.write_text('raw line with invalid json escape \\s and alice\n', encoding="utf-8")
+
+            with mock.patch("donate.redact.build_analyzer", return_value=object()):
+                with mock.patch("donate.redact.redact_text", side_effect=lambda text, *_args, **_kwargs: text.replace("alice", "<USER>")):
+                    redact_file_with_progress(src, dst, scrub_terms=set(), progress=False)
+
+            rows = [json.loads(line) for line in dst.read_text(encoding="utf-8").splitlines()]
+
+        self.assertEqual(rows[0]["type"], "redacted_raw_line")
+        self.assertEqual(rows[0]["line_number"], 1)
+        self.assertIn("<USER>", rows[0]["text"])
+        self.assertNotIn("alice", rows[0]["text"])
+
     def test_fast_scrub_repair_expands_home_path_terms(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

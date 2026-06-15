@@ -9,6 +9,16 @@ from donate.verify import _write_detect_secrets_candidate_file, verify_session
 
 
 class VerifyTests(unittest.TestCase):
+    def test_malformed_jsonl_is_blocking(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "session.redacted.jsonl"
+            path.write_text('{"text":"bad escape \\s"}\n', encoding="utf-8")
+
+            report = verify_session(path)
+
+        self.assertIn("malformed_jsonl", report["blocking"])
+        self.assertIn("line 1", report["blocking"]["malformed_jsonl"][0])
+
     def test_private_key_prose_is_not_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "session.redacted.jsonl"

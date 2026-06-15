@@ -362,8 +362,11 @@ def redact_file_with_progress(
             try:
                 obj = json.loads(line)
             except Exception:
-                # Unknown/non-JSON logs are still handled as raw text.
-                fout.write(redact_text(line, analyzer, scrub_terms, stats, known_usernames=usernames) + "\n")
+                # Unknown/non-JSON logs are still handled as raw text, but the
+                # donated artifact must remain valid JSONL for relay intake.
+                redacted_text = redact_text(line, analyzer, scrub_terms, stats, known_usernames=usernames)
+                wrapped = {"type": "redacted_raw_line", "line_number": i, "text": redacted_text}
+                fout.write(json.dumps(wrapped, ensure_ascii=False, separators=(",", ":")) + "\n")
                 if progress_callback:
                     progress_callback(i, total)
                 continue
