@@ -25,6 +25,40 @@ class RelayServerTests(unittest.TestCase):
 
         self.assertEqual(relay_server._session_prefixes(files), ["", "pending/submission-abc"])
 
+    def test_copy_upload_limited_writes_temp_file_and_enforces_limit(self) -> None:
+        class FakeUpload:
+            def __init__(self, chunks):
+                self.chunks = list(chunks)
+
+            async def read(self, _size):
+                return self.chunks.pop(0) if self.chunks else b""
+
+        async def run_ok():
+            path, total = await relay_server._copy_upload_limited(
+                FakeUpload([b'{"text":"', b'clean"}\n']),
+                100,
+                "session.redacted.jsonl",
+            )
+            try:
+                self.assertEqual(total, len(b'{"text":"clean"}\n'))
+                self.assertEqual(path.read_bytes(), b'{"text":"clean"}\n')
+            finally:
+                path.unlink(missing_ok=True)
+
+        async def run_too_large():
+            with self.assertRaises(relay_server.HTTPException) as cm:
+                await relay_server._copy_upload_limited(
+                    FakeUpload([b"12345", b"67890"]),
+                    6,
+                    "session.redacted.jsonl",
+                )
+            self.assertEqual(cm.exception.status_code, 413)
+
+        import asyncio
+
+        asyncio.run(run_ok())
+        asyncio.run(run_too_large())
+
     def test_backfill_seen_hashes_records_existing_sessions(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

@@ -46,6 +46,25 @@ class SubmitTests(unittest.TestCase):
 
         self.assertIn("verify.json", names)
 
+    def test_multipart_body_file_uses_file_backing(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            session = root / "session.redacted.jsonl"
+            session.write_text('{"text":"clean"}\n', encoding="utf-8")
+            session_size = session.stat().st_size
+
+            with mock.patch.object(Path, "read_bytes", side_effect=AssertionError("should stream from files")):
+                body_path, boundary, size = submit.multipart_body_file([(session, "session.redacted.jsonl")])
+            try:
+                body = body_path.read_bytes()
+            finally:
+                body_path.unlink(missing_ok=True)
+
+        self.assertGreater(size, session_size)
+        self.assertIn(boundary.encode(), body)
+        self.assertIn(b'name="session.redacted.jsonl"', body)
+        self.assertIn(b'{"text":"clean"}', body)
+
 
 if __name__ == "__main__":
     unittest.main()

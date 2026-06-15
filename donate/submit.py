@@ -20,17 +20,28 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import http.client
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import uuid
 from pathlib import Path
-from urllib import error, request
+from urllib import parse
 
 STAGING_REPO = "contextecho2026/persona-drift-staging"
 VERIFY_CACHE_VERSION = 1
+
+
+class RelayUploadError(Exception):
+    def __init__(self, status: int, reason: str, detail: str):
+        self.status = status
+        self.reason = reason
+        self.detail = detail
+        super().__init__(detail or reason)
 
 
 def session_sha256(session: Path) -> str:
@@ -139,6 +150,59 @@ def multipart_body(artifacts: list[tuple[Path, str]]) -> tuple[bytes, str]:
     return b"".join(chunks), boundary
 
 
+def multipart_body_file(artifacts: list[tuple[Path, str]]) -> tuple[Path, str, int]:
+    boundary = f"----ContextEcho{uuid.uuid4().hex}"
+    tmp = tempfile.NamedTemporaryFile(prefix="contextecho-upload-", suffix=".multipart", delete=False)
+    body_path = Path(tmp.name)
+    try:
+        with tmp:
+            for src, field_name in artifacts:
+                tmp.write(f"--{boundary}\r\n".encode())
+                tmp.write(
+                    (
+                        f'Content-Disposition: form-data; name="{field_name}"; '
+                        f'filename="{src.name}"\r\n'
+                    ).encode()
+                )
+                tmp.write(b"Content-Type: application/octet-stream\r\n\r\n")
+                with src.open("rb") as f:
+                    shutil.copyfileobj(f, tmp, length=1024 * 1024)
+                tmp.write(b"\r\n")
+            tmp.write(f"--{boundary}--\r\n".encode())
+    except Exception:
+        body_path.unlink(missing_ok=True)
+        raise
+    return body_path, boundary, body_path.stat().st_size
+
+
+def post_multipart_file(endpoint: str, body_path: Path, boundary: str, content_length: int) -> dict:
+    parsed = parse.urlsplit(endpoint)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError(f"unsupported relay URL scheme: {parsed.scheme}")
+    conn_cls = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
+    target = parsed.path or "/"
+    if parsed.query:
+        target += f"?{parsed.query}"
+    conn = conn_cls(parsed.netloc, timeout=300)
+    try:
+        conn.putrequest("POST", target)
+        conn.putheader("Content-Type", f"multipart/form-data; boundary={boundary}")
+        conn.putheader("Content-Length", str(content_length))
+        conn.putheader("User-Agent", "contextecho-donate")
+        conn.endheaders()
+        with body_path.open("rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                conn.send(chunk)
+        resp = conn.getresponse()
+        data = resp.read()
+    finally:
+        conn.close()
+    text = data.decode("utf-8", errors="replace")
+    if resp.status >= 400:
+        raise RelayUploadError(resp.status, resp.reason, text)
+    return json.loads(text)
+
+
 def submit_via_relay(relay_url: str, artifacts: list[tuple[Path, str]], dry_run: bool) -> int:
     endpoint = f"{relay_url}/api/donate"
     print(f"[submit] upload mode  : relay")
@@ -150,28 +214,19 @@ def submit_via_relay(relay_url: str, artifacts: list[tuple[Path, str]], dry_run:
         print("\n[submit] --dry-run: nothing uploaded.")
         return 0
 
-    body, boundary = multipart_body(artifacts)
-    req = request.Request(
-        endpoint,
-        data=body,
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            "User-Agent": "contextecho-donate",
-        },
-        method="POST",
-    )
+    body_path, boundary, content_length = multipart_body_file(artifacts)
     try:
-        with request.urlopen(req, timeout=120) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
-    except error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        print(f"\n[submit] relay upload failed: HTTP {exc.code}", file=sys.stderr)
-        print(detail, file=sys.stderr)
+        payload = post_multipart_file(endpoint, body_path, boundary, content_length)
+    except RelayUploadError as exc:
+        print(f"\n[submit] relay upload failed: HTTP {exc.status}", file=sys.stderr)
+        print(exc.detail or exc.reason, file=sys.stderr)
         return 1
     except Exception as exc:
         print(f"\n[submit] relay upload failed: {exc}", file=sys.stderr)
         print("[submit] Check CONTEXTECHO_RELAY_URL or use direct maintainer auth.", file=sys.stderr)
         return 1
+    finally:
+        body_path.unlink(missing_ok=True)
 
     submission_id = payload.get("submission_id", "unknown")
     print("\n[submit] Submitted for maintainer review.")

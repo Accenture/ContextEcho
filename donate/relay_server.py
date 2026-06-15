@@ -11,7 +11,6 @@ Run locally:
 from __future__ import annotations
 
 import hashlib
-import io
 import json
 import os
 import re
@@ -26,7 +25,7 @@ from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 from donate.adapters.base import conversation_fingerprint
 
 STAGING_REPO = os.environ.get("CONTEXTECHO_STAGING_REPO", "contextecho2026/persona-drift-staging")
-MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(200 * 1024 * 1024)))
+MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(1024 * 1024 * 1024)))
 MAX_META_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_META_BYTES", str(256 * 1024)))
 STATE_DIR = Path(os.environ.get("CONTEXTECHO_RELAY_STATE_DIR", ".relay_state"))
 SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
@@ -62,6 +61,14 @@ app = FastAPI(title="ContextEcho Donation Relay", version="0.1")
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _read_seen_records() -> list[dict]:
@@ -224,7 +231,9 @@ def _backfill_seen_hashes_from_hf() -> dict:
                 added += 1
             except Exception as exc:
                 errors.append(f"{repo_id}/{prefix}: {exc}")
-        for row in _release_ledger_rows(repo_id, files, token):
+        ledger_rows = _release_ledger_rows(repo_id, files, token)
+        ledger_session_paths = {str(row.get("session_path") or "") for row in ledger_rows}
+        for row in ledger_rows:
             scanned += 1
             session_path = str(row.get("session_path") or "")
             manifest_path = str(row.get("manifest_path") or "")
@@ -239,6 +248,8 @@ def _backfill_seen_hashes_from_hf() -> dict:
             except Exception as exc:
                 errors.append(f"{repo_id}/{session_path}: {exc}")
         for session_path in _release_session_paths(files):
+            if session_path in ledger_session_paths:
+                continue
             scanned += 1
             submission_id = Path(session_path).stem.replace("session_", "public-session-", 1)
             try:
@@ -316,6 +327,29 @@ async def _read_limited(upload: UploadFile, limit: int, label: str) -> bytes:
     return data
 
 
+async def _copy_upload_limited(upload: UploadFile, limit: int, label: str) -> tuple[Path, int]:
+    tmp = tempfile.NamedTemporaryFile(prefix="contextecho-relay-", suffix=".upload", delete=False)
+    path = Path(tmp.name)
+    total = 0
+    try:
+        with tmp:
+            while True:
+                chunk = await upload.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > limit:
+                    raise HTTPException(status_code=413, detail=f"{label} is too large")
+                tmp.write(chunk)
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise
+    if total <= 0:
+        path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=f"{label} is empty")
+    return path, total
+
+
 def _validate_jsonl(data: bytes) -> None:
     for i, raw in enumerate(data.splitlines(), start=1):
         if not raw.strip():
@@ -324,6 +358,17 @@ def _validate_jsonl(data: bytes) -> None:
             json.loads(raw)
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=400, detail=f"session JSONL invalid at line {i}: {exc}") from exc
+
+
+def _validate_jsonl_file(path: Path) -> None:
+    with path.open("rb") as f:
+        for i, raw in enumerate(f, start=1):
+            if not raw.strip():
+                continue
+            try:
+                json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise HTTPException(status_code=400, detail=f"session JSONL invalid at line {i}: {exc}") from exc
 
 
 def _validate_manifest(data: bytes) -> dict:
@@ -355,7 +400,7 @@ def _safe_name(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") or "artifact"
 
 
-def _upload_to_hf(submission_id: str, session_data: bytes, manifest_data: bytes, consent_data: bytes) -> str | None:
+def _upload_to_hf(submission_id: str, session_path: Path, manifest_data: bytes, consent_data: bytes) -> str | None:
     token = os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
     if not token:
         raise HTTPException(status_code=500, detail="relay missing HF_STAGING_TOKEN")
@@ -364,15 +409,15 @@ def _upload_to_hf(submission_id: str, session_data: bytes, manifest_data: bytes,
     operations = [
         CommitOperationAdd(
             path_in_repo=f"pending/{submission_id}/session.redacted.jsonl",
-            path_or_fileobj=io.BytesIO(session_data),
+            path_or_fileobj=str(session_path),
         ),
         CommitOperationAdd(
             path_in_repo=f"pending/{submission_id}/manifest.json",
-            path_or_fileobj=io.BytesIO(manifest_data),
+            path_or_fileobj=manifest_data,
         ),
         CommitOperationAdd(
             path_in_repo=f"pending/{submission_id}/CONSENT.md",
-            path_or_fileobj=io.BytesIO(consent_data),
+            path_or_fileobj=consent_data,
         ),
     ]
     try:
@@ -394,6 +439,7 @@ def health() -> dict:
         "ok": True,
         "staging_repo": STAGING_REPO,
         "has_token": bool(os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")),
+        "max_session_bytes": MAX_SESSION_BYTES,
     }
 
 
@@ -421,25 +467,28 @@ async def donate(
     manifest_json: Annotated[UploadFile, File(alias="manifest.json")],
     consent_md: Annotated[UploadFile, File(alias="CONSENT.md")],
 ) -> dict:
-    session_data = await _read_limited(session_redacted, MAX_SESSION_BYTES, "session.redacted.jsonl")
+    session_path, _session_bytes = await _copy_upload_limited(session_redacted, MAX_SESSION_BYTES, "session.redacted.jsonl")
     manifest_data = await _read_limited(manifest_json, MAX_META_BYTES, "manifest.json")
     consent_data = await _read_limited(consent_md, MAX_META_BYTES, "CONSENT.md")
 
-    _validate_jsonl(session_data)
-    manifest = _validate_manifest(manifest_data)
-    _validate_consent(consent_data)
+    try:
+        _validate_jsonl_file(session_path)
+        manifest = _validate_manifest(manifest_data)
+        _validate_consent(consent_data)
 
-    artifact_hash = _sha256(session_data)
-    seen_records = _read_seen_records()
-    if artifact_hash in {row.get("artifact_hash") for row in seen_records}:
-        raise HTTPException(status_code=409, detail="duplicate redacted session artifact")
-    near_duplicate = _near_duplicate_detail(manifest, seen_records)
-    if near_duplicate:
-        raise HTTPException(status_code=409, detail=near_duplicate)
+        artifact_hash = _sha256_file(session_path)
+        seen_records = _read_seen_records()
+        if artifact_hash in {row.get("artifact_hash") for row in seen_records}:
+            raise HTTPException(status_code=409, detail="duplicate redacted session artifact")
+        near_duplicate = _near_duplicate_detail(manifest, seen_records)
+        if near_duplicate:
+            raise HTTPException(status_code=409, detail=near_duplicate)
 
-    submission_id = _submission_id()
-    pr_url = _upload_to_hf(submission_id, session_data, manifest_data, consent_data)
-    _record_seen_hash(artifact_hash, submission_id, manifest)
+        submission_id = _submission_id()
+        pr_url = _upload_to_hf(submission_id, session_path, manifest_data, consent_data)
+        _record_seen_hash(artifact_hash, submission_id, manifest)
+    finally:
+        session_path.unlink(missing_ok=True)
 
     return {
         "ok": True,
