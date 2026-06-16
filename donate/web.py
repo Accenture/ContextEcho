@@ -823,17 +823,14 @@ INDEX_HTML = r"""<!doctype html>
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
-    .coverage-radar { margin:0 0 18px; border:1px solid #dfe7dc; border-radius:16px; background:#fffefb; padding:14px; display:grid; grid-template-columns:240px minmax(0,1fr); gap:18px; align-items:center; }
-    .radar-plot { width:240px; height:210px; overflow:visible; }
+    .coverage-radar { margin:0 0 18px; border:1px solid #dfe7dc; border-radius:16px; background:#fffefb; padding:14px; display:grid; place-items:center; }
+    .radar-plot { width:min(100%, 320px); height:250px; overflow:visible; }
     .radar-axis { stroke:#d8e1d5; stroke-width:1; }
     .radar-ring { fill:none; stroke:#e7ede3; stroke-width:1; }
     .radar-area { fill:rgba(23,113,63,.2); stroke:#17713f; stroke-width:2; }
     .radar-point { fill:#17713f; stroke:#fffefb; stroke-width:2; }
     .radar-label { fill:#4f5b54; font-size:10px; font-weight:900; text-anchor:middle; dominant-baseline:middle; }
-    .radar-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 14px; }
-    .radar-metric { min-width:0; }
-    .radar-metric strong { display:block; color:#14241d; font-size:15px; line-height:1.05; }
-    .radar-metric span { display:block; color:#5b655f; font-size:11px; font-weight:800; margin-top:3px; }
+    .radar-label-value { fill:#14241d; font-size:13px; font-weight:950; }
     .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; max-width:520px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
     .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
     .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
@@ -1021,7 +1018,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .coverage-radar { grid-template-columns:1fr; justify-items:center; } .radar-plot { width:100%; max-width:260px; } .radar-grid { width:100%; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .radar-plot { max-width:280px; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -1336,7 +1333,7 @@ function renderCoverageRadar(){
     coverageMetric('Models', 'models', 12, 'Models'),
     coverageMetric('Ctx compactions', 'compactions', 40, 'Ctx cmp'),
   ];
-  const cx = 120, cy = 106, radius = 68;
+  const cx = 160, cy = 126, radius = 72;
   const points = metrics.map((m,i) => radarPoint(cx, cy, radius, m, i, metrics.length));
   const polygon = points.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
   const axes = metrics.map((m,i) => {
@@ -1344,8 +1341,8 @@ function renderCoverageRadar(){
     return `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
   }).join('');
   const axisLabels = metrics.map((m,i) => {
-    const [x,y] = radarPoint(cx, cy, radius + 28, {...m, score:1}, i, metrics.length);
-    return `<text class="radar-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${escapeHtml(m.shortLabel || m.label)}</text>`;
+    const [x,y] = radarPoint(cx, cy, radius + 38, {...m, score:1}, i, metrics.length);
+    return `<text class="radar-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}"><tspan class="radar-label-value" x="${x.toFixed(1)}" dy="-0.45em">${escapeHtml(fmtStat(m.value))}</tspan><tspan x="${x.toFixed(1)}" dy="1.25em">${escapeHtml(m.shortLabel || m.label)}</tspan></text>`;
   }).join('');
   const pointDots = points.map(([x,y]) => `<circle class="radar-point" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4"></circle>`).join('');
   const rings = [0.33, 0.66, 1].map(scale => {
@@ -1353,16 +1350,13 @@ function renderCoverageRadar(){
     return `<polygon class="radar-ring" points="${ring}"></polygon>`;
   }).join('');
   target.innerHTML = `
-    <svg class="radar-plot" viewBox="0 0 240 210" role="img" aria-label="Coverage radar chart">
+    <svg class="radar-plot" viewBox="0 0 320 250" role="img" aria-label="Coverage radar chart">
       ${rings}
       ${axes}
       <polygon class="radar-area" points="${polygon}"></polygon>
       ${pointDots}
       ${axisLabels}
     </svg>
-    <div class="radar-grid">
-      ${metrics.map(m => `<div class="radar-metric"><strong>${escapeHtml(fmtStat(m.value))}</strong><span>${escapeHtml(m.label)}</span></div>`).join('')}
-    </div>
   `;
 }
 function verifyFailureSummary(data){

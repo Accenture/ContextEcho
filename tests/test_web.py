@@ -96,8 +96,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("Coverage radar chart", INDEX_HTML)
         self.assertIn("Ctx compactions", INDEX_HTML)
         self.assertIn("radar-label", INDEX_HTML)
+        self.assertIn("radar-label-value", INDEX_HTML)
         self.assertIn("Institutes", INDEX_HTML)
         self.assertIn("Ctx cmp", INDEX_HTML)
+        self.assertNotIn("radar-grid", INDEX_HTML)
 
     def test_auto_repair_removes_detect_secrets_value(self):
         with TemporaryDirectory() as td:
