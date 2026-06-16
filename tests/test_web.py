@@ -78,11 +78,13 @@ class WebTests(unittest.TestCase):
 
     def test_donated_sessions_can_be_cleared_one_at_a_time(self):
         self.assertIn("Clear all local donated labels", INDEX_HTML)
-        self.assertIn("Retry failed upload", INDEX_HTML)
+        self.assertIn("row.oncontextmenu", INDEX_HTML)
+        self.assertIn("Clear the local donated label for this session", INDEX_HTML)
         self.assertIn("/api/clear_donated_label", INDEX_HTML)
         self.assertIn("does not bypass maintainer duplicate checks", INDEX_HTML)
-        self.assertIn("Use Retry failed upload only if the previous upload failed before reaching the relay", INDEX_HTML)
+        self.assertIn("Right-click this row to clear only its local label", INDEX_HTML)
         self.assertNotIn(">Clear label<", INDEX_HTML)
+        self.assertNotIn(">Retry failed upload<", INDEX_HTML)
 
     def test_pick_session_explains_research_value_threshold(self):
         self.assertIn("20+ user turns or detected context compactions", INDEX_HTML)

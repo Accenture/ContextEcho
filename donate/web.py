@@ -807,7 +807,6 @@ INDEX_HTML = r"""<!doctype html>
     .session-row.donated-row { cursor:not-allowed; opacity:.72; background:#f7f9f4; }
     .session-row.donated-row:hover { background:#f7f9f4; }
     .session-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .clear-session-donated { padding:4px 8px; font-size:11px; box-shadow:none; background:#e8eddc; color:var(--ink); }
     .all-donated-note { margin:12px; border:1px solid #b9d6b0; background:#f2fbef; border-radius:14px; padding:14px 16px; color:#145832; font-weight:900; }
     .all-donated-note span { display:block; margin-top:4px; color:#52605a; font-weight:650; }
     .empty-sessions.thanks { color:#145832; font-weight:900; background:#f8fcf4; }
@@ -1849,7 +1848,7 @@ function renderSessions(){
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
-        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.project || 'unknown project')} ${donated ? '<span class="pill donated">donated</span><button type="button" class="clear-session-donated" title="Retry only if the previous upload failed before reaching the relay">Retry failed upload</button>' : ''}</div>
+        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.project || 'unknown project')} ${donated ? '<span class="pill donated">donated</span>' : ''}</div>
       </div>
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
@@ -1857,11 +1856,10 @@ function renderSessions(){
       <div class="session-fit"><span class="pill ${fit(s)}">${fit(s)}</span></div>
     `;
     if (selected && selected.path === s.path && !donated) row.classList.add('selected');
-    const clearOne = row.querySelector('.clear-session-donated');
-    if(clearOne){
-      clearOne.onclick = async (event) => {
-        event.stopPropagation();
-        const ok = confirm('Retry this session only if the previous upload failed before reaching the relay. This clears only the local donated label; it does not bypass maintainer duplicate checks or retract submitted data.');
+    if(donated){
+      row.oncontextmenu = async (event) => {
+        event.preventDefault();
+        const ok = confirm('Clear the local donated label for this session? Use this only if the previous upload failed before reaching the relay. This does not bypass maintainer duplicate checks or retract submitted data.');
         if(!ok) return;
         try {
           await post('/api/clear_donated_label', {source_path:s.path || ''});
@@ -1873,7 +1871,7 @@ function renderSessions(){
           saveDiscoveryCache();
           renderSessions();
           refreshButtons();
-          status('discoverStatus', 'Retry enabled for this session locally. If the relay already received it, the relay may still reject the repeat attempt.');
+          status('discoverStatus', 'Local donated label cleared for this session. If the relay already received it, the relay may still reject the repeat attempt.');
         } catch(e) {
           status('discoverStatus','ERROR: '+e.message);
         }
@@ -1881,7 +1879,7 @@ function renderSessions(){
     }
     row.onclick = () => {
       if(donated){
-        status('discoverStatus', 'This session is already marked donated locally. Use Retry failed upload only if the previous upload failed before reaching the relay.');
+        status('discoverStatus', 'This session is already marked donated locally. Right-click this row to clear only its local label if the previous upload failed before reaching the relay.');
         return;
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
@@ -1901,7 +1899,7 @@ function renderSessions(){
     $('selectedCard').innerHTML = '';
     $('selectedCard').classList.remove('show');
     $('reviewConfirm').checked = false;
-    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated on this machine. Use Retry failed upload on an individual row only if that upload failed before reaching the relay.</span></div>`);
+    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated on this machine. Right-click an individual row to clear only its local label if that upload failed before reaching the relay.</span></div>`);
   }
   const totalPages = Math.max(1, Math.ceil(sessions.length / pageSize));
   $('pageInfo').textContent = `Page ${page + 1} of ${totalPages} · showing ${sessions.length ? start + 1 : 0}-${Math.min(start + pageSize, sessions.length)} of ${sessions.length}`;
