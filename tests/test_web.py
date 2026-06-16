@@ -90,6 +90,13 @@ class WebTests(unittest.TestCase):
     def test_pick_session_explains_research_value_threshold(self):
         self.assertIn("20+ user turns or detected context compactions", INDEX_HTML)
 
+    def test_top_stats_leave_donated_sessions_to_radar(self):
+        self.assertIn("Dataset Downloads", INDEX_HTML)
+        self.assertIn("GitHub Stars", INDEX_HTML)
+        self.assertIn("Dataset Likes", INDEX_HTML)
+        self.assertNotIn("['gift', 'Donated Sessions'", INDEX_HTML)
+        self.assertNotIn('<div class="stat-card"><div class="stat-icon" data-icon="gift"', INDEX_HTML)
+
     def test_pick_session_shows_public_coverage_radar(self):
         self.assertIn("coverageRadar", INDEX_HTML)
         self.assertIn("renderCoverageRadar", INDEX_HTML)
