@@ -9,6 +9,7 @@ from donate.web import (
     INDEX_HTML,
     _auto_repair_until_verified,
     _load_contributors_markdown,
+    _parse_dataset_card_coverage,
     _parse_contributor_leaderboard,
     _parse_donated_sessions,
     already_submitted,
@@ -89,6 +90,12 @@ class WebTests(unittest.TestCase):
     def test_pick_session_explains_research_value_threshold(self):
         self.assertIn("20+ user turns or detected context compactions", INDEX_HTML)
 
+    def test_pick_session_shows_public_coverage_radar(self):
+        self.assertIn("coverageRadar", INDEX_HTML)
+        self.assertIn("renderCoverageRadar", INDEX_HTML)
+        self.assertIn("Coverage radar chart", INDEX_HTML)
+        self.assertIn("Ctx compactions", INDEX_HTML)
+
     def test_auto_repair_removes_detect_secrets_value(self):
         with TemporaryDirectory() as td:
             path = Path(td) / "session.redacted.jsonl"
@@ -150,6 +157,36 @@ class WebTests(unittest.TestCase):
         self.assertEqual(rows[0]["contributor"], "Founding donors")
         self.assertEqual(rows[0]["sessions_num"], 3)
         self.assertEqual(rows[0]["turns_num"], 18380)
+
+    def test_parse_dataset_card_coverage(self):
+        coverage = _parse_dataset_card_coverage(
+            "\n".join([
+                "## Dataset Summary",
+                "| Field | Value |",
+                "|-------|-------|",
+                "| Active public/candidate sessions tracked locally | 5 |",
+                "| Active public/candidate user turns tracked locally | 20,380 |",
+                "| Active public/candidate context compactions tracked locally | 21 |",
+                "| Public contributors in leaderboard | 4 |",
+                "",
+                "## Composition",
+                "| Axis | Values |",
+                "|------|--------|",
+                "| Agent / harness | Claude Code (3), Codex CLI (2) |",
+                "| Model family | Opus 4.x (mixed) (3), GPT-5 (2) |",
+                "| Model organization | Anthropic (3), OpenAI (2) |",
+                "| Task domain | agentic-coding (4), research (1) |",
+                "| Primary language | Python (3), mixed (2) |",
+                "| Public contributor institutions | UC Merced (2), independent (1) |",
+            ])
+        )
+        self.assertEqual(coverage["sessions"], 5)
+        self.assertEqual(coverage["contributors"], 4)
+        self.assertEqual(coverage["institutions"], 2)
+        self.assertEqual(coverage["agents"], 2)
+        self.assertEqual(coverage["models"], 2)
+        self.assertEqual(coverage["compactions"], 21)
+        self.assertEqual(coverage["turns"], 20380)
 
     def test_load_contributors_markdown_falls_back_to_github_when_packaged(self):
         remote_text = "| Rank | Contributor | Sessions | Turns | Agents | Models | Points |\n"

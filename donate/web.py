@@ -555,6 +555,49 @@ def _parse_contributor_leaderboard(markdown: str) -> list[dict]:
     return rows[:5]
 
 
+def _parse_dataset_card_coverage(markdown: str) -> dict:
+    fields: dict[str, str] = {}
+    composition: dict[str, str] = {}
+    section = ""
+    for line in markdown.splitlines():
+        if line.startswith("## "):
+            section = line.removeprefix("## ").strip()
+            continue
+        if not line.startswith("|") or line.startswith("|-"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 2 or cells[0] in {"Field", "Axis"}:
+            continue
+        if section == "Dataset Summary":
+            fields[cells[0]] = cells[1]
+        elif section == "Composition":
+            composition[cells[0]] = cells[1]
+
+    def as_int(label: str) -> int:
+        value = fields.get(label, "")
+        m = re.search(r"\d[\d,]*", value)
+        return int(m.group(0).replace(",", "")) if m else 0
+
+    def unique_count(axis: str) -> int:
+        value = composition.get(axis, "")
+        if not value or value.lower() == "none yet":
+            return 0
+        return len([part for part in value.split(",") if part.strip() and not part.strip().startswith("+")])
+
+    return {
+        "sessions": as_int("Active public/candidate sessions tracked locally") or as_int("Public v1 founding sessions"),
+        "contributors": as_int("Public contributors in leaderboard"),
+        "institutions": unique_count("Public contributor institutions"),
+        "agents": unique_count("Agent / harness"),
+        "models": unique_count("Model family"),
+        "organizations": unique_count("Model organization"),
+        "domains": unique_count("Task domain"),
+        "languages": unique_count("Primary language"),
+        "compactions": as_int("Active public/candidate context compactions tracked locally"),
+        "turns": as_int("Active public/candidate user turns tracked locally"),
+    }
+
+
 def _load_contributors_markdown(local_path: Path | None = None) -> str:
     if local_path is None:
         local_path = Path(__file__).resolve().parents[1] / "CONTRIBUTORS.md"
@@ -562,6 +605,15 @@ def _load_contributors_markdown(local_path: Path | None = None) -> str:
         return local_path.read_text(encoding="utf-8")
     except Exception:
         return _fetch_text("https://raw.githubusercontent.com/Accenture/ContextEcho/main/CONTRIBUTORS.md")
+
+
+def _load_dataset_card_markdown(local_path: Path | None = None) -> str:
+    if local_path is None:
+        local_path = Path(__file__).resolve().parents[1] / "DATASET_CARD.md"
+    try:
+        return local_path.read_text(encoding="utf-8")
+    except Exception:
+        return _fetch_text("https://raw.githubusercontent.com/Accenture/ContextEcho/main/DATASET_CARD.md")
 
 
 def project_stats() -> dict:
@@ -572,6 +624,7 @@ def project_stats() -> dict:
         "dataset_downloads": None,
         "dataset_likes": None,
         "leaderboard": [],
+        "coverage": {},
     }
     try:
         gh = _fetch_json("https://api.github.com/repos/Accenture/ContextEcho")
@@ -592,6 +645,10 @@ def project_stats() -> dict:
     try:
         text = _load_contributors_markdown()
         stats["leaderboard"] = _parse_contributor_leaderboard(text)
+    except Exception:
+        pass
+    try:
+        stats["coverage"] = _parse_dataset_card_coverage(_load_dataset_card_markdown())
     except Exception:
         pass
     return stats
@@ -766,6 +823,16 @@ INDEX_HTML = r"""<!doctype html>
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
+    .coverage-radar { margin:0 0 18px; border:1px solid #dfe7dc; border-radius:16px; background:#fffefb; padding:14px; display:grid; grid-template-columns:180px minmax(0,1fr); gap:18px; align-items:center; }
+    .radar-plot { width:180px; height:180px; }
+    .radar-axis { stroke:#d8e1d5; stroke-width:1; }
+    .radar-ring { fill:none; stroke:#e7ede3; stroke-width:1; }
+    .radar-area { fill:rgba(23,113,63,.2); stroke:#17713f; stroke-width:2; }
+    .radar-point { fill:#17713f; stroke:#fffefb; stroke-width:2; }
+    .radar-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 14px; }
+    .radar-metric { min-width:0; }
+    .radar-metric strong { display:block; color:#14241d; font-size:15px; line-height:1.05; }
+    .radar-metric span { display:block; color:#5b655f; font-size:11px; font-weight:800; margin-top:3px; }
     .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; max-width:520px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
     .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
     .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
@@ -953,7 +1020,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .coverage-radar { grid-template-columns:1fr; justify-items:center; } .radar-grid { width:100%; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -1008,6 +1075,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="gift"></div><div class="stat-value">...</div><div class="stat-label">Donated Sessions</div></div>
         </div>
+        <div id="coverageRadar" class="coverage-radar" aria-label="Public dataset coverage radar"></div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
         <div class="row reset-donated">
           <button id="clearDonatedBtn" class="secondary">Clear all local donated labels</button>
@@ -1243,6 +1311,53 @@ function renderProjectStats(){
       <div class="stat-label">${escapeHtml(label)}</div>
     </div>
   `).join('');
+  renderCoverageRadar();
+}
+function coverageMetric(label, key, target){
+  const coverage = publicStats.coverage || {};
+  const raw = Number(coverage[key] || 0);
+  const value = Number.isFinite(raw) ? raw : 0;
+  return {label, key, value, target, score: Math.max(0, Math.min(1, value / target))};
+}
+function radarPoint(cx, cy, radius, metric, i, total){
+  const angle = -Math.PI / 2 + (Math.PI * 2 * i / total);
+  const r = radius * metric.score;
+  return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r];
+}
+function renderCoverageRadar(){
+  const target = $('coverageRadar');
+  if(!target) return;
+  const metrics = [
+    coverageMetric('Sessions', 'sessions', 12),
+    coverageMetric('Contributors', 'contributors', 12),
+    coverageMetric('Institutions', 'institutions', 8),
+    coverageMetric('Agents', 'agents', 8),
+    coverageMetric('Models', 'models', 12),
+    coverageMetric('Ctx compactions', 'compactions', 40),
+  ];
+  const cx = 90, cy = 90, radius = 68;
+  const points = metrics.map((m,i) => radarPoint(cx, cy, radius, m, i, metrics.length));
+  const polygon = points.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
+  const axes = metrics.map((m,i) => {
+    const [x,y] = radarPoint(cx, cy, radius, {...m, score:1}, i, metrics.length);
+    return `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
+  }).join('');
+  const pointDots = points.map(([x,y]) => `<circle class="radar-point" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4"></circle>`).join('');
+  const rings = [0.33, 0.66, 1].map(scale => {
+    const ring = metrics.map((m,i) => radarPoint(cx, cy, radius * scale, {...m, score:1}, i, metrics.length)).map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
+    return `<polygon class="radar-ring" points="${ring}"></polygon>`;
+  }).join('');
+  target.innerHTML = `
+    <svg class="radar-plot" viewBox="0 0 180 180" role="img" aria-label="Coverage radar chart">
+      ${rings}
+      ${axes}
+      <polygon class="radar-area" points="${polygon}"></polygon>
+      ${pointDots}
+    </svg>
+    <div class="radar-grid">
+      ${metrics.map(m => `<div class="radar-metric"><strong>${escapeHtml(fmtStat(m.value))}</strong><span>${escapeHtml(m.label)}</span></div>`).join('')}
+    </div>
+  `;
 }
 function verifyFailureSummary(data){
   const blocking = ((data || {}).verify_report || {}).blocking || {};
