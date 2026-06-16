@@ -5,11 +5,13 @@ from tempfile import TemporaryDirectory
 
 from scripts.intake_donations import (
     append_review_record,
+    known_session_lineage,
     known_session_hashes,
     load_review_registry,
     promoted_submission_ids,
     sha256_file,
     submission_fingerprint,
+    submission_lineage,
     submission_session_hash,
 )
 
@@ -88,6 +90,37 @@ class IntakeDonationTests(unittest.TestCase):
             })
 
             self.assertEqual(known_session_hashes(root)[session_hash], "submission-one")
+
+    def test_session_lineage_tracks_same_source_variants(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            sub = root / "pending" / "submission-one"
+            sub.mkdir(parents=True)
+            (sub / "manifest.json").write_text(
+                json.dumps({
+                    "source_session_id": "source-abc",
+                    "conversation_fingerprint": "conv-abc",
+                })
+                + "\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                submission_lineage(sub),
+                {"source_session_id": "source-abc", "conversation_fingerprint": "conv-abc"},
+            )
+
+            append_review_record(root, {
+                "submission_id": "submission-one",
+                "fingerprint": "abc",
+                "source_session_id": "source-abc",
+                "conversation_fingerprint": "conv-abc",
+                "decision": "ACCEPTABLE",
+            })
+
+            lineage = known_session_lineage(root)
+            self.assertEqual(lineage["source_session_id:source-abc"], "submission-one")
+            self.assertEqual(lineage["conversation_fingerprint:conv-abc"], "submission-one")
 
     def test_known_session_hashes_reads_legacy_ledger_session_path(self):
         with TemporaryDirectory() as td:

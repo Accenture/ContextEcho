@@ -70,6 +70,25 @@ def submission_session_hash(submission: Path) -> str:
     return sha256_file(path) if path.exists() else ""
 
 
+def submission_manifest(submission: Path) -> dict:
+    path = submission / "manifest.json"
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def submission_lineage(submission: Path) -> dict[str, str]:
+    manifest = submission_manifest(submission)
+    return {
+        "source_session_id": str(manifest.get("source_session_id") or "").strip(),
+        "conversation_fingerprint": str(manifest.get("conversation_fingerprint") or "").strip(),
+    }
+
+
 def review_registry_path(dataset_root: Path) -> Path:
     return dataset_root / "data" / "donations" / "reviewed_submissions.jsonl"
 
@@ -102,6 +121,25 @@ def known_session_hashes(dataset_root: Path, reviewed: dict[str, dict] | None = 
         if isinstance(session_hash, str) and session_hash:
             hashes.setdefault(session_hash, submission_id)
     return hashes
+
+
+def known_session_lineage(dataset_root: Path, reviewed: dict[str, dict] | None = None) -> dict[str, str]:
+    lineage: dict[str, str] = {}
+    ledger = dataset_root / "data" / "donations" / "ledger.jsonl"
+    for record in iter_jsonl_records(ledger):
+        submission_id = record.get("submission_id")
+        if not isinstance(submission_id, str):
+            continue
+        for key in ("source_session_id", "conversation_fingerprint"):
+            value = record.get(key)
+            if isinstance(value, str) and value:
+                lineage[f"{key}:{value}"] = submission_id
+    for submission_id, record in (reviewed or load_review_registry(dataset_root)).items():
+        for key in ("source_session_id", "conversation_fingerprint"):
+            value = record.get(key)
+            if isinstance(value, str) and value:
+                lineage.setdefault(f"{key}:{value}", submission_id)
+    return lineage
 
 
 def append_review_record(dataset_root: Path, record: dict) -> None:
@@ -147,6 +185,7 @@ def main(argv: list[str] | None = None) -> int:
     already_promoted = promoted_submission_ids(args.dataset_root)
     reviewed = load_review_registry(args.dataset_root)
     session_hashes = known_session_hashes(args.dataset_root, reviewed)
+    session_lineage = known_session_lineage(args.dataset_root, reviewed)
     failures = 0
     accepted: list[tuple[Path, str, str]] = []
     skipped_promoted = 0
@@ -155,20 +194,35 @@ def main(argv: list[str] | None = None) -> int:
     for sub in pending:
         fingerprint = submission_fingerprint(sub)
         session_hash = submission_session_hash(sub)
+        lineage = submission_lineage(sub)
         duplicate_of = session_hashes.get(session_hash) if session_hash else ""
+        lineage_duplicate_of = ""
+        for key, value in lineage.items():
+            if value:
+                lineage_duplicate_of = session_lineage.get(f"{key}:{value}", "")
+                if lineage_duplicate_of:
+                    break
         if sub.name in already_promoted and not (args.include_promoted or args.include_reviewed):
             skipped_promoted += 1
             print(f"[intake] skip already promoted: {sub.name}")
             continue
-        if duplicate_of and duplicate_of != sub.name and not args.include_duplicates:
+        duplicate_reason = ""
+        if duplicate_of and duplicate_of != sub.name:
+            duplicate_reason = "session_sha256"
+        elif lineage_duplicate_of and lineage_duplicate_of != sub.name:
+            duplicate_of = lineage_duplicate_of
+            duplicate_reason = "session_lineage"
+        if duplicate_reason and duplicate_of != sub.name and not args.include_duplicates:
             skipped_duplicates += 1
-            print(f"[intake] skip duplicate session: {sub.name} matches {duplicate_of}")
+            print(f"[intake] skip duplicate session: {sub.name} matches {duplicate_of} by {duplicate_reason}")
             append_review_record(args.dataset_root, {
                 "submission_id": sub.name,
                 "fingerprint": fingerprint,
                 "session_sha256": session_hash,
+                **lineage,
                 "decision": "DUPLICATE",
                 "duplicate_of": duplicate_of,
+                "duplicate_reason": duplicate_reason,
                 "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                 "quick_validation": False,
                 "promoted": False,
@@ -194,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
                     "submission_id": sub.name,
                     "fingerprint": fingerprint,
                     "session_sha256": session_hash,
+                    **lineage,
                     "decision": "ACCEPTABLE",
                     "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                     "quick_validation": bool(args.run_quick),
@@ -201,12 +256,16 @@ def main(argv: list[str] | None = None) -> int:
                 })
                 if session_hash:
                     session_hashes.setdefault(session_hash, sub.name)
+                for key, value in lineage.items():
+                    if value:
+                        session_lineage.setdefault(f"{key}:{value}", sub.name)
         else:
             failures += 1
             append_review_record(args.dataset_root, {
                 "submission_id": sub.name,
                 "fingerprint": fingerprint,
                 "session_sha256": session_hash,
+                **lineage,
                 "decision": "CHECK_REQUIRED",
                 "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                 "quick_validation": bool(args.run_quick),
@@ -214,6 +273,9 @@ def main(argv: list[str] | None = None) -> int:
             })
             if session_hash:
                 session_hashes.setdefault(session_hash, sub.name)
+            for key, value in lineage.items():
+                if value:
+                    session_lineage.setdefault(f"{key}:{value}", sub.name)
 
     if args.promote:
         for sub, fingerprint, session_hash in accepted:
@@ -234,6 +296,7 @@ def main(argv: list[str] | None = None) -> int:
                 "submission_id": sub.name,
                 "fingerprint": fingerprint,
                 "session_sha256": session_hash,
+                **submission_lineage(sub),
                 "decision": "ACCEPTABLE",
                 "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                 "quick_validation": bool(args.run_quick),
