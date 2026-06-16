@@ -128,6 +128,8 @@ The released dataset includes:
   cross-judge audit, drift-onset sweep, stressor-surface compliance,
   SWE-Bench-style continuation, and TerminalBench fresh-task null
 - **`DATASHEET.md`** (Datasheets-for-Datasets format)
+- **[`DATASET_CARD.md`](DATASET_CARD.md)** (public release and donation
+  pipeline summary generated from release metadata)
 - **`croissant.json`** (ML Commons Croissant 1.0 metadata)
 - **`LICENSE-DATA`** (CC-BY-SA-4.0) and **`LICENSE-CODE`** (Apache-2.0
   reference)
@@ -247,6 +249,7 @@ dataset candidate with:
 
 ```bash
 make intake-donations RUN_QUICK=1 PROMOTE=1
+make update-release-metadata
 ```
 
 Accepted sessions are copied into `data_archive_release_v2/data/sessions/`,

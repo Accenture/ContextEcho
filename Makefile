@@ -8,7 +8,8 @@
         fig-app-anchor-decay fig-app-anchor-size fig-app-crossjudge \
         fig-app-crosssession fig-app-full25 fig-app-onset \
         download-donations intake-donations promote-donation reset-donation-test-state \
-        update-contributors check-contributors \
+        update-contributors check-contributors update-dataset-card check-dataset-card \
+        update-release-metadata check-release-metadata \
         review-donation review-donation-quick \
         fig-session-validation session-validation-dry-run session-validation-quick \
         session-validation-quick-summary session-validation-summary \
@@ -43,6 +44,10 @@ help:
 	@echo "    make reset-donation-test-state            archive + clear local test intake state"
 	@echo "    make update-contributors                  regenerate CONTRIBUTORS.md from accepted ledger"
 	@echo "    make check-contributors                   verify CONTRIBUTORS.md is up to date"
+	@echo "    make update-dataset-card                  regenerate DATASET_CARD.md from release metadata"
+	@echo "    make check-dataset-card                   verify DATASET_CARD.md is up to date"
+	@echo "    make update-release-metadata              regenerate CONTRIBUTORS.md + DATASET_CARD.md"
+	@echo "    make check-release-metadata               verify public release metadata is up to date"
 	@echo "    make session-validation-dry-run SESSION=... LABEL=...  plan a new donor validation"
 	@echo "    make session-validation-quick SESSION=... LABEL=...    run 30-cell donor intake check"
 	@echo "    make session-validation-quick-summary LABEL=...        summarize quick validation"
@@ -158,6 +163,16 @@ update-contributors:
 
 check-contributors:
 	$(PYTHON) scripts/update_contributors.py --check
+
+update-dataset-card:
+	$(PYTHON) scripts/update_dataset_card.py
+
+check-dataset-card:
+	$(PYTHON) scripts/update_dataset_card.py --check
+
+update-release-metadata: update-contributors update-dataset-card
+
+check-release-metadata: check-contributors check-dataset-card
 
 session-validation-dry-run:
 	@if [ -z "$(SESSION)" ] || [ -z "$(LABEL)" ]; then \

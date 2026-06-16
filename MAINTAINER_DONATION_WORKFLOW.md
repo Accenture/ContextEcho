@@ -27,7 +27,7 @@ flowchart TD
   P -- no --> Q[Record needs-attention / reject]
   P -- yes --> R[Promote to data_archive_release_v2]
   R --> S[Append donation ledger]
-  S --> T[Regenerate CONTRIBUTORS.md]
+  S --> T[Regenerate public release metadata]
   T --> U[Commit release-candidate dataset updates]
 ```
 
@@ -81,8 +81,8 @@ Use the repo virtualenv so all maintainer dependencies are available:
 ```bash
 make setup-maintainer PYTHON=.venv/bin/python
 make intake-donations RUN_QUICK=1 PROMOTE=1 PYTHON=.venv/bin/python
-make update-contributors PYTHON=.venv/bin/python
-make check-contributors PYTHON=.venv/bin/python
+make update-release-metadata PYTHON=.venv/bin/python
+make check-release-metadata PYTHON=.venv/bin/python
 ```
 
 `make intake-donations RUN_QUICK=1 PROMOTE=1` does the maintainer work:
@@ -104,12 +104,14 @@ Accepted artifacts are written to:
 - `data_archive_release_v2/data/donations/<label>/review_report.json`
 - `data_archive_release_v2/data/donations/ledger.jsonl`
 
-## Contributor Ranking
+## Public Release Metadata
 
-`CONTRIBUTORS.md` is generated. Do not edit it by hand.
+`CONTRIBUTORS.md` and `DATASET_CARD.md` are generated from the same promoted
+public ledger. Do not edit either file by hand.
 
 ```bash
-make update-contributors PYTHON=.venv/bin/python
+make update-release-metadata PYTHON=.venv/bin/python
+make check-release-metadata PYTHON=.venv/bin/python
 ```
 
 Ranking source:
@@ -150,7 +152,7 @@ After intake and contributor regeneration:
 
 ```bash
 git status
-git add data_archive_release_v2 CONTRIBUTORS.md
+git add data_archive_release_v2 CONTRIBUTORS.md DATASET_CARD.md
 git commit -m "Promote accepted donations"
 git push
 ```
