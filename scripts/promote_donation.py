@@ -99,7 +99,28 @@ def append_ledger(path: Path, record: dict) -> None:
                     existing.append(json.loads(line))
                 except json.JSONDecodeError:
                     pass
-    kept = [r for r in existing if r.get("submission_id") != record["submission_id"]]
+    superseded: list[str] = []
+    kept = []
+    for row in existing:
+        if row.get("submission_id") == record["submission_id"]:
+            continue
+        same_source = (
+            record.get("source_session_id")
+            and row.get("source_session_id") == record.get("source_session_id")
+        )
+        same_fingerprint = (
+            record.get("conversation_fingerprint")
+            and row.get("conversation_fingerprint") == record.get("conversation_fingerprint")
+        )
+        if row.get("decision") == "ACCEPTABLE" and (same_source or same_fingerprint):
+            row = dict(row)
+            row["decision"] = "SUPERSEDED"
+            row["superseded_by"] = record["submission_id"]
+            superseded.append(str(row.get("submission_id") or ""))
+        kept.append(row)
+    if superseded:
+        record = dict(record)
+        record["supersedes_submission"] = superseded[0] if len(superseded) == 1 else superseded
     kept.append(record)
     path.write_text(
         "\n".join(json.dumps(r, sort_keys=True) for r in kept) + "\n",

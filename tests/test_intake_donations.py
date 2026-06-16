@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 
 from scripts.intake_donations import (
     append_review_record,
+    enough_lineage_growth,
     known_session_lineage,
     known_session_hashes,
     load_review_registry,
@@ -14,6 +15,7 @@ from scripts.intake_donations import (
     submission_lineage,
     submission_session_hash,
 )
+from scripts.promote_donation import append_ledger as append_promoted_ledger
 
 
 class IntakeDonationTests(unittest.TestCase):
@@ -119,8 +121,40 @@ class IntakeDonationTests(unittest.TestCase):
             })
 
             lineage = known_session_lineage(root)
-            self.assertEqual(lineage["source_session_id:source-abc"], "submission-one")
-            self.assertEqual(lineage["conversation_fingerprint:conv-abc"], "submission-one")
+            self.assertEqual(lineage["source_session_id:source-abc"]["submission_id"], "submission-one")
+            self.assertEqual(lineage["conversation_fingerprint:conv-abc"]["submission_id"], "submission-one")
+
+    def test_lineage_growth_allows_substantial_updates_only(self):
+        old = {"submission_id": "submission-old", "turns": 100, "records": 1000}
+
+        self.assertFalse(enough_lineage_growth({"turns": 105, "records": 1100}, old))
+        self.assertTrue(enough_lineage_growth({"turns": 150, "records": 1100}, old))
+        self.assertTrue(enough_lineage_growth({"turns": 110, "records": 1200}, old))
+
+    def test_promote_ledger_supersedes_same_lineage_accepted_rows(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            ledger = root / "data" / "donations" / "ledger.jsonl"
+            old = {
+                "submission_id": "submission-old",
+                "decision": "ACCEPTABLE",
+                "source_session_id": "source-abc",
+                "conversation_fingerprint": "conv-abc",
+            }
+            new = {
+                "submission_id": "submission-new",
+                "decision": "ACCEPTABLE",
+                "source_session_id": "source-abc",
+                "conversation_fingerprint": "conv-abc",
+            }
+
+            append_promoted_ledger(ledger, old)
+            append_promoted_ledger(ledger, new)
+            rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+
+        self.assertEqual(rows[0]["decision"], "SUPERSEDED")
+        self.assertEqual(rows[0]["superseded_by"], "submission-new")
+        self.assertEqual(rows[1]["supersedes_submission"], "submission-old")
 
     def test_known_session_hashes_reads_legacy_ledger_session_path(self):
         with TemporaryDirectory() as td:

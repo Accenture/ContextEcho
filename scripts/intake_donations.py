@@ -12,6 +12,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SUBMISSION_FILES = ("session.redacted.jsonl", "manifest.json", "CONSENT.md")
 SESSION_NAME = "session.redacted.jsonl"
+MIN_SESSION_GROWTH_RATIO = 0.20
+MIN_SESSION_GROWTH_TURNS = 50
 
 
 def run(cmd: list[str]) -> int:
@@ -89,6 +91,21 @@ def submission_lineage(submission: Path) -> dict[str, str]:
     }
 
 
+def count_value(value: object) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def submission_scale(submission: Path) -> dict[str, int]:
+    manifest = submission_manifest(submission)
+    return {
+        "turns": count_value(manifest.get("turns")),
+        "records": count_value(manifest.get("records")),
+    }
+
+
 def review_registry_path(dataset_root: Path) -> Path:
     return dataset_root / "data" / "donations" / "reviewed_submissions.jsonl"
 
@@ -123,23 +140,43 @@ def known_session_hashes(dataset_root: Path, reviewed: dict[str, dict] | None = 
     return hashes
 
 
-def known_session_lineage(dataset_root: Path, reviewed: dict[str, dict] | None = None) -> dict[str, str]:
-    lineage: dict[str, str] = {}
+def known_session_lineage(dataset_root: Path, reviewed: dict[str, dict] | None = None) -> dict[str, dict]:
+    lineage: dict[str, dict] = {}
     ledger = dataset_root / "data" / "donations" / "ledger.jsonl"
     for record in iter_jsonl_records(ledger):
         submission_id = record.get("submission_id")
-        if not isinstance(submission_id, str):
+        if not isinstance(submission_id, str) or record.get("decision") not in {None, "", "ACCEPTABLE"}:
             continue
         for key in ("source_session_id", "conversation_fingerprint"):
             value = record.get(key)
             if isinstance(value, str) and value:
-                lineage[f"{key}:{value}"] = submission_id
+                lineage[f"{key}:{value}"] = record
     for submission_id, record in (reviewed or load_review_registry(dataset_root)).items():
+        if record.get("decision") != "ACCEPTABLE":
+            continue
         for key in ("source_session_id", "conversation_fingerprint"):
             value = record.get(key)
             if isinstance(value, str) and value:
-                lineage.setdefault(f"{key}:{value}", submission_id)
+                enriched = dict(record)
+                enriched.setdefault("submission_id", submission_id)
+                lineage.setdefault(f"{key}:{value}", enriched)
     return lineage
+
+
+def enough_lineage_growth(new_scale: dict[str, int], old_record: dict) -> bool:
+    old_turns = count_value(old_record.get("turns"))
+    old_records = count_value(old_record.get("records"))
+    new_turns = count_value(new_scale.get("turns"))
+    new_records = count_value(new_scale.get("records"))
+    turn_delta = max(0, new_turns - old_turns)
+    record_delta = max(0, new_records - old_records)
+    turn_growth = (turn_delta / old_turns) if old_turns else (1.0 if turn_delta else 0.0)
+    record_growth = (record_delta / old_records) if old_records else (1.0 if record_delta else 0.0)
+    return (
+        turn_growth >= MIN_SESSION_GROWTH_RATIO
+        or record_growth >= MIN_SESSION_GROWTH_RATIO
+        or turn_delta >= MIN_SESSION_GROWTH_TURNS
+    )
 
 
 def append_review_record(dataset_root: Path, record: dict) -> None:
@@ -195,23 +232,28 @@ def main(argv: list[str] | None = None) -> int:
         fingerprint = submission_fingerprint(sub)
         session_hash = submission_session_hash(sub)
         lineage = submission_lineage(sub)
+        scale = submission_scale(sub)
         duplicate_of = session_hashes.get(session_hash) if session_hash else ""
-        lineage_duplicate_of = ""
+        lineage_duplicate_record: dict = {}
         for key, value in lineage.items():
             if value:
-                lineage_duplicate_of = session_lineage.get(f"{key}:{value}", "")
-                if lineage_duplicate_of:
+                lineage_duplicate_record = session_lineage.get(f"{key}:{value}", {})
+                if lineage_duplicate_record:
                     break
         if sub.name in already_promoted and not (args.include_promoted or args.include_reviewed):
             skipped_promoted += 1
             print(f"[intake] skip already promoted: {sub.name}")
             continue
         duplicate_reason = ""
+        supersedes_submission = ""
         if duplicate_of and duplicate_of != sub.name:
             duplicate_reason = "session_sha256"
-        elif lineage_duplicate_of and lineage_duplicate_of != sub.name:
-            duplicate_of = lineage_duplicate_of
-            duplicate_reason = "session_lineage"
+        elif lineage_duplicate_record and lineage_duplicate_record.get("submission_id") != sub.name:
+            duplicate_of = str(lineage_duplicate_record.get("submission_id") or "")
+            if enough_lineage_growth(scale, lineage_duplicate_record):
+                supersedes_submission = duplicate_of
+            else:
+                duplicate_reason = "session_lineage_low_growth"
         if duplicate_reason and duplicate_of != sub.name and not args.include_duplicates:
             skipped_duplicates += 1
             print(f"[intake] skip duplicate session: {sub.name} matches {duplicate_of} by {duplicate_reason}")
@@ -220,6 +262,7 @@ def main(argv: list[str] | None = None) -> int:
                 "fingerprint": fingerprint,
                 "session_sha256": session_hash,
                 **lineage,
+                **scale,
                 "decision": "DUPLICATE",
                 "duplicate_of": duplicate_of,
                 "duplicate_reason": duplicate_reason,
@@ -249,6 +292,8 @@ def main(argv: list[str] | None = None) -> int:
                     "fingerprint": fingerprint,
                     "session_sha256": session_hash,
                     **lineage,
+                    **scale,
+                    "supersedes_submission": supersedes_submission,
                     "decision": "ACCEPTABLE",
                     "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                     "quick_validation": bool(args.run_quick),
@@ -258,7 +303,11 @@ def main(argv: list[str] | None = None) -> int:
                     session_hashes.setdefault(session_hash, sub.name)
                 for key, value in lineage.items():
                     if value:
-                        session_lineage.setdefault(f"{key}:{value}", sub.name)
+                        session_lineage[f"{key}:{value}"] = {
+                            "submission_id": sub.name,
+                            **lineage,
+                            **scale,
+                        }
         else:
             failures += 1
             append_review_record(args.dataset_root, {
@@ -266,6 +315,7 @@ def main(argv: list[str] | None = None) -> int:
                 "fingerprint": fingerprint,
                 "session_sha256": session_hash,
                 **lineage,
+                **scale,
                 "decision": "CHECK_REQUIRED",
                 "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                 "quick_validation": bool(args.run_quick),
@@ -275,7 +325,11 @@ def main(argv: list[str] | None = None) -> int:
                 session_hashes.setdefault(session_hash, sub.name)
             for key, value in lineage.items():
                 if value:
-                    session_lineage.setdefault(f"{key}:{value}", sub.name)
+                    session_lineage[f"{key}:{value}"] = {
+                        "submission_id": sub.name,
+                        **lineage,
+                        **scale,
+                    }
 
     if args.promote:
         for sub, fingerprint, session_hash in accepted:
@@ -297,6 +351,7 @@ def main(argv: list[str] | None = None) -> int:
                 "fingerprint": fingerprint,
                 "session_sha256": session_hash,
                 **submission_lineage(sub),
+                **submission_scale(sub),
                 "decision": "ACCEPTABLE",
                 "reviewed_utc": datetime.now(timezone.utc).isoformat(),
                 "quick_validation": bool(args.run_quick),

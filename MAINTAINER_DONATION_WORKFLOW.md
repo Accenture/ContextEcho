@@ -90,10 +90,10 @@ make check-contributors PYTHON=.venv/bin/python
 1. Downloads private Hugging Face staging submissions into `hf_staging_download/`.
 2. Skips already promoted submissions.
 3. Skips already reviewed unchanged submissions.
-4. Skips duplicate redacted artifacts and same-source/session-fingerprint repeats.
+4. Skips duplicate redacted artifacts and low-growth same-source/session-fingerprint repeats.
 5. Runs technical review.
 6. Runs quick 30-cell validation.
-7. Promotes accepted submissions into `data_archive_release_v2/`.
+7. Promotes accepted submissions into `data_archive_release_v2/`, marking older same-lineage sessions as superseded when the update has enough new turns/records.
 8. Appends accepted rows to `data_archive_release_v2/data/donations/ledger.jsonl`.
 
 Accepted artifacts are written to:

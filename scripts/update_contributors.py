@@ -155,6 +155,8 @@ def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
     rows = iter_jsonl(ledger)
     out: list[SessionEntry] = []
     for i, row in enumerate(rows, start=4):
+        if norm(row.get("decision")) != "ACCEPTABLE":
+            continue
         manifest: dict[str, Any] = {}
         manifest_path = dataset_root / norm(row.get("manifest_path"))
         if manifest_path.exists():
