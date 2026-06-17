@@ -812,31 +812,31 @@ INDEX_HTML = r"""<!doctype html>
     .intro-head { display:flex; gap:22px; align-items:flex-start; padding-bottom:20px; border-bottom:1px solid var(--line); }
     .folder-icon { width:76px; height:76px; border-radius:18px; display:grid; place-items:center; background:linear-gradient(135deg,#eef6d4,#f7faeb); }
     .folder-icon:before { content:""; width:42px; height:29px; border:3px solid var(--accent); border-radius:6px; box-sizing:border-box; box-shadow:0 -10px 0 -6px var(--accent); }
-    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:22px 0 20px; align-items:stretch; }
-    .stat-card { min-height:154px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:14px; padding:18px 12px; box-shadow:0 8px 24px rgba(43,59,37,.08); }
-    .stat-icon { width:56px; height:56px; margin:0 auto 12px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
-    .stat-icon svg { width:26px; height:26px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0 14px; align-items:stretch; }
+    .stat-card { min-height:112px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:12px; padding:12px 10px; box-shadow:0 6px 18px rgba(43,59,37,.07); }
+    .stat-icon { width:42px; height:42px; margin:0 auto 8px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
+    .stat-icon svg { width:21px; height:21px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
     .stat-icon .icon-fill { fill:currentColor; stroke:none; }
     .stat-icon[data-icon="star"] { background:#f6edd6; color:#d28b00; }
     .stat-icon[data-icon="download"] { background:#e9f2e5; color:var(--accent); }
     .stat-icon[data-icon="heart"] { background:#f6eadb; color:#dc4b30; }
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
-    .stat-value { font-size:30px; line-height:1; font-weight:950; letter-spacing:-.035em; }
-    .stat-label { margin-top:8px; color:#3d4440; font-size:13px; font-weight:800; line-height:1.18; }
-    .composition-panel { margin:0 0 18px; border:1px solid #dfe7dc; border-radius:16px; background:#fffefb; padding:18px; }
-    .composition-head { margin-bottom:14px; }
-    .composition-title { font-size:18px; font-weight:950; color:#14241d; }
-    .composition-subtitle { color:#657069; font-size:13px; margin-top:3px; }
+    .stat-value { font-size:24px; line-height:1; font-weight:950; letter-spacing:-.035em; }
+    .stat-label { margin-top:5px; color:#3d4440; font-size:11px; font-weight:800; line-height:1.15; }
+    .composition-panel { margin:0 0 14px; border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; padding:14px; }
+    .composition-head { margin-bottom:9px; }
+    .composition-title { font-size:16px; font-weight:950; color:#14241d; }
+    .composition-subtitle { color:#657069; font-size:11px; margin-top:2px; }
     .composition-list { display:grid; gap:0; }
-    .composition-row { display:grid; grid-template-columns:44px minmax(96px,1fr) minmax(110px,1.4fr) 38px; gap:12px; align-items:center; padding:10px 0; border-bottom:1px dashed #e5ebe1; }
+    .composition-row { display:grid; grid-template-columns:34px minmax(82px,1fr) minmax(96px,1.4fr) 30px; gap:10px; align-items:center; padding:7px 0; border-bottom:1px dashed #e5ebe1; }
     .composition-row:last-child { border-bottom:0; }
-    .composition-icon { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:#e9f4e8; color:#17713f; }
-    .composition-icon svg { width:18px; height:18px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
-    .composition-label { min-width:0; color:#14241d; font-weight:900; font-size:14px; line-height:1.1; }
-    .composition-label small { display:block; color:#657069; font-size:11px; font-weight:700; margin-top:2px; }
-    .composition-track { height:10px; border-radius:999px; background:#f0f1ef; overflow:hidden; }
+    .composition-icon { width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:#e9f4e8; color:#17713f; }
+    .composition-icon svg { width:15px; height:15px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+    .composition-label { min-width:0; color:#14241d; font-weight:900; font-size:12px; line-height:1.05; }
+    .composition-label small { display:block; color:#657069; font-size:10px; font-weight:700; margin-top:2px; }
+    .composition-track { height:8px; border-radius:999px; background:#f0f1ef; overflow:hidden; }
     .composition-fill { height:100%; min-width:0; border-radius:999px; background:linear-gradient(90deg,#1b8a4b,#17713f); box-shadow:0 2px 7px rgba(23,113,63,.18); }
-    .composition-value { color:#14241d; text-align:right; font-weight:950; font-size:18px; }
+    .composition-value { color:#14241d; text-align:right; font-weight:950; font-size:15px; }
     .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; max-width:520px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
     .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
     .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
