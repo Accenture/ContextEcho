@@ -91,6 +91,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("20+ user turns or detected context compactions", INDEX_HTML)
 
     def test_top_stats_are_embedded_in_support_card(self):
+        self.assertIn('<a class="github" href="https://github.com/Accenture/ContextEcho"', INDEX_HTML)
+        self.assertIn('<a class="dataset" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho"', INDEX_HTML)
+        self.assertNotIn('<button class="github" type="button">Star on GitHub</button>', INDEX_HTML)
+        self.assertNotIn('<button class="dataset" type="button">Like Dataset</button>', INDEX_HTML)
         self.assertIn("Dataset Downloads", INDEX_HTML)
         self.assertIn("GitHub Stars", INDEX_HTML)
         self.assertIn("Dataset Likes", INDEX_HTML)

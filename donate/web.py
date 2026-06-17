@@ -855,10 +855,9 @@ INDEX_HTML = r"""<!doctype html>
     .support-title { font-weight:950; color:#13552f; }
     .support-copy { color:var(--muted); font-size:12px; margin-top:2px; }
     .support-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-    .support-actions a { text-decoration:none; }
-    .support-actions button { padding:8px 10px; font-size:12px; box-shadow:none; }
-    .support-actions button.github { background:#111b18; color:#fffef8; }
-    .support-actions button.dataset { background:#e8eddc; color:var(--ink); }
+    .support-actions a { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; padding:8px 10px; font-size:12px; font-weight:900; }
+    .support-actions a.github { background:#111b18; color:#fffef8; }
+    .support-actions a.dataset { background:#e8eddc; color:var(--ink); }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
     .reset-donated { margin-top:12px; justify-content:center; }
     .reset-donated button { padding:8px 12px; font-size:12px; }
@@ -1050,8 +1049,8 @@ INDEX_HTML = r"""<!doctype html>
           <div class="support-title">Help more donors find ContextEcho</div>
           <div class="support-copy">A star or like improves visibility for this benchmark.</div>
           <div class="support-actions">
-            <a href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><button class="github" type="button">Star on GitHub</button></a>
-            <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
+            <a class="github" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">Star on GitHub</a>
+            <a class="dataset" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">Like Dataset</a>
           </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
