@@ -17,7 +17,6 @@ import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-TOOLS_ROOT = REPO_ROOT.parent / "tools"
 SESSION_NAME = "session.redacted.jsonl"
 MANIFEST_NAME = "manifest.json"
 CONSENT_NAME = "CONSENT.md"
@@ -93,8 +92,7 @@ def output_tail(text: str, limit: int = 4000) -> str:
 
 
 def verify_session(path: Path, python: str) -> dict:
-    verify_cwd = TOOLS_ROOT if (TOOLS_ROOT / "donate" / "verify.py").exists() else REPO_ROOT
-    rc, out = run_cmd([python, "-m", "donate.verify", str(path.resolve())], cwd=verify_cwd)
+    rc, out = run_cmd([python, "-m", "donate.verify", str(path.resolve())], cwd=REPO_ROOT)
     return {"passed": rc == 0, "returncode": rc, "output": out}
 
 

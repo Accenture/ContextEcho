@@ -110,6 +110,7 @@ def mask_token(tok: str) -> str:
 
 _LONG_TEXT_THRESHOLD = 20000
 _VERIFY_WINDOW = 4096
+_ENTROPY_SCAN_LIMIT = 100
 
 
 def _windows_around_literals(text: str, literals: tuple[str, ...], *, window: int = _VERIFY_WINDOW) -> list[str]:
@@ -144,6 +145,29 @@ def _texts_for_literals(text: str, literals: tuple[str, ...]) -> list[str]:
     if len(text) <= _LONG_TEXT_THRESHOLD:
         return [text]
     return _windows_around_literals(text, literals) or []
+
+
+def _entropy_texts(text: str) -> list[str]:
+    """Return bounded samples for the advisory entropy pass.
+
+    Entropy findings are non-blocking. For very large JSONL records, scanning
+    the entire line can dominate maintainer review time, so keep the advisory
+    pass near strings that are already credential-shaped.
+    """
+    if len(text) <= _LONG_TEXT_THRESHOLD:
+        return [text]
+    if not _has_any_indicator(text, _DETECT_SECRETS_INDICATORS):
+        return []
+    return _windows_around_literals(text, _DETECT_SECRETS_INDICATORS + ("://",))
+
+
+def _add_entropy_hits(entropy_hits: set[str], text: str) -> None:
+    if len(entropy_hits) >= _ENTROPY_SCAN_LIMIT:
+        return
+    for sample in _entropy_texts(text):
+        if len(entropy_hits) >= _ENTROPY_SCAN_LIMIT:
+            break
+        entropy_hits.update(find_high_entropy(sample))
 
 
 def verify_text(text: str) -> dict[str, list[str]]:
@@ -203,8 +227,7 @@ def verify_text_stream(path: Path) -> dict[str, list[str]]:
     with path.open("r", encoding="utf-8", errors="replace") as f:
         for line in f:
             _merge_findings(merged, verify_text(line))
-            if len(entropy_hits) < 100:
-                entropy_hits.update(find_high_entropy(line))
+            _add_entropy_hits(entropy_hits, line)
     findings = {category: sorted(samples)[:10] for category, samples in merged.items() if samples}
     findings["high_entropy"] = [mask_token(tok) for tok in sorted(entropy_hits)[:10]]
     return findings
@@ -227,8 +250,7 @@ def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, lis
                     except json.JSONDecodeError as exc:
                         merged.setdefault("malformed_jsonl", set()).add(f"line {original_no}: {exc.msg}")
                 _merge_findings(merged, verify_text(line))
-                if len(entropy_hits) < 100:
-                    entropy_hits.update(find_high_entropy(line))
+                _add_entropy_hits(entropy_hits, line)
                 for snippet in _detect_secret_candidate_snippets(line):
                     candidate_no += 1
                     line_map[candidate_no] = original_no

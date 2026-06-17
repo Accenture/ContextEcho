@@ -134,6 +134,18 @@ class VerifyTests(unittest.TestCase):
         self.assertIn("api_key", report["blocking"])
         self.assertIn("detect_secrets", report["blocking"])
 
+    def test_large_record_without_secret_indicators_skips_full_entropy_scan(self) -> None:
+        long_record = '{"text":"' + ("ordinary redacted coding discussion " * 20000) + '"}'
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "session.redacted.jsonl"
+            path.write_text(long_record + "\n", encoding="utf-8")
+
+            with mock.patch("donate.verify.find_high_entropy", wraps=lambda text: []) as entropy:
+                report = verify_session(path)
+
+        self.assertTrue(report["passed"])
+        entropy.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
