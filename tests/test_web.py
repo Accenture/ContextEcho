@@ -90,13 +90,16 @@ class WebTests(unittest.TestCase):
     def test_pick_session_explains_research_value_threshold(self):
         self.assertIn("20+ user turns or detected context compactions", INDEX_HTML)
 
-    def test_top_stats_leave_donated_sessions_to_composition_panel(self):
+    def test_top_stats_are_embedded_in_support_card(self):
         self.assertIn("Dataset Downloads", INDEX_HTML)
         self.assertIn("GitHub Stars", INDEX_HTML)
         self.assertIn("Dataset Likes", INDEX_HTML)
-        self.assertIn(".stat-card { min-height:112px", INDEX_HTML)
+        self.assertIn('<div id="projectStats" class="stats" aria-live="polite">', INDEX_HTML)
+        self.assertLess(INDEX_HTML.index('id="projectStats"'), INDEX_HTML.index('id="step1"'))
+        self.assertIn(".hero-flow { display:grid; grid-template-columns:minmax(560px,1fr) minmax(420px,.8fr)", INDEX_HTML)
+        self.assertIn(".stat-card { min-height:78px", INDEX_HTML)
         self.assertIn("background:#fff; border:1px solid #e3e7df", INDEX_HTML)
-        self.assertIn("box-shadow:0 6px 18px", INDEX_HTML)
+        self.assertIn("box-shadow:0 5px 14px", INDEX_HTML)
         self.assertNotIn("['gift', 'Donated Sessions'", INDEX_HTML)
         self.assertNotIn('<div class="stat-card"><div class="stat-icon" data-icon="gift"', INDEX_HTML)
 

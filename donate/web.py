@@ -779,7 +779,7 @@ INDEX_HTML = r"""<!doctype html>
     .card.step { margin-top:16px; }
     .step { display:none; }
     .step.active { display:block; }
-    .hero-flow { display:grid; grid-template-columns:minmax(360px,520px) 1fr; gap:26px; align-items:center; margin-top:20px; }
+    .hero-flow { display:grid; grid-template-columns:minmax(560px,1fr) minmax(420px,.8fr); gap:26px; align-items:center; margin-top:20px; }
     .steps { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:center; min-width:0; }
     .step-pill { position:relative; display:flex; align-items:center; gap:11px; color:#6a6f6b; font-size:15px; font-weight:850; }
     .step-pill:after { content:""; height:3px; flex:1; border-radius:999px; background:#e2e4df; margin-left:6px; }
@@ -812,17 +812,17 @@ INDEX_HTML = r"""<!doctype html>
     .intro-head { display:flex; gap:22px; align-items:flex-start; padding-bottom:20px; border-bottom:1px solid var(--line); }
     .folder-icon { width:76px; height:76px; border-radius:18px; display:grid; place-items:center; background:linear-gradient(135deg,#eef6d4,#f7faeb); }
     .folder-icon:before { content:""; width:42px; height:29px; border:3px solid var(--accent); border-radius:6px; box-sizing:border-box; box-shadow:0 -10px 0 -6px var(--accent); }
-    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0 14px; align-items:stretch; }
-    .stat-card { min-height:112px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:12px; padding:12px 10px; box-shadow:0 6px 18px rgba(43,59,37,.07); }
-    .stat-icon { width:42px; height:42px; margin:0 auto 8px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
-    .stat-icon svg { width:21px; height:21px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(82px,1fr)); gap:10px; align-items:stretch; min-width:330px; }
+    .stat-card { min-height:78px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:10px; padding:8px 9px; box-shadow:0 5px 14px rgba(43,59,37,.06); }
+    .stat-icon { width:28px; height:28px; margin:0 auto 5px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
+    .stat-icon svg { width:15px; height:15px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
     .stat-icon .icon-fill { fill:currentColor; stroke:none; }
     .stat-icon[data-icon="star"] { background:#f6edd6; color:#d28b00; }
     .stat-icon[data-icon="download"] { background:#e9f2e5; color:var(--accent); }
     .stat-icon[data-icon="heart"] { background:#f6eadb; color:#dc4b30; }
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
-    .stat-value { font-size:24px; line-height:1; font-weight:950; letter-spacing:-.035em; }
-    .stat-label { margin-top:5px; color:#3d4440; font-size:11px; font-weight:800; line-height:1.15; }
+    .stat-value { font-size:17px; line-height:1; font-weight:950; letter-spacing:-.025em; }
+    .stat-label { margin-top:4px; color:#3d4440; font-size:9px; font-weight:800; line-height:1.1; }
     .composition-panel { margin:0 0 14px; border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; padding:14px; }
     .composition-head { margin-bottom:9px; }
     .composition-title { font-size:16px; font-weight:950; color:#14241d; }
@@ -837,7 +837,7 @@ INDEX_HTML = r"""<!doctype html>
     .composition-track { height:8px; border-radius:999px; background:#f0f1ef; overflow:hidden; }
     .composition-fill { height:100%; min-width:0; border-radius:999px; background:linear-gradient(90deg,#1b8a4b,#17713f); box-shadow:0 2px 7px rgba(23,113,63,.18); }
     .composition-value { color:#14241d; text-align:right; font-weight:950; font-size:15px; }
-    .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; max-width:520px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
+    .support-card { display:flex; gap:14px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
     .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
     .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
     .bow-head:before, .bow-head:after { content:""; position:absolute; top:9px; width:3px; height:3px; border-radius:50%; background:#17201c; }
@@ -1023,8 +1023,8 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:1fr; } .composition-row { grid-template-columns:38px minmax(84px,1fr) 38px; gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) 38px; gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -1054,6 +1054,11 @@ INDEX_HTML = r"""<!doctype html>
             <a href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><button class="dataset" type="button">Like Dataset</button></a>
           </div>
         </div>
+        <div id="projectStats" class="stats" aria-live="polite">
+          <div class="stat-card"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Dataset Downloads</div></div>
+          <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
+          <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
+        </div>
       </div>
       <div class="steps">
         <span id="pill1" class="step-pill active"><span class="step-num">1</span><span>Pick a Session</span></span>
@@ -1072,11 +1077,6 @@ INDEX_HTML = r"""<!doctype html>
             <h2>1. Pick a Session</h2>
             <p class="muted">Choose a real session. Discovery shows sessions with 20+ user turns or detected context compactions.</p>
           </div>
-        </div>
-        <div id="projectStats" class="stats" aria-live="polite">
-          <div class="stat-card"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Dataset Downloads</div></div>
-          <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
-          <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
