@@ -245,16 +245,19 @@ Face staging token is never shipped to donors. See
 > submitted identity fields for review, support, and duplicate checks.
 
 Maintainers convert accepted private staging submissions into the next public
-dataset candidate with:
+dataset candidate with one command:
 
 ```bash
-make intake-donations RUN_QUICK=1 PROMOTE=1
-make update-release-metadata
+bash scripts/run-maintainer-intake.sh
 ```
 
+This bootstraps a Python 3.14 maintainer environment, downloads staged
+submissions, checks duplicate/session lineage, runs technical review and quick
+validation, promotes accepted sessions, and regenerates/checks public metadata.
 Accepted sessions are copied into `data_archive_release_v2/data/sessions/`,
 with consent, manifests, review reports, and a donation ledger under
-`data_archive_release_v2/data/donations/`.
+`data_archive_release_v2/data/donations/`. The lower-level Make targets remain
+available for debugging individual stages.
 See [`MAINTAINER_DONATION_WORKFLOW.md`](MAINTAINER_DONATION_WORKFLOW.md) for
 the full donor-to-ledger workflow and maintainer checklist.
 

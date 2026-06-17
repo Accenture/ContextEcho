@@ -8,6 +8,7 @@
         fig-app-anchor-decay fig-app-anchor-size fig-app-crossjudge \
         fig-app-crosssession fig-app-full25 fig-app-onset \
         download-donations intake-donations promote-donation reset-donation-test-state \
+        maintainer-intake \
         update-contributors check-contributors update-dataset-card check-dataset-card \
         update-release-metadata check-release-metadata \
         review-donation review-donation-quick \
@@ -32,6 +33,7 @@ help:
 	@echo "    make verify-pii       run PII redaction grep audit on data_archive_release/"
 	@echo "    make smoke-test       run a 1-cell harness check"
 	@echo "    make download-donations                  download private HF staging donations"
+	@echo "    make maintainer-intake                   one-command full intake + promotion + metadata"
 	@echo "    make intake-donations                    download + technical-review all pending donations"
 	@echo "    make intake-donations RUN_QUICK=1        include quick validation gate"
 	@echo "    make intake-donations PROMOTE=1          promote accepted donations into data_archive_release_v2/"
@@ -123,6 +125,9 @@ smoke-test:
 
 download-donations:
 	$(PYTHON) scripts/download_donations.py
+
+maintainer-intake:
+	bash scripts/run-maintainer-intake.sh
 
 intake-donations:
 	$(PYTHON) scripts/intake_donations.py \
