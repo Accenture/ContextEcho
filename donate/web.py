@@ -582,12 +582,15 @@ def _parse_dataset_card_coverage(markdown: str) -> dict:
         value = composition.get(axis, "")
         if not value or value.lower() == "none yet":
             return 0
+        m = re.match(r"\s*(\d[\d,]*)\b", value)
+        if m:
+            return int(m.group(1).replace(",", ""))
         return len([part for part in value.split(",") if part.strip() and not part.strip().startswith("+")])
 
     return {
         "sessions": as_int("Active public/candidate sessions tracked locally") or as_int("Public v1 founding sessions"),
         "contributors": as_int("Public contributors in leaderboard"),
-        "institutions": unique_count("Public contributor institutions"),
+        "institutions": unique_count("Institution coverage") or unique_count("Public contributor institutions"),
         "agents": unique_count("Agent / harness"),
         "models": unique_count("Model family"),
         "organizations": unique_count("Model organization"),

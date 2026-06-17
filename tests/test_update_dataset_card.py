@@ -65,10 +65,57 @@ class UpdateDatasetCardTests(unittest.TestCase):
 
             card = render_dataset_card(root)
 
-        self.assertIn("Example University (1)", card)
+        self.assertIn("Institution coverage | 1 institution", card)
+        self.assertNotIn("Example University", card)
         self.assertIn("Codex CLI (1)", card)
         self.assertIn("ACCEPTABLE | 1", card)
         self.assertIn("SUPERSEDED | 1", card)
+        self.assertNotIn("donor@example.com", card)
+
+    def test_card_counts_public_anonymous_institution_coverage(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "data_archive_release_v2"
+            donation = root / "data" / "donations" / "donor-one"
+            donation.mkdir(parents=True)
+            (donation / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "public_anonymous": True,
+                        "contributor_email": "donor@example.com",
+                        "contributor_institute": "Private Lab",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            ledger = root / "data" / "donations" / "ledger.jsonl"
+            ledger.write_text(
+                json.dumps(
+                    {
+                        "submission_id": "submission-one",
+                        "decision": "ACCEPTABLE",
+                        "manifest_path": "data/donations/donor-one/manifest.json",
+                        "contributor": "Named Donor",
+                        "credit_name": "Named Donor",
+                        "public_anonymous": True,
+                        "institute": "Private Lab",
+                        "agent": "Codex CLI",
+                        "model": "GPT-5",
+                        "org": "OpenAI",
+                        "turns": 120,
+                        "compactions": 2,
+                        "domain": "agentic-coding",
+                        "language": "Python",
+                        "session_sha256": "abc",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            card = render_dataset_card(root)
+
+        self.assertIn("Institution coverage | 1 institution", card)
+        self.assertNotIn("Private Lab", card)
         self.assertNotIn("donor@example.com", card)
 
     def test_check_mode_reports_stale_card(self):

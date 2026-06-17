@@ -69,9 +69,16 @@ def value_counts(values: list[str], limit: int = 8) -> str:
     return ", ".join(parts)
 
 
-def public_institutions(sessions: list[SessionEntry]) -> list[str]:
-    # Emails and individual private identity fields stay out of the public card.
-    return [s.institute for s in sessions if s.institute and not s.contributor.lower().startswith("anonymous donor")]
+def coverage_count(values: list[str], singular: str, plural: str) -> str:
+    count = len(set(v for v in values if v))
+    label = singular if count == 1 else plural
+    return f"{count} {label}"
+
+
+def institution_coverage(sessions: list[SessionEntry]) -> list[str]:
+    # Emails and donor-level identity links stay out of the public card. The
+    # aggregate coverage count can still include public-anonymous donations.
+    return [s.institute for s in sessions if s.institute]
 
 
 def render_dataset_card(dataset_root: Path = Path("data_archive_release_v2")) -> str:
@@ -123,7 +130,7 @@ def render_dataset_card(dataset_root: Path = Path("data_archive_release_v2")) ->
         f"| Task domain | {md_escape(value_counts([s.domain for s in counted]))} |",
         f"| Primary language | {md_escape(value_counts([s.language for s in counted]))} |",
         f"| Privacy tier | {md_escape(value_counts([s.privacy_tier for s in counted if s.privacy_tier]))} |",
-        f"| Public contributor institutions | {md_escape(value_counts(public_institutions(counted)))} |",
+        f"| Institution coverage | {md_escape(coverage_count(institution_coverage(counted), 'institution', 'institutions'))} |",
         "",
         "## Donation And Promotion Pipeline",
         "",
@@ -146,8 +153,9 @@ def render_dataset_card(dataset_root: Path = Path("data_archive_release_v2")) ->
         "",
         "Donors may submit maintainer-visible name, email, and institute fields while",
         "choosing to appear publicly as anonymous. Public leaderboard names and this",
-        "dataset card never publish donor email addresses. Institution counts include",
-        "only public non-anonymous contributor rows with an institution value.",
+        "dataset card never publish donor email addresses or donor-to-institution",
+        "links. Institution coverage is reported only as aggregate dataset",
+        "composition.",
         "",
         "## Current Ledger Counts",
         "",

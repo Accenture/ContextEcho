@@ -32,7 +32,7 @@ not included.
 | Task domain | agentic-coding (6), manuscript-writing (1), non-coding-docs (1), web-frontend (1) |
 | Primary language | mixed (8), Python (1) |
 | Privacy tier | full_redacted (6) |
-| Public contributor institutions | none yet |
+| Institution coverage | 6 institutions |
 
 ## Donation And Promotion Pipeline
 
@@ -55,8 +55,9 @@ marked `SUPERSEDED` and stops counting as an active session.
 
 Donors may submit maintainer-visible name, email, and institute fields while
 choosing to appear publicly as anonymous. Public leaderboard names and this
-dataset card never publish donor email addresses. Institution counts include
-only public non-anonymous contributor rows with an institution value.
+dataset card never publish donor email addresses or donor-to-institution
+links. Institution coverage is reported only as aggregate dataset
+composition.
 
 ## Current Ledger Counts
 
