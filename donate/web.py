@@ -823,14 +823,20 @@ INDEX_HTML = r"""<!doctype html>
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
     .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
     .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
-    .coverage-radar { margin:0 0 18px; border:1px solid #dfe7dc; border-radius:16px; background:#fffefb; padding:14px; display:grid; place-items:center; }
-    .radar-plot { width:min(100%, 320px); height:250px; overflow:visible; }
-    .radar-axis { stroke:#d8e1d5; stroke-width:1; }
-    .radar-ring { fill:none; stroke:#e7ede3; stroke-width:1; }
-    .radar-area { fill:rgba(23,113,63,.2); stroke:#17713f; stroke-width:2; }
-    .radar-point { fill:#17713f; stroke:#fffefb; stroke-width:2; }
-    .radar-label { fill:#4f5b54; font-size:10px; font-weight:900; text-anchor:middle; dominant-baseline:middle; }
-    .radar-label-value { fill:#14241d; font-size:13px; font-weight:950; }
+    .composition-panel { margin:0 0 18px; border:1px solid #dfe7dc; border-radius:16px; background:#fffefb; padding:18px; }
+    .composition-head { margin-bottom:14px; }
+    .composition-title { font-size:18px; font-weight:950; color:#14241d; }
+    .composition-subtitle { color:#657069; font-size:13px; margin-top:3px; }
+    .composition-list { display:grid; gap:0; }
+    .composition-row { display:grid; grid-template-columns:44px minmax(96px,1fr) minmax(110px,1.4fr) 38px; gap:12px; align-items:center; padding:10px 0; border-bottom:1px dashed #e5ebe1; }
+    .composition-row:last-child { border-bottom:0; }
+    .composition-icon { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:#e9f4e8; color:#17713f; }
+    .composition-icon svg { width:18px; height:18px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+    .composition-label { min-width:0; color:#14241d; font-weight:900; font-size:14px; line-height:1.1; }
+    .composition-label small { display:block; color:#657069; font-size:11px; font-weight:700; margin-top:2px; }
+    .composition-track { height:10px; border-radius:999px; background:#f0f1ef; overflow:hidden; }
+    .composition-fill { height:100%; min-width:0; border-radius:999px; background:linear-gradient(90deg,#1b8a4b,#17713f); box-shadow:0 2px 7px rgba(23,113,63,.18); }
+    .composition-value { color:#14241d; text-align:right; font-weight:950; font-size:18px; }
     .support-card { display:flex; gap:12px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; max-width:520px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
     .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
     .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
@@ -1018,7 +1024,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:1fr; } .radar-plot { max-width:280px; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:1fr; } .composition-row { grid-template-columns:38px minmax(84px,1fr) 38px; gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -1072,7 +1078,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
           <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
         </div>
-        <div id="coverageRadar" class="coverage-radar" aria-label="Public dataset coverage radar"></div>
+        <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
         <div class="row reset-donated">
           <button id="clearDonatedBtn" class="secondary">Clear all local donated labels</button>
@@ -1186,7 +1192,12 @@ const statIcons = {
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 2.4l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.47l-5.9 3.1 1.13-6.57-4.78-4.66 6.6-.96L12 2.4z"/></svg>',
   download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 17.5V20h14v-2.5"/></svg>',
   heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 21s-7.25-4.45-9.35-8.7C.93 8.82 3.05 5 6.9 5c2.05 0 3.47 1.08 4.1 2.02C11.63 6.08 13.05 5 15.1 5c3.85 0 5.97 3.82 4.25 7.3C19.25 16.55 12 21 12 21z"/></svg>',
-  gift: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v10H4z"/><path d="M3 6h18v4H3z"/><path d="M12 6v14"/><path d="M12 6c-2.8 0-4.7-.85-4.7-2.2C7.3 2.8 8.05 2 9.05 2 10.8 2 12 6 12 6z"/><path d="M12 6c2.8 0 4.7-.85 4.7-2.2 0-1-.75-1.8-1.75-1.8C13.2 2 12 6 12 6z"/></svg>'
+  users: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  handHeart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 14h2.8a2 2 0 1 0 0-4H11"/><path d="M4 20V9a2 2 0 0 1 2-2h3.5"/><path d="M6 18h8l5.4-5.4a2 2 0 0 1 2.8 2.8L17 20H6"/><path d="M12 5.2C12.7 4.3 14.2 4 15.2 5c1 1 1 2.5 0 3.5L12 11.5 8.8 8.5a2.5 2.5 0 0 1 0-3.5c1-1 2.5-.7 3.2.2z"/></svg>',
+  institute: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M5 10h14"/><path d="M6 10v9"/><path d="M10 10v9"/><path d="M14 10v9"/><path d="M18 10v9"/><path d="M12 3l8 5H4z"/></svg>',
+  bot: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="10" rx="3"/><path d="M12 8V4"/><path d="M8.5 13h.01"/><path d="M15.5 13h.01"/><path d="M9 18v2"/><path d="M15 18v2"/></svg>',
+  cube: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 21 7.5v9L12 21.5 3 16.5v-9z"/><path d="M12 12.5v9"/><path d="m3 7.5 9 5 9-5"/><path d="m7.5 5 9 5"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>'
 };
 function iconSvg(name){ return statIcons[name] || ''; }
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
@@ -1307,54 +1318,40 @@ function renderProjectStats(){
       <div class="stat-label">${escapeHtml(label)}</div>
     </div>
   `).join('');
-  renderCoverageRadar();
+  renderDatasetComposition();
 }
-function coverageMetric(label, key, target, shortLabel){
+function compositionMetric(label, key, target, icon, note=''){
   const coverage = publicStats.coverage || {};
   const raw = Number(coverage[key] || 0);
   const value = Number.isFinite(raw) ? raw : 0;
-  return {label, key, value, target, shortLabel, score: Math.max(0, Math.min(1, value / target))};
+  return {label, key, value, target, icon, note, pct: Math.max(0, Math.min(100, (value / target) * 100))};
 }
-function radarPoint(cx, cy, radius, metric, i, total){
-  const angle = -Math.PI / 2 + (Math.PI * 2 * i / total);
-  const r = radius * metric.score;
-  return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r];
-}
-function renderCoverageRadar(){
-  const target = $('coverageRadar');
+function renderDatasetComposition(){
+  const target = $('datasetComposition');
   if(!target) return;
   const metrics = [
-    coverageMetric('Sessions', 'sessions', 12, 'Sessions'),
-    coverageMetric('Contributors', 'contributors', 12, 'Donors'),
-    coverageMetric('Institutions', 'institutions', 8, 'Institutes'),
-    coverageMetric('Agents', 'agents', 8, 'Agents'),
-    coverageMetric('Models', 'models', 12, 'Models'),
-    coverageMetric('Ctx compactions', 'compactions', 40, 'Ctx cmp'),
+    compositionMetric('Sessions', 'sessions', 12, 'users'),
+    compositionMetric('Donors', 'contributors', 12, 'handHeart'),
+    compositionMetric('Institutes', 'institutions', 8, 'institute'),
+    compositionMetric('Agents', 'agents', 8, 'bot'),
+    compositionMetric('Models', 'models', 12, 'cube'),
+    compositionMetric('Ctx cmp', 'compactions', 40, 'grid', 'Context Windows'),
   ];
-  const cx = 160, cy = 126, radius = 72;
-  const points = metrics.map((m,i) => radarPoint(cx, cy, radius, m, i, metrics.length));
-  const polygon = points.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
-  const axes = metrics.map((m,i) => {
-    const [x,y] = radarPoint(cx, cy, radius, {...m, score:1}, i, metrics.length);
-    return `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
-  }).join('');
-  const axisLabels = metrics.map((m,i) => {
-    const [x,y] = radarPoint(cx, cy, radius + 38, {...m, score:1}, i, metrics.length);
-    return `<text class="radar-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}"><tspan class="radar-label-value" x="${x.toFixed(1)}" dy="-0.45em">${escapeHtml(fmtStat(m.value))}</tspan><tspan x="${x.toFixed(1)}" dy="1.25em">${escapeHtml(m.shortLabel || m.label)}</tspan></text>`;
-  }).join('');
-  const pointDots = points.map(([x,y]) => `<circle class="radar-point" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4"></circle>`).join('');
-  const rings = [0.33, 0.66, 1].map(scale => {
-    const ring = metrics.map((m,i) => radarPoint(cx, cy, radius * scale, {...m, score:1}, i, metrics.length)).map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
-    return `<polygon class="radar-ring" points="${ring}"></polygon>`;
-  }).join('');
   target.innerHTML = `
-    <svg class="radar-plot" viewBox="0 0 320 250" role="img" aria-label="Coverage radar chart">
-      ${rings}
-      ${axes}
-      <polygon class="radar-area" points="${polygon}"></polygon>
-      ${pointDots}
-      ${axisLabels}
-    </svg>
+    <div class="composition-head">
+      <div class="composition-title">Dataset Composition</div>
+      <div class="composition-subtitle">Breakdown of key public coverage metrics.</div>
+    </div>
+    <div class="composition-list">
+      ${metrics.map(m => `
+        <div class="composition-row">
+          <div class="composition-icon">${iconSvg(m.icon)}</div>
+          <div class="composition-label">${escapeHtml(m.label)}${m.note ? `<small>${escapeHtml(m.note)}</small>` : ''}</div>
+          <div class="composition-track" aria-hidden="true"><div class="composition-fill" style="width:${m.pct.toFixed(1)}%"></div></div>
+          <div class="composition-value">${escapeHtml(fmtStat(m.value))}</div>
+        </div>
+      `).join('')}
+    </div>
   `;
 }
 function verifyFailureSummary(data){

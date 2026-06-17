@@ -90,23 +90,23 @@ class WebTests(unittest.TestCase):
     def test_pick_session_explains_research_value_threshold(self):
         self.assertIn("20+ user turns or detected context compactions", INDEX_HTML)
 
-    def test_top_stats_leave_donated_sessions_to_radar(self):
+    def test_top_stats_leave_donated_sessions_to_composition_panel(self):
         self.assertIn("Dataset Downloads", INDEX_HTML)
         self.assertIn("GitHub Stars", INDEX_HTML)
         self.assertIn("Dataset Likes", INDEX_HTML)
         self.assertNotIn("['gift', 'Donated Sessions'", INDEX_HTML)
         self.assertNotIn('<div class="stat-card"><div class="stat-icon" data-icon="gift"', INDEX_HTML)
 
-    def test_pick_session_shows_public_coverage_radar(self):
-        self.assertIn("coverageRadar", INDEX_HTML)
-        self.assertIn("renderCoverageRadar", INDEX_HTML)
-        self.assertIn("Coverage radar chart", INDEX_HTML)
-        self.assertIn("Ctx compactions", INDEX_HTML)
-        self.assertIn("radar-label", INDEX_HTML)
-        self.assertIn("radar-label-value", INDEX_HTML)
+    def test_pick_session_shows_public_dataset_composition(self):
+        self.assertIn("datasetComposition", INDEX_HTML)
+        self.assertIn("renderDatasetComposition", INDEX_HTML)
+        self.assertIn("Dataset Composition", INDEX_HTML)
+        self.assertIn("Breakdown of key public coverage metrics", INDEX_HTML)
+        self.assertIn("composition-track", INDEX_HTML)
         self.assertIn("Institutes", INDEX_HTML)
         self.assertIn("Ctx cmp", INDEX_HTML)
-        self.assertNotIn("radar-grid", INDEX_HTML)
+        self.assertNotIn("Coverage radar chart", INDEX_HTML)
+        self.assertNotIn("renderCoverageRadar", INDEX_HTML)
 
     def test_auto_repair_removes_detect_secrets_value(self):
         with TemporaryDirectory() as td:
