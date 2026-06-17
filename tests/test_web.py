@@ -88,7 +88,7 @@ class WebTests(unittest.TestCase):
         self.assertNotIn(">Retry failed upload<", INDEX_HTML)
 
     def test_pick_session_explains_research_value_threshold(self):
-        self.assertIn("20+ user turns or detected context compactions", INDEX_HTML)
+        self.assertIn("100+ turns or context compactions", INDEX_HTML)
 
     def test_top_stats_are_embedded_in_support_card(self):
         self.assertIn('<a class="github" href="https://github.com/Accenture/ContextEcho"', INDEX_HTML)

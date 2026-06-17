@@ -1074,7 +1074,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="folder-icon"></div>
           <div>
             <h2>1. Pick a Session</h2>
-            <p class="muted">Choose a real session. Discovery shows sessions with 20+ user turns or detected context compactions.</p>
+            <p class="muted">Choose a real session with 100+ turns or context compactions.</p>
           </div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>

@@ -104,7 +104,7 @@ def print_session_table(sessions: list[dict], start: int = 0, limit: int = 15) -
     end = min(start + limit, len(sessions))
     print(f"\n  Showing {start + 1}-{end} of {len(sessions)} usable sessions.")
     print("  UserT = human/user prompt turns. CCmp = context compactions detected in local logs.")
-    print("  Minimum shown: 20+ user turns, or any detected context compaction.")
+    print("  Minimum shown: 100+ user turns, or any detected context compaction.")
     print("  Fit: best = 100+ user turns with context compactions.")
     if end < len(sessions):
         print("  Type 'more' to show more, a number to select, or paste a session path.")
