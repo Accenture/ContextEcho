@@ -75,4 +75,4 @@ else
 fi
 
 echo "[ContextEcho] starting local donation wizard..."
-"${UV_RUN[@]}" run --refresh --no-project --python 3.11 --managed-python --with "$SPEC" contextecho-donate "$@"
+"${UV_RUN[@]}" run --refresh --no-project --python 3.14 --managed-python --with "$SPEC" contextecho-donate "$@"

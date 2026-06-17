@@ -1,5 +1,5 @@
 # ContextEcho runtime dependencies — pinned for BlackDuck Hub OSS scan.
-# Python 3.13 (also tested on 3.11). All deps are permissive-licensed
+# Python 3.14. All deps are permissive-licensed
 # (MIT / Apache-2.0 / BSD).
 
 # LLM provider clients

@@ -198,7 +198,7 @@ curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/ru
 ```
 
 This bootstraps a private `uv` runner with `python3` if needed, then launches
-the local browser wizard from the GitHub repo with Python 3.11. Verified
+the local browser wizard from the GitHub repo with Python 3.14. Verified
 donations upload through the official ContextEcho relay:
 
 ```text
