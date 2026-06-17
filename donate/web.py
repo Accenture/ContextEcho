@@ -924,6 +924,9 @@ INDEX_HTML = r"""<!doctype html>
     .leaderboard-row { padding:10px 16px; border-top:1px solid #eef1e8; font-size:13px; }
     .leaderboard-row.pending { margin:0 8px 8px; border:1px solid #d8ecce; border-radius:12px; background:#f1fbeb; color:#13552f; font-weight:900; }
     .leaderboard-row span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .leaderboard-pager { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px 16px 12px; border-top:1px solid #eef1e8; color:#5f6662; font-size:12px; font-weight:800; }
+    .leaderboard-pager button { border:0; border-radius:10px; background:#e9efe2; color:#14241d; font-size:12px; font-weight:900; padding:8px 12px; min-height:34px; cursor:pointer; }
+    .leaderboard-pager button:disabled { opacity:.45; cursor:not-allowed; }
     .leader-person { font-weight:850; }
     .success-detail-card { border:1px solid #e0e6dc; border-radius:20px; padding:22px; background:#fffefb; box-shadow:0 12px 34px rgba(43,59,37,.07); position:sticky; top:16px; }
     .detail-section { padding:0 0 20px; margin-bottom:20px; border-bottom:1px dashed #dfe5da; }
@@ -1190,6 +1193,7 @@ const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonated
 const discoveryCacheKey = 'contextechoDiscoveryCacheV1';
 const discoveryCacheMaxAgeMs = 30 * 60 * 1000;
 let publicStats = {};
+let leaderboardPreviewPage = null;
 const statIcons = {
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 2.4l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.47l-5.9 3.1 1.13-6.57-4.78-4.66 6.6-.96L12 2.4z"/></svg>',
   download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 17.5V20h14v-2.5"/></svg>',
@@ -1645,13 +1649,20 @@ function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compa
     estimatedRank: Math.max(1, simulatedLeaders.findIndex(row => row.pending) + 1),
   };
 }
+function leaderboardDefaultPage(model, pageSize){
+  return Math.max(0, Math.floor((Math.max(1, model.estimatedRank) - 1) / pageSize));
+}
 function leaderboardPreviewHtml(model){
   const totalDonorsEstimate = model.simulatedLeaders.length;
   const rankLabel = `${model.estimatedRank}/${totalDonorsEstimate}`;
-  const windowSize = 5;
-  const windowStart = Math.max(0, Math.min(model.estimatedRank - 3, Math.max(0, model.simulatedLeaders.length - windowSize)));
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil(model.simulatedLeaders.length / pageSize));
+  const defaultPage = leaderboardDefaultPage(model, pageSize);
+  if(leaderboardPreviewPage === null || leaderboardPreviewPage >= totalPages) leaderboardPreviewPage = defaultPage;
+  const currentPage = Math.max(0, Math.min(Number(leaderboardPreviewPage || 0), totalPages - 1));
+  const windowStart = currentPage * pageSize;
   const displayRank = rank => ({1:'🥇', 2:'🥈', 3:'🥉'}[rank] || String(rank));
-  const leaderboardRows = model.simulatedLeaders.slice(windowStart, windowStart + windowSize).map((row, offset) => {
+  const leaderboardRows = model.simulatedLeaders.slice(windowStart, windowStart + pageSize).map((row, offset) => {
     const rank = windowStart + offset + 1;
     const sessionText = row.pending
       ? `${row.sessions} pending`
@@ -1672,7 +1683,28 @@ function leaderboardPreviewHtml(model){
     <div class="leaderboard-title"><span class="leaderboard-title-main">♙ <span>Leaderboard preview</span></span><span class="leaderboard-rank-badge">Estimated rank: ${escapeHtml(rankLabel)}</span></div>
     <div class="leaderboard-head"><span>#</span><span>Contributor</span><span>Sessions</span><span>Points</span></div>
     ${leaderboardRows || '<div class="leaderboard-row"><span>—</span><span class="leader-person">Accepted leaderboard loads after release</span><span>—</span><span>—</span></div>'}
+    ${totalPages > 1 ? `
+      <div class="leaderboard-pager">
+        <button type="button" id="leaderPrev" ${currentPage <= 0 ? 'disabled' : ''}>Previous</button>
+        <span>Page ${currentPage + 1} of ${totalPages}</span>
+        <button type="button" id="leaderNext" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Next</button>
+      </div>
+    ` : ''}
   `;
+}
+function bindLeaderboardPager(model){
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil((model.simulatedLeaders || []).length / pageSize));
+  const prev = $('leaderPrev');
+  const next = $('leaderNext');
+  if(prev) prev.onclick = () => {
+    leaderboardPreviewPage = Math.max(0, Number(leaderboardPreviewPage || 0) - 1);
+    renderSubmitLeaderboardPreview();
+  };
+  if(next) next.onclick = () => {
+    leaderboardPreviewPage = Math.min(totalPages - 1, Number(leaderboardPreviewPage || 0) + 1);
+    renderSubmitLeaderboardPreview();
+  };
 }
 function renderSubmitLeaderboardPreview(){
   const target = $('submitLeaderboardPreview');
@@ -1692,6 +1724,7 @@ function renderSubmitLeaderboardPreview(){
       </div>
     </div>
   `;
+  bindLeaderboardPager(model);
   $('publicAnonymous').onchange = renderSubmitLeaderboardPreview;
 }
 function renderSubmitResult(data){

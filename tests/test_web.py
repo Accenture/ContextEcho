@@ -38,6 +38,9 @@ class WebTests(unittest.TestCase):
         self.assertIn("Show me anonymously on the public leaderboard", INDEX_HTML)
         self.assertIn("Default is public credit", INDEX_HTML)
         self.assertIn("You (anonymous)", INDEX_HTML)
+        self.assertIn("leaderboardPreviewPage", INDEX_HTML)
+        self.assertIn("Page ${currentPage + 1} of ${totalPages}", INDEX_HTML)
+        self.assertIn("bindLeaderboardPager(model)", INDEX_HTML)
         self.assertIn("pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicCreditName)", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
 
