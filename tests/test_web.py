@@ -94,6 +94,9 @@ class WebTests(unittest.TestCase):
         self.assertIn("Dataset Downloads", INDEX_HTML)
         self.assertIn("GitHub Stars", INDEX_HTML)
         self.assertIn("Dataset Likes", INDEX_HTML)
+        self.assertIn(".stat-card { min-height:154px", INDEX_HTML)
+        self.assertIn("background:#fff; border:1px solid #e3e7df", INDEX_HTML)
+        self.assertIn("box-shadow:0 8px 24px", INDEX_HTML)
         self.assertNotIn("['gift', 'Donated Sessions'", INDEX_HTML)
         self.assertNotIn('<div class="stat-card"><div class="stat-icon" data-icon="gift"', INDEX_HTML)
 

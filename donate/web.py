@@ -812,17 +812,17 @@ INDEX_HTML = r"""<!doctype html>
     .intro-head { display:flex; gap:22px; align-items:flex-start; padding-bottom:20px; border-bottom:1px solid var(--line); }
     .folder-icon { width:76px; height:76px; border-radius:18px; display:grid; place-items:center; background:linear-gradient(135deg,#eef6d4,#f7faeb); }
     .folder-icon:before { content:""; width:42px; height:29px; border:3px solid var(--accent); border-radius:6px; box-sizing:border-box; box-shadow:0 -10px 0 -6px var(--accent); }
-    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin:22px 0 20px; }
-    .stat-card { text-align:center; background:transparent; border:0; padding:0; min-height:0; }
-    .stat-icon { width:52px; height:52px; margin:0 auto 8px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:22px 0 20px; align-items:stretch; }
+    .stat-card { min-height:154px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:14px; padding:18px 12px; box-shadow:0 8px 24px rgba(43,59,37,.08); }
+    .stat-icon { width:56px; height:56px; margin:0 auto 12px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
     .stat-icon svg { width:26px; height:26px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
     .stat-icon .icon-fill { fill:currentColor; stroke:none; }
     .stat-icon[data-icon="star"] { background:#f6edd6; color:#d28b00; }
     .stat-icon[data-icon="download"] { background:#e9f2e5; color:var(--accent); }
     .stat-icon[data-icon="heart"] { background:#f6eadb; color:#dc4b30; }
     .stat-icon[data-icon="gift"] { background:#efedf5; color:#7657a8; }
-    .stat-value { font-size:23px; line-height:1; font-weight:950; letter-spacing:-.035em; }
-    .stat-label { margin-top:5px; color:#3d4440; font-size:12px; font-weight:650; }
+    .stat-value { font-size:30px; line-height:1; font-weight:950; letter-spacing:-.035em; }
+    .stat-label { margin-top:8px; color:#3d4440; font-size:13px; font-weight:800; line-height:1.18; }
     .composition-panel { margin:0 0 18px; border:1px solid #dfe7dc; border-radius:16px; background:#fffefb; padding:18px; }
     .composition-head { margin-bottom:14px; }
     .composition-title { font-size:18px; font-weight:950; color:#14241d; }
