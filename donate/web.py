@@ -863,8 +863,8 @@ INDEX_HTML = r"""<!doctype html>
     .support-actions a.dataset { background:#e8eddc; color:var(--ink); }
     .ranking-wrap { position:relative; display:inline-flex; }
     .ranking-button { background:#dfeadd; color:#13552f; }
-    .ranking-popover { display:none; position:absolute; left:0; top:calc(100% + 10px); z-index:40; width:min(520px, calc(100vw - 60px)); border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; box-shadow:0 18px 48px rgba(43,59,37,.16); overflow:hidden; }
-    .ranking-wrap.open .ranking-popover, .ranking-wrap:hover .ranking-popover { display:block; }
+    .ranking-popover { display:none; position:fixed; left:24px; top:120px; z-index:1000; width:min(520px, calc(100vw - 60px)); max-height:min(430px, calc(100vh - 32px)); border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; box-shadow:0 18px 48px rgba(43,59,37,.16); overflow:auto; }
+    .ranking-popover.open { display:block; }
     .ranking-popover-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid #e8eee3; color:#12332a; font-weight:950; }
     .ranking-popover-count { color:#657069; font-size:11px; font-weight:800; }
     .ranking-table-head, .ranking-table-row { display:grid; grid-template-columns:42px minmax(150px,1fr) 78px 64px; gap:10px; align-items:center; }
@@ -1363,6 +1363,23 @@ function renderCurrentRankingPopover(){
     <div class="ranking-table-head"><span>#</span><span>Contributor</span><span>Sessions</span><span>Points</span></div>
     ${rows || '<div class="ranking-table-row"><span>—</span><span>Leaderboard loads after release</span><span>—</span><span>—</span></div>'}
   `;
+}
+function showRankingPopover(){
+  const popover = $('rankingPopover');
+  const button = $('rankingBtn');
+  if(!popover || !button) return;
+  const rect = button.getBoundingClientRect();
+  const width = Math.min(520, Math.max(280, window.innerWidth - 60));
+  const left = Math.max(16, Math.min(rect.left, window.innerWidth - width - 16));
+  const top = Math.max(16, Math.min(rect.bottom + 10, window.innerHeight - 180));
+  popover.style.width = width + 'px';
+  popover.style.left = left + 'px';
+  popover.style.top = top + 'px';
+  popover.classList.add('open');
+}
+function hideRankingPopover(){
+  const popover = $('rankingPopover');
+  if(popover) popover.classList.remove('open');
 }
 function compositionMetric(label, key, target, icon, note=''){
   const coverage = publicStats.coverage || {};
@@ -2167,12 +2184,21 @@ $('nextPage').onclick = () => { if((page + 1) * pageSize < sessions.length){ pag
 if($('rankingBtn')){
   $('rankingBtn').onclick = ev => {
     ev.stopPropagation();
-    $('rankingWrap').classList.toggle('open');
+    if($('rankingPopover').classList.contains('open')) hideRankingPopover();
+    else showRankingPopover();
   };
-  $('rankingWrap').onmouseleave = () => $('rankingWrap').classList.remove('open');
+  $('rankingWrap').onmouseenter = showRankingPopover;
+  $('rankingWrap').onmouseleave = ev => {
+    const next = ev.relatedTarget;
+    if(next && $('rankingPopover').contains(next)) return;
+    hideRankingPopover();
+  };
+  $('rankingPopover').onmouseleave = hideRankingPopover;
   document.addEventListener('click', ev => {
-    if(!$('rankingWrap').contains(ev.target)) $('rankingWrap').classList.remove('open');
+    if(!$('rankingWrap').contains(ev.target) && !$('rankingPopover').contains(ev.target)) hideRankingPopover();
   });
+  window.addEventListener('resize', hideRankingPopover);
+  window.addEventListener('scroll', hideRankingPopover, true);
 }
 $('safeConfirm').onchange = refreshButtons;
 $('reviewConfirm').onchange = refreshButtons;
