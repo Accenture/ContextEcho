@@ -861,17 +861,7 @@ INDEX_HTML = r"""<!doctype html>
     .support-actions a, .support-actions button { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; padding:8px 10px; font-size:12px; font-weight:900; min-height:34px; box-shadow:none; }
     .support-actions a.github { background:#111b18; color:#fffef8; }
     .support-actions a.dataset { background:#e8eddc; color:var(--ink); }
-    .ranking-wrap { position:relative; display:inline-flex; }
-    .ranking-button { background:#dfeadd; color:#13552f; }
-    .ranking-popover { display:none; position:fixed; left:24px; top:120px; z-index:2147483647; width:min(520px, calc(100vw - 60px)); max-height:min(430px, calc(100vh - 32px)); border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; box-shadow:0 18px 48px rgba(43,59,37,.16); overflow:auto; }
-    .ranking-popover.open { display:block; }
-    .ranking-popover-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid #e8eee3; color:#12332a; font-weight:950; }
-    .ranking-popover-count { color:#657069; font-size:11px; font-weight:800; }
-    .ranking-table-head, .ranking-table-row { display:grid; grid-template-columns:42px minmax(150px,1fr) 78px 64px; gap:10px; align-items:center; }
-    .ranking-table-head { padding:8px 14px; color:#5f6662; font-size:11px; font-weight:900; background:#f5f7f2; border-bottom:1px solid #edf1e8; }
-    .ranking-table-row { padding:9px 14px; border-bottom:1px solid #edf1e8; font-size:12px; color:#17201c; }
-    .ranking-table-row:last-child { border-bottom:0; }
-    .ranking-table-row span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .support-actions a.ranking { background:#dfeadd; color:#13552f; }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
     .reset-donated { margin-top:12px; justify-content:center; }
     .reset-donated button { padding:8px 12px; font-size:12px; }
@@ -1068,9 +1058,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="support-actions">
             <a class="github" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">Star on GitHub</a>
             <a class="dataset" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">Like Dataset</a>
-            <span id="rankingWrap" class="ranking-wrap">
-              <button id="rankingBtn" class="ranking-button" type="button">Ranking</button>
-            </span>
+            <a class="ranking" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener noreferrer">Ranking</a>
           </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
@@ -1193,7 +1181,6 @@ INDEX_HTML = r"""<!doctype html>
     <div class="inline-status" id="submitStatus"></div>
   </section>
 </main>
-<div id="rankingPopover" class="ranking-popover" aria-live="polite"></div>
 <script>
 let sessions = [];
 let selected = null;
@@ -1340,46 +1327,6 @@ function renderProjectStats(){
     </div>
   `).join('');
   renderDatasetComposition();
-  renderCurrentRankingPopover();
-}
-function renderCurrentRankingPopover(){
-  const target = $('rankingPopover');
-  if(!target) return;
-  const leaders = publicStats.leaderboard || [];
-  const displayRank = rank => ({1:'🥇', 2:'🥈', 3:'🥉'}[rank] || String(rank));
-  const rows = leaders.map((row, idx) => `
-    <div class="ranking-table-row">
-      <span>${escapeHtml(displayRank(idx + 1))}</span>
-      <span>${escapeHtml(row.contributor || 'anonymous')}</span>
-      <span>${escapeHtml(row.sessions || '—')}</span>
-      <span>${escapeHtml(row.points || '—')}</span>
-    </div>
-  `).join('');
-  target.innerHTML = `
-    <div class="ranking-popover-head">
-      <span>Current Ranking</span>
-      <span class="ranking-popover-count">${escapeHtml(String(leaders.length || 0))} donors</span>
-    </div>
-    <div class="ranking-table-head"><span>#</span><span>Contributor</span><span>Sessions</span><span>Points</span></div>
-    ${rows || '<div class="ranking-table-row"><span>—</span><span>Leaderboard loads after release</span><span>—</span><span>—</span></div>'}
-  `;
-}
-function showRankingPopover(){
-  const popover = $('rankingPopover');
-  const button = $('rankingBtn');
-  if(!popover || !button) return;
-  const rect = button.getBoundingClientRect();
-  const width = Math.min(520, Math.max(280, window.innerWidth - 60));
-  const left = Math.max(16, Math.min(rect.left, window.innerWidth - width - 16));
-  const top = Math.max(16, Math.min(rect.bottom + 10, window.innerHeight - 180));
-  popover.style.width = width + 'px';
-  popover.style.left = left + 'px';
-  popover.style.top = top + 'px';
-  popover.classList.add('open');
-}
-function hideRankingPopover(){
-  const popover = $('rankingPopover');
-  if(popover) popover.classList.remove('open');
 }
 function compositionMetric(label, key, target, icon, note=''){
   const coverage = publicStats.coverage || {};
@@ -1447,7 +1394,6 @@ async function loadProjectStats(){
     if(!r.ok) return;
     publicStats = await r.json();
     renderProjectStats();
-    renderCurrentRankingPopover();
     renderSubmitLeaderboardPreview();
   } catch(e) {
     renderProjectStats();
@@ -2181,24 +2127,6 @@ $('clearDonatedBtn').onclick = async () => {
 };
 $('prevPage').onclick = () => { if(page > 0){ page--; renderSessions(); } };
 $('nextPage').onclick = () => { if((page + 1) * pageSize < sessions.length){ page++; renderSessions(); } };
-if($('rankingBtn')){
-  $('rankingBtn').onclick = ev => {
-    ev.stopPropagation();
-    showRankingPopover();
-  };
-  $('rankingWrap').onmouseenter = showRankingPopover;
-  $('rankingPopover').onmouseleave = hideRankingPopover;
-  document.addEventListener('mousemove', ev => {
-    if(!$('rankingPopover').classList.contains('open')) return;
-    if($('rankingWrap').contains(ev.target) || $('rankingPopover').contains(ev.target)) return;
-    hideRankingPopover();
-  });
-  document.addEventListener('click', ev => {
-    if(!$('rankingWrap').contains(ev.target) && !$('rankingPopover').contains(ev.target)) hideRankingPopover();
-  });
-  window.addEventListener('resize', hideRankingPopover);
-  window.addEventListener('scroll', hideRankingPopover, true);
-}
 $('safeConfirm').onchange = refreshButtons;
 $('reviewConfirm').onchange = refreshButtons;
 document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
