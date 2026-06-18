@@ -2184,16 +2184,15 @@ $('nextPage').onclick = () => { if((page + 1) * pageSize < sessions.length){ pag
 if($('rankingBtn')){
   $('rankingBtn').onclick = ev => {
     ev.stopPropagation();
-    if($('rankingPopover').classList.contains('open')) hideRankingPopover();
-    else showRankingPopover();
+    showRankingPopover();
   };
   $('rankingWrap').onmouseenter = showRankingPopover;
-  $('rankingWrap').onmouseleave = ev => {
-    const next = ev.relatedTarget;
-    if(next && $('rankingPopover').contains(next)) return;
-    hideRankingPopover();
-  };
   $('rankingPopover').onmouseleave = hideRankingPopover;
+  document.addEventListener('mousemove', ev => {
+    if(!$('rankingPopover').classList.contains('open')) return;
+    if($('rankingWrap').contains(ev.target) || $('rankingPopover').contains(ev.target)) return;
+    hideRankingPopover();
+  });
   document.addEventListener('click', ev => {
     if(!$('rankingWrap').contains(ev.target) && !$('rankingPopover').contains(ev.target)) hideRankingPopover();
   });

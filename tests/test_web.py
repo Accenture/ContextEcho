@@ -109,6 +109,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("showRankingPopover", INDEX_HTML)
         self.assertIn("hideRankingPopover", INDEX_HTML)
         self.assertIn("getBoundingClientRect", INDEX_HTML)
+        self.assertIn("document.addEventListener('mousemove'", INDEX_HTML)
         self.assertIn('<div id="projectStats" class="stats" aria-live="polite">', INDEX_HTML)
         self.assertLess(INDEX_HTML.index('id="projectStats"'), INDEX_HTML.index('id="step1"'))
         self.assertIn(".hero-flow { display:grid; grid-template-columns:minmax(560px,1fr) minmax(420px,.8fr)", INDEX_HTML)
