@@ -840,7 +840,7 @@ INDEX_HTML = r"""<!doctype html>
     .composition-track { height:8px; border-radius:999px; background:#f0f1ef; overflow:hidden; }
     .composition-fill { height:100%; min-width:0; border-radius:999px; background:linear-gradient(90deg,#1b8a4b,#17713f); box-shadow:0 2px 7px rgba(23,113,63,.18); }
     .composition-value { color:#14241d; text-align:right; font-weight:950; font-size:15px; }
-    .support-card { display:flex; gap:14px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:hidden; }
+    .support-card { display:flex; gap:14px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:visible; position:relative; z-index:5; }
     .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
     .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); transform-origin:50% 100%; animation:bowHead 2.4s ease-in-out infinite; }
     .bow-head:before, .bow-head:after { content:""; position:absolute; top:9px; width:3px; height:3px; border-radius:50%; background:#17201c; }
@@ -863,7 +863,7 @@ INDEX_HTML = r"""<!doctype html>
     .support-actions a.dataset { background:#e8eddc; color:var(--ink); }
     .ranking-wrap { position:relative; display:inline-flex; }
     .ranking-button { background:#dfeadd; color:#13552f; }
-    .ranking-popover { display:none; position:absolute; left:0; top:calc(100% + 10px); z-index:20; width:min(520px, calc(100vw - 60px)); border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; box-shadow:0 18px 48px rgba(43,59,37,.16); overflow:hidden; }
+    .ranking-popover { display:none; position:absolute; left:0; top:calc(100% + 10px); z-index:40; width:min(520px, calc(100vw - 60px)); border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; box-shadow:0 18px 48px rgba(43,59,37,.16); overflow:hidden; }
     .ranking-wrap.open .ranking-popover, .ranking-wrap:hover .ranking-popover { display:block; }
     .ranking-popover-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid #e8eee3; color:#12332a; font-weight:950; }
     .ranking-popover-count { color:#657069; font-size:11px; font-weight:800; }

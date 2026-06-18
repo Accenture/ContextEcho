@@ -106,6 +106,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("renderCurrentRankingPopover", INDEX_HTML)
         self.assertIn("Current Ranking", INDEX_HTML)
         self.assertIn("rankingWrap').onmouseleave", INDEX_HTML)
+        self.assertIn(".support-card { display:flex; gap:14px; align-items:center; border:1px solid #dce7d2; border-radius:16px; padding:10px 12px; background:linear-gradient(135deg,#fff8df,#eef8e8); overflow:visible;", INDEX_HTML)
         self.assertIn('<div id="projectStats" class="stats" aria-live="polite">', INDEX_HTML)
         self.assertLess(INDEX_HTML.index('id="projectStats"'), INDEX_HTML.index('id="step1"'))
         self.assertIn(".hero-flow { display:grid; grid-template-columns:minmax(560px,1fr) minmax(420px,.8fr)", INDEX_HTML)
