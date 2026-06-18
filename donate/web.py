@@ -863,7 +863,7 @@ INDEX_HTML = r"""<!doctype html>
     .support-actions a.dataset { background:#e8eddc; color:var(--ink); }
     .ranking-wrap { position:relative; display:inline-flex; }
     .ranking-button { background:#dfeadd; color:#13552f; }
-    .ranking-popover { display:none; position:fixed; left:24px; top:120px; z-index:1000; width:min(520px, calc(100vw - 60px)); max-height:min(430px, calc(100vh - 32px)); border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; box-shadow:0 18px 48px rgba(43,59,37,.16); overflow:auto; }
+    .ranking-popover { display:none; position:fixed; left:24px; top:120px; z-index:2147483647; width:min(520px, calc(100vw - 60px)); max-height:min(430px, calc(100vh - 32px)); border:1px solid #dfe7dc; border-radius:14px; background:#fffefb; box-shadow:0 18px 48px rgba(43,59,37,.16); overflow:auto; }
     .ranking-popover.open { display:block; }
     .ranking-popover-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid #e8eee3; color:#12332a; font-weight:950; }
     .ranking-popover-count { color:#657069; font-size:11px; font-weight:800; }
@@ -1070,7 +1070,6 @@ INDEX_HTML = r"""<!doctype html>
             <a class="dataset" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">Like Dataset</a>
             <span id="rankingWrap" class="ranking-wrap">
               <button id="rankingBtn" class="ranking-button" type="button">Ranking</button>
-              <div id="rankingPopover" class="ranking-popover" aria-live="polite"></div>
             </span>
           </div>
         </div>
@@ -1194,6 +1193,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="inline-status" id="submitStatus"></div>
   </section>
 </main>
+<div id="rankingPopover" class="ranking-popover" aria-live="polite"></div>
 <script>
 let sessions = [];
 let selected = null;
