@@ -26,7 +26,6 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "Continue in Local Wizard" in LANDING
     assert "/api/health" in LANDING
     assert "localPorts" in LANDING
-    assert "Local wizard preview" in LANDING
+    assert "Local wizard preview" not in LANDING
     assert "Discover sessions" in LANDING
-    assert "Discover Sessions" in LANDING
     assert "manual file picker fallback" in LANDING

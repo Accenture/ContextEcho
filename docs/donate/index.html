@@ -10,7 +10,7 @@
     body { margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:linear-gradient(120deg,#fff7d9 0%,#f7fbf2 48%,#dcefe1 100%); }
     main { max-width:1120px; margin:0 auto; padding:42px 20px 56px; }
     .shell { background:#fffef8; border:1px solid var(--line); border-radius:24px; padding:34px; box-shadow:0 24px 60px rgba(37,54,42,.12); }
-    .hero { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:32px; align-items:center; }
+    .hero { max-width:860px; }
     h1 { margin:0; font-size:48px; line-height:1.02; letter-spacing:0; }
     .lede { margin:16px 0 0; font-size:20px; line-height:1.45; color:var(--muted); max-width:760px; }
     .privacy { margin-top:18px; color:#13552f; font-weight:800; }
@@ -32,19 +32,8 @@
     .num { width:34px; height:34px; border-radius:999px; background:#e3f2df; color:#13552f; display:flex; align-items:center; justify-content:center; font-weight:950; margin-bottom:14px; }
     .step strong { display:block; font-size:16px; margin-bottom:6px; }
     .step span { color:var(--muted); font-size:14px; line-height:1.4; }
-    .wizard-preview { border-radius:18px; border:1px solid var(--line); background:white; padding:16px; box-shadow:0 16px 36px rgba(43,59,37,.12); }
-    .preview-label { font-size:13px; color:#13552f; font-weight:950; text-transform:uppercase; letter-spacing:.04em; margin-bottom:10px; }
-    .bar { height:28px; border-radius:10px; background:#eef2ea; display:flex; align-items:center; gap:6px; padding:0 10px; }
-    .dot { width:8px; height:8px; border-radius:999px; background:#8fa093; }
-    .screen { margin-top:12px; border-radius:12px; background:var(--cream); padding:16px; min-height:230px; }
-    .screen-title { color:#15382b; font-size:22px; line-height:1.05; font-weight:950; margin-bottom:14px; }
-    .session-row { margin-top:10px; display:grid; grid-template-columns:1fr 54px; gap:10px; align-items:center; padding:10px; border-radius:10px; background:white; border:1px solid #e8eee3; }
-    .session-name { font-size:13px; font-weight:900; color:#182820; }
-    .session-meta { color:var(--muted); font-size:11px; margin-top:2px; }
-    .badge { min-height:24px; border-radius:999px; background:#dff2dc; color:#13552f; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:950; }
-    .scan-button { margin-top:14px; height:42px; border-radius:10px; background:var(--green); color:white; display:flex; align-items:center; justify-content:center; font-weight:950; }
     .note { margin-top:22px; color:var(--muted); font-size:14px; line-height:1.45; }
-    @media (max-width:900px) { .hero,.steps { grid-template-columns:1fr; } h1 { font-size:36px; } .shell { padding:24px; } }
+    @media (max-width:900px) { .steps { grid-template-columns:1fr; } h1 { font-size:36px; } .shell { padding:24px; } }
   </style>
 </head>
 <body>
@@ -65,16 +54,6 @@
             <a class="button secondary" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md">Current Ranking</a>
           </div>
           <div id="bridgeStatus" class="bridge-status">Run the command once. When the local wizard starts, this page will detect it and enable Continue.</div>
-        </div>
-      </div>
-      <div class="wizard-preview" aria-label="Local wizard preview">
-        <div class="preview-label">Local wizard preview</div>
-        <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-        <div class="screen">
-          <div class="screen-title">Pick a Session</div>
-          <div class="session-row"><div><div class="session-name">Claude Code project</div><div class="session-meta">2.5k turns · 17 compactions</div></div><div class="badge">best</div></div>
-          <div class="session-row"><div><div class="session-name">Codex CLI session</div><div class="session-meta">564 turns · 8 compactions</div></div><div class="badge">best</div></div>
-          <div class="scan-button">Discover Sessions</div>
         </div>
       </div>
     </div>
