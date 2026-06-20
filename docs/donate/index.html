@@ -21,6 +21,10 @@
     button, a.button { border:0; border-radius:12px; padding:12px 16px; font-weight:900; font-size:15px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
     button.primary, a.button.primary { background:var(--green); color:white; box-shadow:0 12px 28px rgba(22,120,67,.22); }
     a.button.secondary { background:#e8eddc; color:var(--ink); }
+    a.button.local { background:#dfeadd; color:#13552f; opacity:.76; }
+    a.button.local.ready { background:var(--green); color:white; pointer-events:auto; opacity:1; box-shadow:0 12px 28px rgba(22,120,67,.22); }
+    .bridge-status { margin-top:12px; color:var(--muted); font-size:14px; line-height:1.4; }
+    .bridge-status.ready { color:#13552f; font-weight:850; }
     .panel { border:1px solid var(--line); border-radius:16px; padding:22px; background:white; }
     .panel h2 { margin:0 0 14px; font-size:22px; }
     .steps { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:30px; }
@@ -56,9 +60,11 @@
           <pre id="command">curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash</pre>
           <div class="actions">
             <button class="primary" id="copyCommand" type="button">Copy Command</button>
+            <a class="button local" id="openLocalWizard" href="http://127.0.0.1:8766/">Continue in Local Wizard</a>
             <a class="button secondary" href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md">Privacy Details</a>
             <a class="button secondary" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md">Current Ranking</a>
           </div>
+          <div id="bridgeStatus" class="bridge-status">Run the command once. When the local wizard starts, this page will detect it and enable Continue.</div>
         </div>
       </div>
       <div class="wizard-preview" aria-label="Local wizard preview">
@@ -83,11 +89,58 @@
 </main>
 <script>
 const button = document.getElementById('copyCommand');
+const openLocalWizard = document.getElementById('openLocalWizard');
+const bridgeStatus = document.getElementById('bridgeStatus');
+const localPorts = Array.from({length: 20}, (_, i) => 8766 + i);
+
+async function probeLocalWizard(port) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 450);
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/health`, {
+      cache: 'no-store',
+      mode: 'cors',
+      signal: controller.signal
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data && data.ok ? `http://127.0.0.1:${port}/` : null;
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function findLocalWizard() {
+  for (const port of localPorts) {
+    const url = await probeLocalWizard(port);
+    if (url) return url;
+  }
+  return null;
+}
+
+async function refreshLocalWizardLink() {
+  const url = await findLocalWizard();
+  if (!url) return false;
+  openLocalWizard.href = url;
+  openLocalWizard.classList.add('ready');
+  bridgeStatus.textContent = `Local wizard is running at ${url}`;
+  bridgeStatus.classList.add('ready');
+  return true;
+}
+
+refreshLocalWizardLink();
+const bridgeTimer = setInterval(async () => {
+  if (await refreshLocalWizardLink()) clearInterval(bridgeTimer);
+}, 2500);
+
 button.addEventListener('click', async () => {
   const text = document.getElementById('command').textContent.trim();
   try {
     await navigator.clipboard.writeText(text);
     button.textContent = 'Copied';
+    bridgeStatus.textContent = 'Command copied. Run it in Terminal; this page will enable Continue when the local wizard starts.';
     setTimeout(() => { button.textContent = 'Copy Command'; }, 1800);
   } catch (e) {
     button.textContent = 'Select Command Above';

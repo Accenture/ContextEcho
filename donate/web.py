@@ -2470,12 +2470,16 @@ class Handler(BaseHTTPRequestHandler):
                 return False
             raise
 
-    def _json(self, payload: dict, status: int = 200) -> None:
+    def _json(self, payload: dict, status: int = 200, *, cors: bool = False) -> None:
         body = json.dumps(payload, indent=2).encode()
         try:
             self.send_response(status)
             self.send_header("content-type", "application/json")
             self.send_header("content-length", str(len(body)))
+            if cors:
+                self.send_header("access-control-allow-origin", "*")
+                self.send_header("access-control-allow-methods", "GET, OPTIONS")
+                self.send_header("access-control-allow-headers", "content-type")
             self.end_headers()
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             return
@@ -2515,6 +2519,9 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self._write_body(body)
             return
+        if parsed.path == "/api/health":
+            self._json({"ok": True, "app": "ContextEcho donation wizard"}, cors=True)
+            return
         if parsed.path == "/api/discover":
             qs = parse_qs(parsed.query)
             raw_max = qs.get("max_per_agent", ["50"])[0]
@@ -2543,6 +2550,18 @@ class Handler(BaseHTTPRequestHandler):
                 return
             return
         self._json({"error": "not found"}, 404)
+
+    def do_OPTIONS(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/health":
+            self.send_response(204)
+            self.send_header("access-control-allow-origin", "*")
+            self.send_header("access-control-allow-methods", "GET, OPTIONS")
+            self.send_header("access-control-allow-headers", "content-type")
+            self.end_headers()
+            return
+        self.send_response(404)
+        self.end_headers()
 
     def do_POST(self) -> None:
         try:

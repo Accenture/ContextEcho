@@ -95,6 +95,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("100+ turns or context compactions", INDEX_HTML)
         self.assertIn("Choose session file manually", INDEX_HTML)
         self.assertIn("/api/import_session", INDEX_HTML)
+        self.assertIn("/api/health", Path("donate/web.py").read_text(encoding="utf-8"))
+        self.assertIn("access-control-allow-origin", Path("donate/web.py").read_text(encoding="utf-8"))
         self.assertIn("Fallback only: use this if discovery finds nothing", INDEX_HTML)
         self.assertIn("Manual session file imported locally", INDEX_HTML)
 
