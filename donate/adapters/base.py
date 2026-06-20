@@ -218,10 +218,10 @@ def conversation_fingerprint(path: Path, max_rows: int = FINGERPRINT_ROWS) -> st
 def session_label(project: str, fingerprint: str, path: Path | None = None) -> str:
     """Display label that distinguishes multiple sessions from one project."""
     suffix = ""
-    if path is not None and path.stem and path.stem != "session":
-        suffix = safe_project_name_from_path(path.stem)[:12]
+    if path is not None and path.name:
+        suffix = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[:4]
     if not suffix:
-        suffix = (fingerprint or "").replace("conv-", "")[:6]
+        suffix = (fingerprint or "").replace("conv-", "")[:4]
     return f"{project} · {suffix}" if suffix else project
 
 

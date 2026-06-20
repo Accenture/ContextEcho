@@ -62,7 +62,7 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["last_active"], "2026-01-04")
         self.assertEqual(info["modified"], "2026-01-04")
         self.assertEqual(info["project"], "work-agent-project")
-        self.assertEqual(info["session_label"], "work-agent-project · rollout")
+        self.assertRegex(info["session_label"], r"^work-agent-project · [0-9a-f]{4}$")
         self.assertTrue(info["conversation_fingerprint"].startswith("conv-"))
         self.assertEqual(info["fingerprint_version"], "structure-v1")
 
@@ -159,7 +159,7 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["turns"], 1)
         self.assertEqual(info["compactions"], 1)
         self.assertEqual(info["project"], "client-safe-repo")
-        self.assertRegex(info["session_label"], r"^client-safe-repo · [0-9a-f]{6}$")
+        self.assertRegex(info["session_label"], r"^client-safe-repo · [0-9a-f]{4}$")
 
     def test_same_folder_sessions_have_distinct_display_labels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -174,8 +174,8 @@ class DiscoverTests(unittest.TestCase):
 
         self.assertEqual(info_a["project"], info_b["project"])
         self.assertNotEqual(info_a["session_label"], info_b["session_label"])
-        self.assertEqual(info_a["session_label"], "client-safe-repo · session-a")
-        self.assertEqual(info_b["session_label"], "client-safe-repo · session-b")
+        self.assertRegex(info_a["session_label"], r"^client-safe-repo · [0-9a-f]{4}$")
+        self.assertRegex(info_b["session_label"], r"^client-safe-repo · [0-9a-f]{4}$")
 
     def test_claude_tool_result_user_records_are_not_turns(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
