@@ -93,6 +93,7 @@ class WebTests(unittest.TestCase):
 
     def test_pick_session_explains_research_value_threshold(self):
         self.assertIn("100+ turns or context compactions", INDEX_HTML)
+        self.assertIn("s.session_label || s.project", INDEX_HTML)
         self.assertIn("Choose session file manually", INDEX_HTML)
         self.assertIn("/api/import_session", INDEX_HTML)
         self.assertIn("/api/health", Path("donate/web.py").read_text(encoding="utf-8"))

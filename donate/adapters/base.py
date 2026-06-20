@@ -215,6 +215,16 @@ def conversation_fingerprint(path: Path, max_rows: int = FINGERPRINT_ROWS) -> st
     return f"conv-{h.hexdigest()[:16]}"
 
 
+def session_label(project: str, fingerprint: str, path: Path | None = None) -> str:
+    """Display label that distinguishes multiple sessions from one project."""
+    suffix = ""
+    if path is not None and path.stem and path.stem != "session":
+        suffix = safe_project_name_from_path(path.stem)[:12]
+    if not suffix:
+        suffix = (fingerprint or "").replace("conv-", "")[:6]
+    return f"{project} · {suffix}" if suffix else project
+
+
 def dominant_model(models: dict[str, int]) -> str:
     if not models:
         return "unknown"
@@ -343,10 +353,13 @@ class GenericJsonlAdapter:
         model_label = dominant_model(models)
         started = min(event_dates) if event_dates else modified_date(path)
         last_active = max(event_dates) if event_dates else modified_date(path)
+        fingerprint = conversation_fingerprint(path)
+        project = safe_project_name_from_path(project_hint or path)
         return {
             "path": str(path),
-            "project": safe_project_name_from_path(project_hint or path),
-            "conversation_fingerprint": conversation_fingerprint(path),
+            "project": project,
+            "session_label": session_label(project, fingerprint, path),
+            "conversation_fingerprint": fingerprint,
             "fingerprint_version": "structure-v1",
             "modified": last_active,
             "started": started,

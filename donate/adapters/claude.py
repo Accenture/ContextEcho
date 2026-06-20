@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
-from donate.adapters.base import GenericJsonlAdapter, is_redacted_artifact, safe_project_name_from_path
+from donate.adapters.base import GenericJsonlAdapter, is_redacted_artifact, safe_project_name_from_path, session_label
 
 
 class ClaudeCodeAdapter(GenericJsonlAdapter):
@@ -30,6 +30,7 @@ class ClaudeCodeAdapter(GenericJsonlAdapter):
         info = super().inspect(path)
         info["agent"] = self.agent
         info["project"] = safe_project_name_from_path(path.parent.name)
+        info["session_label"] = session_label(info["project"], str(info.get("conversation_fingerprint") or ""), path)
         info["source_format"] = "claude-code-jsonl"
         info["confidence"]["agent"] = "high"
         return info
