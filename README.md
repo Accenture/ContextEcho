@@ -205,6 +205,12 @@ donations upload through the official ContextEcho relay:
 https://contextecho2026-context-echo-donation-relay.hf.space
 ```
 
+The hosted donor landing page lives at [`docs/donate/index.html`](docs/donate/index.html)
+and can be served by GitHub Pages or any static web host. It points donors to
+the one-line local scanner command; the scanner opens the browser wizard,
+discovers local Claude Code/Codex sessions automatically, and keeps raw session
+history on the donor machine.
+
 Supported donor platforms: macOS, Linux, and Windows via WSL. Native Windows
 PowerShell/CMD is not supported by the one-line launcher yet.
 
@@ -226,6 +232,11 @@ The wizard discovers local Claude Code/Codex sessions, redacts and verifies
 the selected session on your machine, writes `session.redacted.jsonl`,
 `manifest.json`, and `CONSENT.md`, then submits only those redacted artifacts
 to private maintainer review.
+
+If automatic discovery finds nothing, the browser wizard offers a manual file
+picker fallback. That fallback imports the selected file into the local
+`~/Downloads/ContextEcho_donations/` workspace before redaction; it is not a
+remote raw-session upload.
 
 Public collection routes uploads through the server-side relay so the Hugging
 Face staging token is never shipped to donors. See

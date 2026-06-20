@@ -38,6 +38,7 @@ from donate.adapters.base import is_redacted_artifact
 DONATION_ROOT = Path.home() / "Downloads" / "ContextEcho_donations"
 DONATION_REGISTRY = DONATION_ROOT / ".donated_sessions.json"
 MAX_AUTO_REPAIR_PASSES = 3
+MAX_MANUAL_IMPORT_BYTES = 1024 * 1024 * 1024
 CLIENT_DISCONNECT_ERRNOS = {errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED}
 SUBMIT_JOBS: dict[str, dict] = {}
 SUBMIT_JOBS_LOCK = threading.Lock()
@@ -79,6 +80,41 @@ def donation_output_dir(info: dict) -> Path:
     agent = safe_slug(str(info.get("agent", "agent")).lower())
     project = safe_slug(str(info.get("project", "session")))
     return DONATION_ROOT / f"{stamp}-{agent}-{project}"
+
+
+def _manual_import_path(filename: str) -> Path:
+    safe_name = safe_slug(Path(filename or "session.jsonl").stem, "session") + ".jsonl"
+    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    out_dir = DONATION_ROOT / "manual_imports"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / f"{stamp}-{safe_name}"
+
+
+def _multipart_file(content_type: str, body: bytes) -> tuple[str, bytes]:
+    match = re.search(r"boundary=(?:\"([^\"]+)\"|([^;]+))", content_type or "")
+    if not match:
+        raise ValueError("manual import requires multipart form data")
+    boundary = (match.group(1) or match.group(2) or "").encode()
+    marker = b"--" + boundary
+    for part in body.split(marker):
+        if not part or part in {b"--", b"--\r\n"}:
+            continue
+        if part.startswith(b"\r\n"):
+            part = part[2:]
+        if part.endswith(b"\r\n"):
+            part = part[:-2]
+        if part.endswith(b"--"):
+            part = part[:-2].rstrip(b"\r\n")
+        if b"\r\n\r\n" not in part:
+            continue
+        raw_headers, payload = part.split(b"\r\n\r\n", 1)
+        headers = raw_headers.decode("utf-8", errors="replace")
+        if 'name="session_file"' not in headers:
+            continue
+        filename_match = re.search(r'filename="([^"]*)"', headers)
+        filename = filename_match.group(1) if filename_match else "session.jsonl"
+        return filename, payload
+    raise ValueError("no session file found in manual import")
 
 
 def _auto_from_existing_manifest(session: Path) -> dict:
@@ -863,6 +899,9 @@ INDEX_HTML = r"""<!doctype html>
     .support-actions a.dataset { background:#e8eddc; color:var(--ink); }
     .support-actions a.ranking { background:#dfeadd; color:#13552f; }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
+    .manual-import { margin-top:12px; padding-top:12px; border-top:1px solid #e5eadf; text-align:center; }
+    .manual-import button { width:100%; justify-content:center; }
+    .manual-import .hint { margin-top:8px; color:var(--muted); font-size:12px; line-height:1.35; }
     .reset-donated { margin-top:12px; justify-content:center; }
     .reset-donated button { padding:8px 12px; font-size:12px; }
     .sessions-card { min-height:342px; }
@@ -1087,6 +1126,11 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
+        <div class="manual-import">
+          <input id="manualSessionFile" type="file" accept=".jsonl,.json,application/json" hidden>
+          <button id="manualImportBtn" class="secondary" type="button">Choose session file manually</button>
+          <div class="hint">Fallback only: use this if discovery finds nothing. The file is imported into this local wizard before redaction.</div>
+        </div>
         <div class="row reset-donated">
           <button id="clearDonatedBtn" class="secondary">Clear all local donated labels</button>
         </div>
@@ -1933,6 +1977,14 @@ async function post(url, body){
   if(!r.ok) throw new Error(data.error || r.statusText);
   return data;
 }
+async function postFile(url, file){
+  const body = new FormData();
+  body.append('session_file', file);
+  const r = await fetch(url, {method:'POST', body});
+  const data = await r.json();
+  if(!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
 async function postStream(url, body, onEvent){
   const r = await fetch(url, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
   if(!r.ok){
@@ -2105,6 +2157,33 @@ $('discoverBtn').onclick = async () => {
     $('discoverBtn').disabled = false;
     delete progressTimers.discoverProgress;
     updateProgressTime('discoverProgress', discoverTiming, {keep:!!discoverTiming});
+  }
+};
+$('manualImportBtn').onclick = () => $('manualSessionFile').click();
+$('manualSessionFile').onchange = async ev => {
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if(!file) return;
+  $('manualImportBtn').disabled = true;
+  status('discoverStatus', `Importing ${file.name} into the local wizard...`);
+  try {
+    const data = await postFile('/api/import_session', file);
+    const imported = data.session;
+    sessions = [imported, ...sessions.filter(s => s.path !== imported.path)];
+    page = 0;
+    selected = imported;
+    redacted = null;
+    appliedScrubTerms = [];
+    submitted = !!imported.donated;
+    saveDiscoveryCache();
+    renderSessions();
+    renderSelectedCard(imported, 0);
+    status('discoverStatus', 'Manual session file imported locally. Continue with Redact and Verify.');
+    refreshButtons();
+  } catch(e) {
+    status('discoverStatus','ERROR: '+friendlyRequestError(e, 'manual session import'));
+  } finally {
+    $('manualImportBtn').disabled = false;
   }
 };
 $('clearDonatedBtn').onclick = async () => {
@@ -2487,6 +2566,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_open_path()
             elif self.path == "/api/search_redacted":
                 self._handle_search_redacted()
+            elif self.path == "/api/import_session":
+                self._handle_import_session()
             elif self.path == "/api/clear_donated_label":
                 self._handle_clear_donated_label()
             elif self.path == "/api/clear_donated_labels":
@@ -2504,6 +2585,27 @@ class Handler(BaseHTTPRequestHandler):
     def _handle_redact(self) -> None:
         data = self._read_json()
         self._json(self._redact_payload(data))
+
+    def _handle_import_session(self) -> None:
+        content_length = int(self.headers.get("content-length", "0") or "0")
+        if content_length <= 0:
+            raise ValueError("choose a session file to import")
+        if content_length > MAX_MANUAL_IMPORT_BYTES:
+            raise ValueError("session file is too large for manual import; use Discover Sessions instead")
+        filename, payload = _multipart_file(self.headers.get("content-type", ""), self.rfile.read(content_length))
+        if not payload.strip():
+            raise ValueError("selected session file is empty")
+        if is_redacted_artifact(Path(filename)):
+            raise ValueError("choose the original session log, not a redacted donation artifact")
+        out = _manual_import_path(filename)
+        out.write_bytes(payload)
+        if is_redacted_artifact(out):
+            out.unlink(missing_ok=True)
+            raise ValueError("choose the original session log, not a redacted donation artifact")
+        info = discover_mod.inspect_session(out)
+        info["path"] = str(out)
+        info["manual_import"] = True
+        self._json({"session": annotate_donated([info])[0]})
 
     def _redact_payload(self, data: dict, emit=None) -> dict:
         if not data.get("confirm_safe"):

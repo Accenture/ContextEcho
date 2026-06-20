@@ -9,6 +9,7 @@ from donate.web import (
     INDEX_HTML,
     _auto_repair_until_verified,
     _load_contributors_markdown,
+    _multipart_file,
     _parse_dataset_card_coverage,
     _parse_contributor_leaderboard,
     _parse_donated_sessions,
@@ -92,6 +93,25 @@ class WebTests(unittest.TestCase):
 
     def test_pick_session_explains_research_value_threshold(self):
         self.assertIn("100+ turns or context compactions", INDEX_HTML)
+        self.assertIn("Choose session file manually", INDEX_HTML)
+        self.assertIn("/api/import_session", INDEX_HTML)
+        self.assertIn("Fallback only: use this if discovery finds nothing", INDEX_HTML)
+        self.assertIn("Manual session file imported locally", INDEX_HTML)
+
+    def test_manual_import_multipart_parser_extracts_session_file(self):
+        boundary = "----ContextEchoTestBoundary"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="session_file"; filename="session.jsonl"\r\n'
+            "Content-Type: application/json\r\n\r\n"
+            '{"role":"user","content":"hello"}\n'
+            f"\r\n--{boundary}--\r\n"
+        ).encode()
+
+        filename, payload = _multipart_file(f"multipart/form-data; boundary={boundary}", body)
+
+        self.assertEqual(filename, "session.jsonl")
+        self.assertEqual(payload, b'{"role":"user","content":"hello"}\n')
 
     def test_top_stats_are_embedded_in_support_card(self):
         self.assertIn('<a class="github" href="https://github.com/Accenture/ContextEcho"', INDEX_HTML)
