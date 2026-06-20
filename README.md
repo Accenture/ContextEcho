@@ -194,7 +194,7 @@ session it covers. We welcome contributions, and we credit them.
 Fastest donor path:
 
 ```bash
-curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/run-donate.sh | bash
+curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash
 ```
 
 This bootstraps a private `uv` runner with `python3` if needed, then launches
