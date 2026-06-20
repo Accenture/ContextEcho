@@ -21,5 +21,7 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "Donate a coding-agent session to ContextEcho" in LANDING
     assert "curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/run-donate.sh | bash" in LANDING
     assert "Raw session history stays local" in LANDING
+    assert "Local wizard preview" in LANDING
     assert "Discover sessions" in LANDING
+    assert "Discover Sessions" in LANDING
     assert "manual file picker fallback" in LANDING

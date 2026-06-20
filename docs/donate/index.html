@@ -16,7 +16,7 @@
     .privacy { margin-top:18px; color:#13552f; font-weight:800; }
     .command-card { border:1px solid #d8e6d5; background:var(--soft); border-radius:16px; padding:18px; margin-top:28px; }
     .command-label { font-size:13px; font-weight:900; color:#13552f; text-transform:uppercase; letter-spacing:.04em; }
-    pre { margin:10px 0 0; overflow:auto; border-radius:12px; padding:14px; background:#111b18; color:#fffef8; font-size:14px; line-height:1.5; }
+    pre { margin:10px 0 0; overflow:visible; white-space:pre-wrap; overflow-wrap:anywhere; border-radius:12px; padding:14px; background:#111b18; color:#fffef8; font-size:14px; line-height:1.5; }
     .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; }
     button, a.button { border:0; border-radius:12px; padding:12px 16px; font-weight:900; font-size:15px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
     button.primary, a.button.primary { background:var(--green); color:white; box-shadow:0 12px 28px rgba(22,120,67,.22); }
@@ -28,16 +28,17 @@
     .num { width:34px; height:34px; border-radius:999px; background:#e3f2df; color:#13552f; display:flex; align-items:center; justify-content:center; font-weight:950; margin-bottom:14px; }
     .step strong { display:block; font-size:16px; margin-bottom:6px; }
     .step span { color:var(--muted); font-size:14px; line-height:1.4; }
-    .browser-art { border-radius:18px; border:1px solid var(--line); background:white; padding:14px; box-shadow:0 16px 36px rgba(43,59,37,.12); }
+    .wizard-preview { border-radius:18px; border:1px solid var(--line); background:white; padding:16px; box-shadow:0 16px 36px rgba(43,59,37,.12); }
+    .preview-label { font-size:13px; color:#13552f; font-weight:950; text-transform:uppercase; letter-spacing:.04em; margin-bottom:10px; }
     .bar { height:28px; border-radius:10px; background:#eef2ea; display:flex; align-items:center; gap:6px; padding:0 10px; }
     .dot { width:8px; height:8px; border-radius:999px; background:#8fa093; }
-    .screen { margin-top:12px; border-radius:12px; background:var(--cream); padding:18px; min-height:220px; }
-    .screen-title { height:22px; width:82%; border-radius:8px; background:#15382b; }
-    .screen-row { margin-top:16px; display:grid; grid-template-columns:1fr 64px; gap:10px; }
-    .line { height:16px; border-radius:8px; background:#dfe9d8; }
-    .line.short { width:70%; }
-    .badge { height:24px; border-radius:999px; background:#cfe9cb; }
-    .scan-button { margin-top:18px; height:42px; border-radius:10px; background:var(--green); }
+    .screen { margin-top:12px; border-radius:12px; background:var(--cream); padding:16px; min-height:230px; }
+    .screen-title { color:#15382b; font-size:22px; line-height:1.05; font-weight:950; margin-bottom:14px; }
+    .session-row { margin-top:10px; display:grid; grid-template-columns:1fr 54px; gap:10px; align-items:center; padding:10px; border-radius:10px; background:white; border:1px solid #e8eee3; }
+    .session-name { font-size:13px; font-weight:900; color:#182820; }
+    .session-meta { color:var(--muted); font-size:11px; margin-top:2px; }
+    .badge { min-height:24px; border-radius:999px; background:#dff2dc; color:#13552f; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:950; }
+    .scan-button { margin-top:14px; height:42px; border-radius:10px; background:var(--green); color:white; display:flex; align-items:center; justify-content:center; font-weight:950; }
     .note { margin-top:22px; color:var(--muted); font-size:14px; line-height:1.45; }
     @media (max-width:900px) { .hero,.steps { grid-template-columns:1fr; } h1 { font-size:36px; } .shell { padding:24px; } }
   </style>
@@ -60,14 +61,14 @@
           </div>
         </div>
       </div>
-      <div class="browser-art" aria-hidden="true">
+      <div class="wizard-preview" aria-label="Local wizard preview">
+        <div class="preview-label">Local wizard preview</div>
         <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
         <div class="screen">
-          <div class="screen-title"></div>
-          <div class="screen-row"><div class="line"></div><div class="badge"></div></div>
-          <div class="screen-row"><div class="line short"></div><div class="badge"></div></div>
-          <div class="screen-row"><div class="line"></div><div class="badge"></div></div>
-          <div class="scan-button"></div>
+          <div class="screen-title">Pick a Session</div>
+          <div class="session-row"><div><div class="session-name">Claude Code project</div><div class="session-meta">2.5k turns · 17 compactions</div></div><div class="badge">best</div></div>
+          <div class="session-row"><div><div class="session-name">Codex CLI session</div><div class="session-meta">564 turns · 8 compactions</div></div><div class="badge">best</div></div>
+          <div class="scan-button">Discover Sessions</div>
         </div>
       </div>
     </div>
