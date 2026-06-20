@@ -12,6 +12,8 @@ def test_launcher_starts_local_browser_wizard_with_managed_python() -> None:
     assert "contextecho-donate" in RUN_DONATE
     assert "--python 3.14" in RUN_DONATE
     assert "--managed-python" in RUN_DONATE
+    assert "sys.version_info >= (3, 8)" in RUN_DONATE
+    assert "Python 3.10+ to bootstrap" not in RUN_DONATE
     assert "raw sessions stay on this machine" in RUN_DONATE
     assert "The local donation wizard did not start" in RUN_DONATE
     assert "Apple Silicon" in RUN_DONATE

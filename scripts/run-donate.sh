@@ -58,10 +58,10 @@ fi
 
 if ! "$python3_bin" - <<'PY' >/dev/null 2>&1
 import sys
-raise SystemExit(0 if sys.version_info >= (3, 10) else 1)
+raise SystemExit(0 if sys.version_info >= (3, 8) else 1)
 PY
 then
-  echo "ERROR: ContextEcho needs Python 3.10+ to bootstrap the local wizard." >&2
+  echo "ERROR: ContextEcho needs Python 3.8+ to bootstrap the local wizard." >&2
   echo "Found: $("$python3_bin" --version 2>&1)" >&2
   exit 1
 fi
