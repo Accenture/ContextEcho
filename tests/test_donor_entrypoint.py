@@ -28,4 +28,5 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "localPorts" in LANDING
     assert "Local wizard preview" not in LANDING
     assert "Discover sessions" in LANDING
-    assert "manual file picker fallback" in LANDING
+    assert "file picker" not in LANDING
+    assert "do not need to know where session history files live" in LANDING

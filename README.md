@@ -233,11 +233,6 @@ the selected session on your machine, writes `session.redacted.jsonl`,
 `manifest.json`, and `CONSENT.md`, then submits only those redacted artifacts
 to private maintainer review.
 
-If automatic discovery finds nothing, the browser wizard offers a manual file
-picker fallback. That fallback imports the selected file into the local
-`~/Downloads/ContextEcho_donations/` workspace before redaction; it is not a
-remote raw-session upload.
-
 Public collection routes uploads through the server-side relay so the Hugging
 Face staging token is never shipped to donors. See
 [`DONATION_RELAY.md`](DONATION_RELAY.md).
