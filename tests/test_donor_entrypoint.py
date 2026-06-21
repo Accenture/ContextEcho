@@ -24,6 +24,9 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash" in LANDING
     assert "Raw session history stays local" in LANDING
     assert "Continue in Local Wizard" in LANDING
+    assert 'aria-disabled="true"' in LANDING
+    assert "Run the command first" in LANDING
+    assert "setAttribute('aria-disabled', 'false')" in LANDING
     assert "/api/health" in LANDING
     assert "localPorts" in LANDING
     assert "Local wizard preview" not in LANDING
