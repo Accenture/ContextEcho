@@ -1712,6 +1712,9 @@ function bindLeaderboardPager(model){
     renderSubmitLeaderboardPreview();
   };
 }
+function scrollToSubmitResult(){
+  requestAnimationFrame(() => $('submitResult').scrollIntoView({behavior:'smooth', block:'start'}));
+}
 function renderSubmitLeaderboardPreview(){
   const target = $('submitLeaderboardPreview');
   if(!target) return;
@@ -1794,6 +1797,7 @@ function renderSubmitResult(data){
     if(data.receipt_path && $('revealReceipt')) $('revealReceipt').onclick = () => post('/api/open_path', {path:data.receipt_path, reveal:true}).catch(e => status('submitStatus','ERROR: '+e.message));
     if($('copyReceiptPath') && data.receipt_path) $('copyReceiptPath').onclick = () => navigator.clipboard?.writeText(data.receipt_path).catch(()=>{});
     $('submitAnother').onclick = () => { resetSessionArtifacts(); goStep(1); };
+    scrollToSubmitResult();
     return;
   }
   $('submitResult').innerHTML = `
@@ -1843,6 +1847,7 @@ function renderSubmitResult(data){
   if($('copySubmissionId')) $('copySubmissionId').onclick = () => navigator.clipboard?.writeText(publicId).catch(()=>{});
   if($('copyReceiptPath') && data.receipt_path) $('copyReceiptPath').onclick = () => navigator.clipboard?.writeText(data.receipt_path).catch(()=>{});
   $('submitAnother').onclick = () => { resetSessionArtifacts(); goStep(1); };
+  scrollToSubmitResult();
 }
 function resetSessionArtifacts(){
   selected = null;

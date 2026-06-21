@@ -41,6 +41,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("leaderboardPreviewPage", INDEX_HTML)
         self.assertIn("Page ${currentPage + 1} of ${totalPages}", INDEX_HTML)
         self.assertIn("bindLeaderboardPager(model)", INDEX_HTML)
+        self.assertIn("scrollToSubmitResult", INDEX_HTML)
+        self.assertIn("scrollIntoView({behavior:'smooth', block:'start'})", INDEX_HTML)
         self.assertIn("pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicCreditName)", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
 
