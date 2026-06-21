@@ -129,7 +129,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("Breakdown of key public coverage metrics", INDEX_HTML)
         self.assertIn("composition-track", INDEX_HTML)
         self.assertIn("Institutes", INDEX_HTML)
-        self.assertIn("Ctx cmp", INDEX_HTML)
+        self.assertIn("Total turns", INDEX_HTML)
+        self.assertNotIn("compositionMetric('Agents'", INDEX_HTML)
+        self.assertNotIn("compositionMetric('Models'", INDEX_HTML)
+        self.assertNotIn("compositionMetric('Ctx cmp'", INDEX_HTML)
         self.assertNotIn("Coverage radar chart", INDEX_HTML)
         self.assertNotIn("renderCoverageRadar", INDEX_HTML)
 

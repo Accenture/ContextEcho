@@ -1341,9 +1341,7 @@ function renderDatasetComposition(){
     compositionMetric('Sessions', 'sessions', 12, 'users'),
     compositionMetric('Donors', 'contributors', 12, 'handHeart'),
     compositionMetric('Institutes', 'institutions', 8, 'institute'),
-    compositionMetric('Agents', 'agents', 8, 'bot'),
-    compositionMetric('Models', 'models', 12, 'cube'),
-    compositionMetric('Ctx cmp', 'compactions', 40, 'grid', 'Context Windows'),
+    compositionMetric('Total turns', 'turns', 50000, 'grid'),
   ];
   target.innerHTML = `
     <div class="composition-head">
