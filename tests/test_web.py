@@ -208,6 +208,19 @@ class WebTests(unittest.TestCase):
         self.assertEqual(rows[0]["sessions_num"], 3)
         self.assertEqual(rows[0]["turns_num"], 18380)
 
+    def test_parse_contributor_leaderboard_keeps_all_ranked_rows(self):
+        lines = [
+            "| Rank | Contributor | Sessions | Turns | Agents | Models | Points |",
+            "|:----:|-------------|:--------:|------:|--------|--------|:------:|",
+        ]
+        lines.extend(
+            f"| {i} | Donor {i} | 1 | {1000 - i} | Claude Code | Opus | 5 |"
+            for i in range(1, 10)
+        )
+        rows = _parse_contributor_leaderboard("\n".join(lines))
+        self.assertEqual(len(rows), 9)
+        self.assertEqual(rows[-1]["contributor"], "Donor 9")
+
     def test_parse_dataset_card_coverage(self):
         coverage = _parse_dataset_card_coverage(
             "\n".join([
@@ -244,6 +257,16 @@ class WebTests(unittest.TestCase):
             missing = Path(td) / "CONTRIBUTORS.md"
             with mock.patch("donate.web._fetch_text", return_value=remote_text) as fetch_text:
                 text = _load_contributors_markdown(missing)
+
+        self.assertEqual(text, remote_text)
+        fetch_text.assert_called_once_with(
+            "https://raw.githubusercontent.com/Accenture/ContextEcho/main/CONTRIBUTORS.md"
+        )
+
+    def test_load_contributors_markdown_prefers_live_github_by_default(self):
+        remote_text = "| Rank | Contributor | Sessions | Turns | Agents | Models | Points |\n"
+        with mock.patch("donate.web._fetch_text", return_value=remote_text) as fetch_text:
+            text = _load_contributors_markdown()
 
         self.assertEqual(text, remote_text)
         fetch_text.assert_called_once_with(

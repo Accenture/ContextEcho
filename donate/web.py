@@ -552,7 +552,7 @@ def _parse_contributor_leaderboard(markdown: str) -> list[dict]:
             "points": points,
             "points_num": int(points) if points.isdigit() else None,
         })
-    return rows[:5]
+    return rows
 
 
 def _parse_dataset_card_coverage(markdown: str) -> dict:
@@ -604,6 +604,10 @@ def _parse_dataset_card_coverage(markdown: str) -> dict:
 def _load_contributors_markdown(local_path: Path | None = None) -> str:
     if local_path is None:
         local_path = Path(__file__).resolve().parents[1] / "CONTRIBUTORS.md"
+        try:
+            return _fetch_text("https://raw.githubusercontent.com/Accenture/ContextEcho/main/CONTRIBUTORS.md")
+        except Exception:
+            return local_path.read_text(encoding="utf-8")
     try:
         return local_path.read_text(encoding="utf-8")
     except Exception:
@@ -613,6 +617,10 @@ def _load_contributors_markdown(local_path: Path | None = None) -> str:
 def _load_dataset_card_markdown(local_path: Path | None = None) -> str:
     if local_path is None:
         local_path = Path(__file__).resolve().parents[1] / "DATASET_CARD.md"
+        try:
+            return _fetch_text("https://raw.githubusercontent.com/Accenture/ContextEcho/main/DATASET_CARD.md")
+        except Exception:
+            return local_path.read_text(encoding="utf-8")
     try:
         return local_path.read_text(encoding="utf-8")
     except Exception:
