@@ -32,6 +32,13 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "setAttribute('aria-disabled', 'false')" in LANDING
     assert "/api/health" in LANDING
     assert "localPorts" in LANDING
+    assert "Step-by-step donation guide" in LANDING
+    assert "Run the command in Terminal" in LANDING
+    assert "Leave this Terminal window open while donating" in LANDING
+    assert "Discover and select a session" in LANDING
+    assert "Redact locally and verify" in LANDING
+    assert "Submit for maintainer review" in LANDING
+    assert "Pending maintainer review" in LANDING
     assert "Local wizard preview" not in LANDING
     assert "Discover sessions" in LANDING
     assert "file picker" not in LANDING
