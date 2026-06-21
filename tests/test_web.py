@@ -101,6 +101,14 @@ class WebTests(unittest.TestCase):
         self.assertIn("/api/health", Path("donate/web.py").read_text(encoding="utf-8"))
         self.assertIn("access-control-allow-origin", Path("donate/web.py").read_text(encoding="utf-8"))
 
+    def test_privacy_switch_restores_cached_verified_redaction(self):
+        self.assertIn("let redactionCache = new Map()", INDEX_HTML)
+        self.assertIn("function redactionCacheKey()", INDEX_HTML)
+        self.assertIn("function restoreCachedRedaction()", INDEX_HTML)
+        self.assertIn("redactionCache.set(redactionCacheKey()", INDEX_HTML)
+        self.assertIn("Restored the verified result for this privacy mode", INDEX_HTML)
+        self.assertIn("if(!restoreCachedRedaction()) status('redactStatus', 'Privacy mode changed.", INDEX_HTML)
+
     def test_top_stats_are_embedded_in_support_card(self):
         self.assertIn('<a class="github" href="https://github.com/Accenture/ContextEcho"', INDEX_HTML)
         self.assertIn('<a class="dataset" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho"', INDEX_HTML)

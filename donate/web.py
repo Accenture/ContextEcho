@@ -1186,6 +1186,7 @@ let sessions = [];
 let selected = null;
 let redacted = null;
 let appliedScrubTerms = [];
+let redactionCache = new Map();
 let submitted = false;
 let activeOperation = false;
 let page = 0;
@@ -1209,6 +1210,26 @@ function iconSvg(name){ return statIcons[name] || ''; }
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
 function sessionLocalKey(s){
   return [s?.path || '', s?.records || '', s?.turns || '', s?.compactions || '', s?.last_active || s?.modified || ''].join('|');
+}
+function redactionCacheKey(){
+  if(!selected) return '';
+  return [
+    sessionLocalKey(selected),
+    privacyTier(),
+    parseScrubTerms($('scrub')?.value || '').join('\u001f')
+  ].join('\u001e');
+}
+function restoreCachedRedaction(){
+  const cached = redactionCache.get(redactionCacheKey());
+  if(!cached) return false;
+  redacted = cached.data;
+  appliedScrubTerms = [...cached.appliedScrubTerms];
+  submitted = false;
+  $('reviewConfirm').checked = false;
+  renderRedactResult(redacted);
+  status('redactStatus', 'Restored the verified result for this privacy mode. Review it, then check the review box to continue.');
+  refreshButtons();
+  return true;
 }
 function annotateCachedDonations(rows){
   return (rows || []).map(s => ({...s, donated: !!(s.donated || donatedPaths.has(sessionLocalKey(s)))}));
@@ -1819,6 +1840,7 @@ function resetSessionArtifacts(){
   selected = null;
   redacted = null;
   appliedScrubTerms = [];
+  redactionCache = new Map();
   submitted = false;
   document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
   ['selectedCard','redactResult','submitResult','searchResult'].forEach(id => {
@@ -2005,7 +2027,7 @@ function renderSessions(){
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
       row.classList.add('selected'); selected = s;
-      redacted = null; appliedScrubTerms = []; submitted = !!donated;
+      redacted = null; appliedScrubTerms = []; redactionCache = new Map(); submitted = !!donated;
       renderSelectedCard(s, idx);
       status('redactStatus', donated ? 'This session is already marked donated locally. Pick a different session to avoid duplicate submissions.' : '');
       status('discoverStatus', '');
@@ -2103,25 +2125,24 @@ $('safeConfirm').onchange = refreshButtons;
 $('reviewConfirm').onchange = refreshButtons;
 document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
   el.onchange = () => {
-    if(redacted){
-      redacted = null;
-      appliedScrubTerms = [];
-      $('reviewConfirm').checked = false;
-      $('redactResult').classList.remove('show');
-      $('searchPanel').classList.remove('show');
-      $('searchResult').classList.remove('show');
-      status('redactStatus', 'Privacy mode changed. Click Redact and Verify again before moving on.');
-    }
+    redacted = null;
+    appliedScrubTerms = [];
+    $('reviewConfirm').checked = false;
+    $('redactResult').classList.remove('show');
+    $('searchPanel').classList.remove('show');
+    $('searchResult').classList.remove('show');
+    if(!restoreCachedRedaction()) status('redactStatus', 'Privacy mode changed. Click Redact and Verify again before moving on.');
     refreshButtons();
   };
 });
 $('scrub').oninput = () => {
-  if(redacted){
-    $('reviewConfirm').checked = false;
-    $('searchPanel').classList.remove('show');
-    $('searchResult').classList.remove('show');
-    status('redactStatus', 'Private words changed. Click Redact and Verify again to update the redacted file.');
-  }
+  redacted = null;
+  appliedScrubTerms = [];
+  $('reviewConfirm').checked = false;
+  $('redactResult').classList.remove('show');
+  $('searchPanel').classList.remove('show');
+  $('searchResult').classList.remove('show');
+  if(!restoreCachedRedaction()) status('redactStatus', 'Private words changed. Click Redact and Verify again to update the redacted file.');
   refreshButtons();
 };
 $('pickNext').onclick = () => goStep(2);
@@ -2249,6 +2270,7 @@ async function runRedactVerify(extraTerms = [], opts = {}){
       appliedScrubTerms = canRepair
         ? [...new Set([...appliedScrubTerms, ...pendingScrubTerms])]
         : parseScrubTerms($('scrub').value);
+      redactionCache.set(redactionCacheKey(), {data:redacted, appliedScrubTerms:[...appliedScrubTerms]});
     }
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
