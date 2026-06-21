@@ -96,6 +96,8 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("Choose session file manually", INDEX_HTML)
         self.assertNotIn("/api/import_session", INDEX_HTML)
         self.assertNotIn("manualSessionFile", INDEX_HTML)
+        self.assertNotIn("loadDiscoveryCache", INDEX_HTML)
+        self.assertNotIn("contextechoDiscoveryCacheV1", INDEX_HTML)
         self.assertIn("/api/health", Path("donate/web.py").read_text(encoding="utf-8"))
         self.assertIn("access-control-allow-origin", Path("donate/web.py").read_text(encoding="utf-8"))
 

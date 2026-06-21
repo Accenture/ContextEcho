@@ -1192,8 +1192,6 @@ let page = 0;
 const pageSize = 5;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
-const discoveryCacheKey = 'contextechoDiscoveryCacheV1';
-const discoveryCacheMaxAgeMs = 30 * 60 * 1000;
 let publicStats = {};
 let leaderboardPreviewPage = null;
 const statIcons = {
@@ -1223,27 +1221,6 @@ function allSessionsDonatedMessage(){
 }
 function noSessionsMessage(){
   return 'Thanks for considering a ContextEcho donation. We did not find any usable Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.';
-}
-function saveDiscoveryCache(){
-  localStorage.setItem(discoveryCacheKey, JSON.stringify({saved_at:Date.now(), sessions, page}));
-}
-function loadDiscoveryCache(){
-  try {
-    const cache = JSON.parse(localStorage.getItem(discoveryCacheKey) || 'null');
-    if(!cache || !Array.isArray(cache.sessions)) return false;
-    const age = Date.now() - Number(cache.saved_at || 0);
-    if(age < 0 || age > discoveryCacheMaxAgeMs) return false;
-    sessions = annotateCachedDonations(cache.sessions);
-    const maxPage = Math.max(0, Math.ceil(sessions.length / pageSize) - 1);
-    page = Math.max(0, Math.min(Number(cache.page || 0), maxPage));
-    renderSessions();
-    $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
-    const mins = Math.max(1, Math.round(age / 60000));
-    status('discoverStatus', allSessionsDonated() ? allSessionsDonatedMessage() : `Loaded ${sessions.length} recently discovered sessions from ${mins} min ago. Click Discover Sessions to refresh.`);
-    return true;
-  } catch(e) {
-    return false;
-  }
 }
 function privacyTier(){ return document.querySelector('input[name="privacyTier"]:checked')?.value || 'full_redacted'; }
 function parseScrubTerms(value){
@@ -2013,7 +1990,6 @@ function renderSessions(){
           if(selected && selected.path === s.path) selected.donated = false;
           submitted = false;
           saveDonatedPaths();
-          saveDiscoveryCache();
           renderSessions();
           refreshButtons();
           status('discoverStatus', 'Local donated label cleared for this session. If the relay already received it, the relay may still reject the repeat attempt.');
@@ -2092,7 +2068,6 @@ $('discoverBtn').onclick = async () => {
     }
     sessions = (final && final.sessions) || [];
     page = 0;
-    saveDiscoveryCache();
     discoverTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
     status('discoverStatus', sessions.length === 0 ? noSessionsMessage() : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} usable sessions. Click a row to select.`));
     renderSessions();
@@ -2113,7 +2088,6 @@ $('clearDonatedBtn').onclick = async () => {
     donatedPaths.clear();
     saveDonatedPaths();
     sessions = sessions.map(s => ({...s, donated:false}));
-    saveDiscoveryCache();
     if(selected) selected.donated = false;
     submitted = false;
     renderSessions();
@@ -2345,7 +2319,7 @@ $('submitBtn').onclick = async () => {
     if(!data) throw new Error('submit did not return a result');
     setBusy('submitProgress', true, 100);
     submitted = true;
-    if(selected && selected.path){ selected.donated = true; donatedPaths.add(sessionLocalKey(selected)); saveDonatedPaths(); saveDiscoveryCache(); renderSessions(); }
+    if(selected && selected.path){ selected.donated = true; donatedPaths.add(sessionLocalKey(selected)); saveDonatedPaths(); renderSessions(); }
     renderSubmitResult(data);
     status('submitStatus', allSessionsDonated() ? allSessionsDonatedMessage() : (data.duplicate ? 'This session was already received. It is now marked donated locally.' : 'Submission marked donated locally. Pick another session to submit more.'));
     refreshButtons();
@@ -2359,7 +2333,6 @@ $('submitBtn').onclick = async () => {
   }
 };
 loadProjectStats();
-loadDiscoveryCache();
 </script>
 </body>
 </html>
