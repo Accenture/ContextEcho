@@ -110,6 +110,7 @@ def render_dataset_card(dataset_root: Path = Path("data_archive_release_v2")) ->
         "| Name | ContextEcho persona-drift benchmark |",
         "| Repository | https://github.com/Accenture/ContextEcho |",
         "| Dataset host | https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho |",
+        "| Donate a session | https://accenture.github.io/ContextEcho/donate/ |",
         "| License | CC-BY-SA-4.0 for data; Apache-2.0 for code |",
         "| Public v1 founding sessions | 3 |",
         f"| Public v1 per-cell evaluations | {FOUNDING_CELL_JSONS:,} |",

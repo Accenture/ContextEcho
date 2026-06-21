@@ -38,6 +38,7 @@ dependencies = [
 Homepage = "https://github.com/Accenture/ContextEcho"
 Repository = "https://github.com/Accenture/ContextEcho"
 Issues = "https://github.com/Accenture/ContextEcho/issues"
+Donate = "https://accenture.github.io/ContextEcho/donate/"
 
 [project.scripts]
 contextecho-donate = "donate.cli:main"

@@ -12,6 +12,7 @@ not included.
 | Name | ContextEcho persona-drift benchmark |
 | Repository | https://github.com/Accenture/ContextEcho |
 | Dataset host | https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho |
+| Donate a session | https://accenture.github.io/ContextEcho/donate/ |
 | License | CC-BY-SA-4.0 for data; Apache-2.0 for code |
 | Public v1 founding sessions | 3 |
 | Public v1 per-cell evaluations | 41,921 |

@@ -6,6 +6,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RUN_DONATE = (ROOT / "scripts" / "run-donate.sh").read_text(encoding="utf-8")
 LANDING = (ROOT / "docs" / "donate" / "index.html").read_text(encoding="utf-8")
+README = (ROOT / "README.md").read_text(encoding="utf-8")
+CONTRIBUTING = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+DONATE_URL = "https://accenture.github.io/ContextEcho/donate/"
 
 
 def test_launcher_starts_local_browser_wizard_with_managed_python() -> None:
@@ -33,3 +36,9 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "Discover sessions" in LANDING
     assert "file picker" not in LANDING
     assert "do not need to know where session history files live" in LANDING
+
+
+def test_public_docs_point_to_hosted_donor_page() -> None:
+    assert DONATE_URL in README
+    assert DONATE_URL in CONTRIBUTING
+    assert "Donate a session" in README

@@ -2,6 +2,7 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2605.24279-b31b1b.svg)](https://arxiv.org/abs/2605.24279)
 [![Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-contextecho2026-yellow)](https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho)
+[![Donate a session](https://img.shields.io/badge/Donate%20a%20session-ContextEcho-167843)](https://accenture.github.io/ContextEcho/donate/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
@@ -192,6 +193,14 @@ session it covers. We welcome contributions, and we credit them.
   door).
 
 Fastest donor path:
+
+Open the hosted donor page:
+
+```text
+https://accenture.github.io/ContextEcho/donate/
+```
+
+Or start the local scanner directly:
 
 ```bash
 curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash

@@ -66,6 +66,7 @@ class UpdateDatasetCardTests(unittest.TestCase):
             card = render_dataset_card(root)
 
         self.assertIn("Institution coverage | 1 institution", card)
+        self.assertIn("Donate a session | https://accenture.github.io/ContextEcho/donate/", card)
         self.assertNotIn("Example University", card)
         self.assertIn("Codex CLI (1)", card)
         self.assertIn("ACCEPTABLE | 1", card)

@@ -109,12 +109,20 @@ release* as authors. Missing the first paper does not close the door.
 
 Fastest donor path:
 
+Open the hosted donor page:
+
+```text
+https://accenture.github.io/ContextEcho/donate/
+```
+
+Or start the local scanner directly:
+
 ```bash
-curl -Ls https://raw.githubusercontent.com/Accenture/ContextEcho/main/scripts/run-donate.sh | bash
+curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash
 ```
 
 This bootstraps a private `uv` runner with `python3` if needed, then launches
-the local browser wizard from GitHub with Python 3.11. Verified donations
+the local browser wizard from GitHub with Python 3.14. Verified donations
 upload through the official ContextEcho relay:
 
 ```text
