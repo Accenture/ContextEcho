@@ -25,6 +25,42 @@
     a.button.local.ready { background:var(--green); color:white; pointer-events:auto; opacity:1; box-shadow:0 12px 28px rgba(22,120,67,.22); }
     .bridge-status { margin-top:12px; color:var(--muted); font-size:14px; line-height:1.4; }
     .bridge-status.ready { color:#13552f; font-weight:850; }
+    .public-overview { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr); gap:16px; margin-top:24px; }
+    .support-card, .composition-panel { border:1px solid #dce7d2; border-radius:16px; background:white; padding:18px; }
+    .support-card { display:flex; gap:16px; align-items:center; background:linear-gradient(135deg,#fff8df,#eef8e8); }
+    .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
+    .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); }
+    .bow-head:before, .bow-head:after { content:""; position:absolute; top:9px; width:3px; height:3px; border-radius:50%; background:#17201c; }
+    .bow-head:before { left:7px; }
+    .bow-head:after { right:7px; }
+    .bow-body { position:absolute; left:10px; top:24px; width:27px; height:20px; border-radius:10px 10px 6px 6px; background:#17713f; }
+    .bow-hands { position:absolute; left:4px; top:34px; width:39px; height:9px; border-radius:999px; background:#f1bf86; }
+    .bow-star { position:absolute; right:0; top:0; color:#d28b00; font-size:14px; line-height:1; }
+    .support-main { min-width:0; flex:1; }
+    .support-title, .composition-title { font-weight:950; color:#13552f; font-size:18px; }
+    .support-copy, .composition-subtitle { color:var(--muted); font-size:14px; margin-top:3px; line-height:1.35; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(96px,1fr)); gap:10px; align-items:stretch; margin-top:14px; }
+    .stat-card { min-height:86px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:12px; padding:10px; box-shadow:0 6px 16px rgba(43,59,37,.07); color:inherit; text-decoration:none; transition:.15s ease; }
+    .stat-card:hover, .stat-card:focus { transform:translateY(-1px); border-color:#c9dcc5; box-shadow:0 10px 20px rgba(43,59,37,.11); outline:none; }
+    .stat-card:focus-visible { outline:3px solid rgba(31,111,67,.18); }
+    .stat-icon, .composition-icon { display:grid; place-items:center; border-radius:50%; background:#e9f2e5; color:var(--green); }
+    .stat-icon { width:30px; height:30px; margin:0 auto 6px; }
+    .stat-icon svg, .composition-icon svg { display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+    .stat-icon svg { width:16px; height:16px; }
+    .stat-icon .icon-fill, .composition-icon .icon-fill { fill:currentColor; stroke:none; }
+    .stat-icon[data-icon="star"] { background:#f6edd6; color:#d28b00; }
+    .stat-icon[data-icon="heart"] { background:#f6eadb; color:#dc4b30; }
+    .stat-value { font-size:22px; line-height:1; font-weight:950; letter-spacing:0; }
+    .stat-label { margin-top:5px; color:#3d4440; font-size:11px; font-weight:850; line-height:1.1; }
+    .composition-list { display:grid; gap:0; margin-top:12px; }
+    .composition-row { display:grid; grid-template-columns:34px minmax(86px,1fr) minmax(70px,.8fr) 64px; gap:9px; align-items:center; padding:8px 0; border-bottom:1px dashed #e5ebe1; }
+    .composition-row:last-child { border-bottom:0; }
+    .composition-icon { width:28px; height:28px; }
+    .composition-icon svg { width:15px; height:15px; }
+    .composition-label { color:#14241d; font-weight:900; font-size:13px; line-height:1.05; }
+    .composition-track { height:8px; border-radius:999px; background:#f0f1ef; overflow:hidden; }
+    .composition-fill { height:100%; min-width:0; border-radius:999px; background:linear-gradient(90deg,#1b8a4b,#17713f); }
+    .composition-value { color:#14241d; text-align:right; font-weight:950; font-size:16px; }
     .panel { border:1px solid var(--line); border-radius:16px; padding:22px; background:white; }
     .panel h2 { margin:0 0 14px; font-size:22px; }
     .steps { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:30px; }
@@ -72,7 +108,8 @@
     .zoom-frame img { display:block; width:auto; max-width:100%; height:auto; max-height:88vh; }
     .zoom-close { position:absolute; top:10px; right:10px; border-radius:999px; width:38px; height:38px; padding:0; background:#111b18; color:white; box-shadow:0 10px 24px rgba(0,0,0,.2); }
     .note { margin-top:22px; color:var(--muted); font-size:14px; line-height:1.45; }
-    @media (max-width:900px) { .steps { grid-template-columns:1fr; } .guide-step { grid-template-columns:1fr; } h1 { font-size:36px; } .shell { padding:24px; } }
+    @media (max-width:900px) { .steps { grid-template-columns:1fr; } .guide-step { grid-template-columns:1fr; } h1 { font-size:36px; } .shell { padding:24px; } .public-overview { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } }
+    @media (max-width:620px) { .stats { grid-template-columns:1fr; } .composition-row { grid-template-columns:34px minmax(88px,1fr) 64px; } .composition-track { grid-column:2 / 4; } }
   </style>
 </head>
 <body>
@@ -83,6 +120,62 @@
         <h1>Donate a coding-agent session to ContextEcho</h1>
         <p class="lede">Start a local scanner, pick a real Claude Code or Codex session, redact it on your machine, and submit only the verified redacted artifact.</p>
         <div class="privacy">Raw session history stays local. The server receives only redacted files after you approve them.</div>
+        <div class="public-overview">
+          <div class="support-card">
+            <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
+            <div class="support-main">
+              <div class="support-title">Help more donors find ContextEcho</div>
+              <div class="support-copy">Star the GitHub repo or like the dataset, even if you are not ready to donate today.</div>
+              <div class="stats" aria-live="polite">
+                <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
+                  <div class="stat-icon" data-icon="download"></div>
+                  <div class="stat-value" data-stat-value="downloads">8,350</div>
+                  <div class="stat-label">Downloads Last Month</div>
+                </a>
+                <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">
+                  <div class="stat-icon" data-icon="star"></div>
+                  <div class="stat-value" data-stat-value="stars">11</div>
+                  <div class="stat-label">GitHub Stars</div>
+                </a>
+                <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
+                  <div class="stat-icon" data-icon="heart"></div>
+                  <div class="stat-value" data-stat-value="likes">5</div>
+                  <div class="stat-label">Dataset Likes</div>
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="composition-panel">
+            <div class="composition-title">Dataset Composition</div>
+            <div class="composition-subtitle">Current public coverage metrics.</div>
+            <div class="composition-list">
+              <div class="composition-row">
+                <div class="composition-icon" data-icon="users"></div>
+                <div class="composition-label">Sessions</div>
+                <div class="composition-track"><div class="composition-fill" style="width:78%"></div></div>
+                <div class="composition-value">9</div>
+              </div>
+              <div class="composition-row">
+                <div class="composition-icon" data-icon="hand-heart"></div>
+                <div class="composition-label">Donors</div>
+                <div class="composition-track"><div class="composition-fill" style="width:78%"></div></div>
+                <div class="composition-value">9</div>
+              </div>
+              <div class="composition-row">
+                <div class="composition-icon" data-icon="building"></div>
+                <div class="composition-label">Institutes</div>
+                <div class="composition-track"><div class="composition-fill" style="width:68%"></div></div>
+                <div class="composition-value">6</div>
+              </div>
+              <div class="composition-row">
+                <div class="composition-icon" data-icon="grid"></div>
+                <div class="composition-label">Total turns</div>
+                <div class="composition-track"><div class="composition-fill" style="width:56%"></div></div>
+                <div class="composition-value">24,649</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="command-card">
           <div class="command-label">One command starts the local wizard</div>
           <pre id="command">curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash</pre>
@@ -181,6 +274,50 @@ const zoomOverlay = document.getElementById('zoomOverlay');
 const zoomImage = document.getElementById('zoomImage');
 const zoomClose = document.getElementById('zoomClose');
 const localPorts = Array.from({length: 20}, (_, i) => 8766 + i);
+
+function iconSvg(name) {
+  if (name === 'download') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path><path d="M5 17v4"></path><path d="M19 17v4"></path></svg>';
+  if (name === 'star') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="m12 2.8 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.9-5.4 2.9 1-6-4.4-4.3 6.1-.9z"></path></svg>';
+  if (name === 'heart') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 21s-7.5-4.8-9.4-9.1C1 8.3 3.1 5 6.5 5c2 0 3.4 1.1 4.1 2.2C11.3 6.1 12.8 5 14.8 5c3.4 0 5.5 3.3 3.9 6.9C16.7 16.2 12 21 12 21z"></path></svg>';
+  if (name === 'users') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
+  if (name === 'hand-heart') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 14h2a2 2 0 0 0 0-4h-3c-.6 0-1.1.2-1.5.6L4 15"></path><path d="m7 18 2 2c.4.4.9.6 1.5.6H15c.8 0 1.5-.4 2-1l4-5"></path><path d="M3 14l5 5"></path><path d="M12 6.5C12 4.6 13.6 3 15.5 3S19 4.6 19 6.5c0 2.8-3.5 5-3.5 5S12 9.3 12 6.5z"></path></svg>';
+  if (name === 'building') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"></path><path d="M4 10h16"></path><path d="M6 10v11"></path><path d="M18 10v11"></path><path d="M8 14v3"></path><path d="M12 14v3"></path><path d="M16 14v3"></path><path d="m12 3 8 5H4z"></path></svg>';
+  if (name === 'grid') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>';
+  return '';
+}
+
+function formatStat(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.trunc(number).toLocaleString() : '...';
+}
+
+document.querySelectorAll('.stat-icon, .composition-icon').forEach(icon => {
+  icon.innerHTML = iconSvg(icon.dataset.icon || '');
+});
+
+async function refreshProjectStats() {
+  const setValue = (name, value) => {
+    const el = document.querySelector(`[data-stat-value="${name}"]`);
+    if (el) el.textContent = formatStat(value);
+  };
+  try {
+    const github = await fetch('https://api.github.com/repos/Accenture/ContextEcho', {cache:'no-store'});
+    if (github.ok) {
+      const data = await github.json();
+      setValue('stars', data.stargazers_count);
+    }
+  } catch (e) {}
+  try {
+    const hf = await fetch('https://huggingface.co/api/datasets/contextecho2026/persona-drift-contextecho', {cache:'no-store'});
+    if (hf.ok) {
+      const data = await hf.json();
+      setValue('downloads', data.downloads);
+      setValue('likes', data.likes);
+    }
+  } catch (e) {}
+}
+
+refreshProjectStats();
 
 async function probeLocalWizard(port) {
   const controller = new AbortController();
