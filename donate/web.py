@@ -905,6 +905,9 @@ INDEX_HTML = r"""<!doctype html>
     .step-pill.active:after, .step-pill.done:after { background:var(--accent); }
     .hero-side { display:flex; align-items:flex-start; gap:16px; justify-content:flex-end; max-width:780px; }
     .privacy-note { color:var(--muted); font-size:13px; line-height:1.35; text-align:right; max-width:560px; padding-top:4px; white-space:nowrap; }
+    .privacy-links { display:flex; justify-content:flex-end; gap:8px; margin-top:7px; }
+    .privacy-links a { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; padding:7px 10px; font-size:12px; font-weight:900; min-height:30px; background:#e8eddc; color:#13552f; }
+    .privacy-links a.ranking { background:#dfeadd; }
     .privacy-note strong { color:#13552f; }
     .hero-progress { display:flex; align-items:center; gap:14px; padding-top:4px; min-width:190px; justify-content:flex-end; }
     .progress-label { text-align:right; color:var(--muted); font-size:14px; }
@@ -971,13 +974,6 @@ INDEX_HTML = r"""<!doctype html>
     .support-main { min-width:0; flex:1; }
     .support-title { font-weight:950; color:#13552f; }
     .support-copy { color:var(--muted); font-size:12px; margin-top:2px; }
-    .support-privacy { margin-top:6px; color:#5d6761; font-size:10px; line-height:1.25; }
-    .support-privacy a { color:#13552f; font-weight:900; text-decoration:none; }
-    .support-privacy a:hover, .support-privacy a:focus { text-decoration:underline; }
-    .support-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-    .support-actions a, .support-actions button { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; padding:8px 10px; font-size:12px; font-weight:900; min-height:34px; box-shadow:none; }
-    .support-actions a.ranking { background:#dfeadd; color:#13552f; }
-    .support-actions a.guide { background:#e8eddc; color:#13552f; }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
     .reset-donated { margin-top:12px; justify-content:center; }
     .reset-donated button { padding:8px 12px; font-size:12px; }
@@ -1145,7 +1141,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .privacy-links { justify-content:flex-start; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
     @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
@@ -1158,6 +1154,12 @@ INDEX_HTML = r"""<!doctype html>
         <div class="topline">Donate a coding-agent session in a few local-first steps.</div>
       </div>
       <div class="hero-side">
+        <div class="privacy-note"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.
+          <div class="privacy-links">
+            <a class="ranking" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener noreferrer">Ranking</a>
+            <a class="guide" href="https://accenture.github.io/ContextEcho/donate/#guideTitle" target="_blank" rel="noopener noreferrer">Guide</a>
+          </div>
+        </div>
         <div class="hero-progress">
           <div class="progress-label"><strong id="stepLabel">Step 1 of 3</strong><span id="stepPercentText">33% complete</span></div>
           <div id="progressRing" class="ring" style="--pct:33"><span id="progressRingText">33%</span></div>
@@ -1170,11 +1172,6 @@ INDEX_HTML = r"""<!doctype html>
         <div class="support-main">
           <div class="support-title">Help more donors find ContextEcho</div>
           <div class="support-copy">Star the GitHub repo or like the dataset by clicking the cards.</div>
-          <div class="support-privacy"><a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md" target="_blank" rel="noopener noreferrer">Donor privacy</a>: ContextEcho analyzes assistant behavior, not donor personality. Default: <a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md" target="_blank" rel="noopener noreferrer">full redacted</a>. Stronger privacy: <a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md" target="_blank" rel="noopener noreferrer">user-minimized</a>.</div>
-          <div class="support-actions">
-            <a class="ranking" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener noreferrer">Ranking</a>
-            <a class="guide" href="https://accenture.github.io/ContextEcho/donate/#guideTitle" target="_blank" rel="noopener noreferrer">Guide</a>
-          </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
           <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Downloads Last Month</div></a>
