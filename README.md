@@ -200,13 +200,19 @@ Open the hosted donor page:
 https://accenture.github.io/ContextEcho/donate/
 ```
 
-Or start the local scanner directly:
+Or start the local scanner directly on macOS/Linux:
 
 ```bash
 curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash
 ```
 
-This bootstraps a private `uv` runner with `python3` if needed, then launches
+On Windows, use PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.ps1 | iex"
+```
+
+These commands bootstrap a private `uv` runner with Python if needed, then launch
 the local browser wizard from the GitHub repo with Python 3.14. Verified
 donations upload through the official ContextEcho relay:
 
@@ -220,8 +226,8 @@ the one-line local scanner command; the scanner opens the browser wizard,
 discovers local Claude Code/Codex sessions automatically, and keeps raw session
 history on the donor machine.
 
-Supported donor platforms: macOS, Linux, and Windows via WSL. Native Windows
-PowerShell/CMD is not supported by the one-line launcher yet.
+Supported donor platforms: macOS, Linux, Windows PowerShell, and Windows via
+WSL/Git Bash.
 
 If you already have `pipx` and Python 3.10+, you can run the package directly:
 

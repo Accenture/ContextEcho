@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN_DONATE = (ROOT / "scripts" / "run-donate.sh").read_text(encoding="utf-8")
+RUN_DONATE_PS1 = (ROOT / "scripts" / "run-donate.ps1").read_text(encoding="utf-8")
 LANDING = (ROOT / "docs" / "donate" / "index.html").read_text(encoding="utf-8")
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 CONTRIBUTING = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
@@ -22,9 +23,21 @@ def test_launcher_starts_local_browser_wizard_with_managed_python() -> None:
     assert "Apple Silicon" in RUN_DONATE
 
 
+def test_windows_launcher_starts_local_browser_wizard_with_managed_python() -> None:
+    assert "contextecho-donate" in RUN_DONATE_PS1
+    assert "--python\", \"3.14" in RUN_DONATE_PS1
+    assert "--managed-python" in RUN_DONATE_PS1
+    assert "sys.version_info >= (3, 8)" in RUN_DONATE_PS1
+    assert "raw sessions stay on this machine" in RUN_DONATE_PS1
+    assert "run-donate.ps1" not in RUN_DONATE
+
+
 def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "Donate a coding-agent session to ContextEcho" in LANDING
     assert "curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash" in LANDING
+    assert "Windows PowerShell" in LANDING
+    assert "run-donate.ps1" in LANDING
+    assert "data-command-target=\"windows\"" in LANDING
     assert "Raw session history stays local" in LANDING
     assert "Continue in Local Wizard" in LANDING
     assert 'aria-disabled="true"' in LANDING
@@ -35,16 +48,16 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "Step-by-step donation guide" in LANDING
     assert "Run the command in Terminal" in LANDING
     assert "Leave this Terminal window open while donating" in LANDING
-    assert "Discover and select a session" in LANDING
+    assert "Discover and pick a session" in LANDING
     assert "Redact locally and verify" in LANDING
-    assert "Submit for maintainer review" in LANDING
+    assert "Submit and save the receipt" in LANDING
     assert "Pending maintainer review" in LANDING
     assert "Click to enlarge" in LANDING
     assert "zoomOverlay" in LANDING
     assert "zoomImage.src = img.src" in LANDING
     assert "Escape" in LANDING
     assert "Local wizard preview" not in LANDING
-    assert "Discover sessions" in LANDING
+    assert "Discover and pick a session" in LANDING
     assert "file picker" not in LANDING
     assert "do not need to know where session history files live" in LANDING
 

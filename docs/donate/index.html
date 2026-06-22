@@ -19,6 +19,10 @@
     .privacy { margin-top:18px; color:#13552f; font-weight:800; }
     .command-card { border:1px solid #d8e6d5; background:var(--soft); border-radius:16px; padding:18px; margin-top:28px; }
     .command-label { font-size:13px; font-weight:900; color:#13552f; text-transform:uppercase; letter-spacing:.04em; }
+    .command-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .command-tab { border-radius:10px; padding:8px 11px; background:#e8eddc; color:var(--ink); box-shadow:none; font-size:13px; min-height:auto; }
+    .command-tab.active { background:var(--green); color:white; }
+    .command-help { margin-top:8px; color:var(--muted); font-size:13px; line-height:1.4; }
     pre { margin:10px 0 0; overflow:visible; white-space:pre-wrap; overflow-wrap:anywhere; border-radius:12px; padding:14px; background:#111b18; color:#fffef8; font-size:14px; line-height:1.5; }
     .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; }
     button, a.button { border:0; border-radius:12px; padding:12px 16px; font-weight:900; font-size:15px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
@@ -180,7 +184,12 @@
         </div>
         <div class="command-card">
           <div class="command-label">One command starts the local wizard</div>
+          <div class="command-tabs" role="tablist" aria-label="Choose operating system command">
+            <button class="command-tab active" type="button" data-command-target="unix">macOS / Linux</button>
+            <button class="command-tab" type="button" data-command-target="windows">Windows PowerShell</button>
+          </div>
           <pre id="command">curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash</pre>
+          <div id="commandHelp" class="command-help">Use this in Terminal on macOS/Linux, or in WSL/Git Bash on Windows.</div>
           <div class="actions">
             <button class="primary" id="copyCommand" type="button">Copy Command</button>
             <a class="button local" id="openLocalWizard" role="button" aria-disabled="true" tabindex="-1">Continue in Local Wizard</a>
@@ -268,6 +277,27 @@ const zoomOverlay = document.getElementById('zoomOverlay');
 const zoomImage = document.getElementById('zoomImage');
 const zoomClose = document.getElementById('zoomClose');
 const localPorts = Array.from({length: 20}, (_, i) => 8766 + i);
+const commands = {
+  unix: {
+    text: 'curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash',
+    help: 'Use this in Terminal on macOS/Linux, or in WSL/Git Bash on Windows.'
+  },
+  windows: {
+    text: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.ps1 | iex"',
+    help: 'Use this in Windows Terminal, PowerShell, or Command Prompt. Raw sessions still stay local.'
+  }
+};
+
+document.querySelectorAll('.command-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.commandTarget || 'unix';
+    const selected = commands[target] || commands.unix;
+    document.querySelectorAll('.command-tab').forEach(item => item.classList.toggle('active', item === tab));
+    document.getElementById('command').textContent = selected.text;
+    document.getElementById('commandHelp').textContent = selected.help;
+    button.textContent = 'Copy Command';
+  });
+});
 
 function iconSvg(name) {
   if (name === 'download') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path><path d="M5 17v4"></path><path d="M19 17v4"></path></svg>';
