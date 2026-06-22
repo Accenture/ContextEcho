@@ -241,6 +241,44 @@ class RelayServerTests(unittest.TestCase):
         self.assertTrue(update_ready["update_ready"])
         self.assertEqual(update_ready["new_turns"], 60)
 
+    def test_remove_seen_records_removes_only_matching_submission(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+            ):
+                relay_server._append_seen_record({
+                    "artifact_hash": "hash-1",
+                    "submission_id": "submission-one",
+                    "source_session_id": "source-1",
+                    "conversation_fingerprint": "conv-1",
+                    "turns": 100,
+                    "records": 200,
+                })
+                relay_server._append_seen_record({
+                    "artifact_hash": "hash-2",
+                    "submission_id": "submission-two",
+                    "source_session_id": "source-2",
+                    "conversation_fingerprint": "conv-2",
+                    "turns": 120,
+                    "records": 240,
+                })
+
+                result = relay_server._remove_seen_records({"submission_id": "submission-one"})
+                records = relay_server._read_seen_records()
+
+        self.assertEqual(result["removed"], 1)
+        self.assertEqual(result["remaining"], 1)
+        self.assertEqual(result["removed_submission_ids"], ["submission-one"])
+        self.assertEqual(records[0]["submission_id"], "submission-two")
+
+    def test_remove_seen_records_requires_specific_match_key(self) -> None:
+        with self.assertRaises(relay_server.HTTPException) as cm:
+            relay_server._remove_seen_records({"unknown": "value"})
+
+        self.assertEqual(cm.exception.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -96,6 +96,13 @@ def _append_seen_record(record: dict) -> None:
         f.write(json.dumps(record, sort_keys=True) + "\n")
 
 
+def _write_seen_records(records: list[dict]) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with SEEN_HASHES.open("w", encoding="utf-8") as f:
+        for record in records:
+            f.write(json.dumps(record, sort_keys=True) + "\n")
+
+
 def _seen_record(artifact_hash: str, submission_id: str, manifest: dict) -> dict:
     return {
         "artifact_hash": artifact_hash,
@@ -355,6 +362,32 @@ def _reset_seen_hashes() -> int:
     return count
 
 
+def _remove_seen_records(match: dict) -> dict:
+    allowed = {"submission_id", "artifact_hash", "source_session_id", "conversation_fingerprint"}
+    criteria = {k: str(v).strip() for k, v in match.items() if k in allowed and str(v).strip()}
+    if not criteria:
+        raise HTTPException(
+            status_code=400,
+            detail="provide one of: submission_id, artifact_hash, source_session_id, conversation_fingerprint",
+        )
+    records = _read_seen_records()
+    removed = []
+    kept = []
+    for row in records:
+        if any(str(row.get(k) or "") == v for k, v in criteria.items()):
+            removed.append(row)
+        else:
+            kept.append(row)
+    if removed:
+        _write_seen_records(kept)
+    return {
+        "removed": len(removed),
+        "remaining": len(kept),
+        "matched_by": sorted(criteria),
+        "removed_submission_ids": sorted({str(row.get("submission_id") or "") for row in removed if row.get("submission_id")}),
+    }
+
+
 def _require_admin_token(token: str | None) -> None:
     if not ADMIN_TOKEN:
         raise HTTPException(status_code=404, detail="admin endpoint is not enabled")
@@ -533,6 +566,16 @@ def reset_seen_hashes(
     _require_admin_token(x_admin_token)
     removed = _reset_seen_hashes()
     return {"ok": True, "removed": removed}
+
+
+@app.delete("/api/admin/seen-hashes/record")
+def remove_seen_hash_record(
+    payload: Annotated[dict, Body()],
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    result = _remove_seen_records(payload if isinstance(payload, dict) else {})
+    return {"ok": True, **result}
 
 
 @app.post("/api/admin/backfill-seen-hashes")
