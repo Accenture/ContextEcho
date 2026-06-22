@@ -84,10 +84,12 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("new folder in Hugging Face", INDEX_HTML)
 
     def test_donated_sessions_can_be_cleared_one_at_a_time(self):
-        self.assertIn("Clear all local donated labels", INDEX_HTML)
+        self.assertNotIn("Clear all local donated labels", INDEX_HTML)
+        self.assertNotIn("clearDonatedBtn", INDEX_HTML)
         self.assertIn("row.oncontextmenu", INDEX_HTML)
         self.assertIn("Clear the local donated label for this session", INDEX_HTML)
         self.assertIn("/api/clear_donated_label", INDEX_HTML)
+        self.assertIn("/api/clear_donated_labels", Path("donate/web.py").read_text(encoding="utf-8"))
         self.assertIn("does not bypass maintainer duplicate checks", INDEX_HTML)
         self.assertIn("Right-click this row to clear only its local label", INDEX_HTML)
         self.assertIn("update ready", INDEX_HTML)

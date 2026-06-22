@@ -1148,9 +1148,6 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
-        <div class="row reset-donated">
-          <button id="clearDonatedBtn" class="secondary">Clear all local donated labels</button>
-        </div>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
       </div>
@@ -2193,31 +2190,6 @@ $('discoverBtn').onclick = async () => {
     $('discoverBtn').disabled = false;
     delete progressTimers.discoverProgress;
     updateProgressTime('discoverProgress', discoverTiming, {keep:!!discoverTiming});
-  }
-};
-$('clearDonatedBtn').onclick = async () => {
-  const ok = confirm('Clear local donated labels on this browser and machine? This does not delete or retract submitted data. It may allow resubmission; maintainers may reject duplicates.');
-  if(!ok) return;
-  try {
-    await post('/api/clear_donated_labels', {});
-    donatedPaths.clear();
-    donatedRecords = {};
-    saveDonatedPaths();
-    saveDonatedRecords();
-    sessions = sessions.map(s => ({...s, donated:false, donated_before:false, update_ready:false, new_turns:0, donated_turns:0}));
-    if(selected) {
-      selected.donated = false;
-      selected.donated_before = false;
-      selected.update_ready = false;
-      selected.new_turns = 0;
-      selected.donated_turns = 0;
-    }
-    submitted = false;
-    renderSessions();
-    refreshButtons();
-    status('discoverStatus', 'Local donated labels cleared. Submitted data and maintainer records are unchanged.');
-  } catch(e) {
-    status('discoverStatus','ERROR: '+e.message);
   }
 };
 $('prevPage').onclick = () => { if(page > 0){ page--; renderSessions(); } };
