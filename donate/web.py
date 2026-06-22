@@ -974,6 +974,7 @@ INDEX_HTML = r"""<!doctype html>
     .support-actions a.github { background:#111b18; color:#fffef8; }
     .support-actions a.dataset { background:#e8eddc; color:var(--ink); }
     .support-actions a.ranking { background:#dfeadd; color:#13552f; }
+    .support-actions a.guide { background:#e8eddc; color:#13552f; }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
     .reset-donated { margin-top:12px; justify-content:center; }
     .reset-donated button { padding:8px 12px; font-size:12px; }
@@ -1171,6 +1172,7 @@ INDEX_HTML = r"""<!doctype html>
             <a class="github" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">Star on GitHub</a>
             <a class="dataset" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">Like Dataset</a>
             <a class="ranking" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener noreferrer">Ranking</a>
+            <a class="guide" href="https://accenture.github.io/ContextEcho/donate/#guideTitle" target="_blank" rel="noopener noreferrer">Guide</a>
           </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
