@@ -39,6 +39,10 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "Redact locally and verify" in LANDING
     assert "Submit for maintainer review" in LANDING
     assert "Pending maintainer review" in LANDING
+    assert "Click to enlarge" in LANDING
+    assert "zoomOverlay" in LANDING
+    assert "zoomImage.src = img.src" in LANDING
+    assert "Escape" in LANDING
     assert "Local wizard preview" not in LANDING
     assert "Discover sessions" in LANDING
     assert "file picker" not in LANDING
