@@ -27,6 +27,7 @@ class DescribeTests(unittest.TestCase):
                 "compactions": 0,
                 "source_format": "codex-cli-jsonl",
                 "path": str(root / "source.jsonl"),
+                "session_label": "Example project · 6980",
                 "conversation_fingerprint": "conv-abc123",
                 "fingerprint_version": "structure-v1",
             }), encoding="utf-8")
@@ -51,6 +52,8 @@ class DescribeTests(unittest.TestCase):
         self.assertEqual(manifest["contributor"], "donor-handle")
         self.assertTrue(manifest["session_id"].startswith("donation-"))
         self.assertEqual(manifest["source_session_id"], describe.source_session_id({"path": str(root / "source.jsonl")}))
+        self.assertEqual(manifest["source_session_label"], "Example project · 6980")
+        self.assertEqual(manifest["source_display_id"], "6980")
         self.assertEqual(manifest["conversation_fingerprint"], "conv-abc123")
         self.assertEqual(manifest["fingerprint_version"], "structure-v1")
         self.assertEqual(manifest["turns"], 42)

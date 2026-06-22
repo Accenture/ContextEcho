@@ -71,6 +71,18 @@ def source_session_id(auto: dict) -> str:
     return hashlib.sha256(source.encode("utf-8")).hexdigest()[:16]
 
 
+def source_display_id(auto: dict) -> str:
+    label = str(auto.get("session_label") or "").strip()
+    if "·" in label:
+        suffix = label.rsplit("·", 1)[1].strip()
+        if suffix:
+            return suffix
+    source = Path(str(auto.get("path") or ""))
+    if source.name:
+        return hashlib.sha256(source.name.encode("utf-8")).hexdigest()[:4]
+    return str(auto.get("conversation_fingerprint") or "").replace("conv-", "")[:4]
+
+
 def count_value(value: object) -> int | str:
     if value in {None, ""}:
         return ""
@@ -112,6 +124,8 @@ def write_manifest_and_consent(
     manifest = {
         "session_id": session_id,
         "source_session_id": source_session_id(auto),
+        "source_session_label": auto.get("session_label", ""),
+        "source_display_id": source_display_id(auto),
         "conversation_fingerprint": auto.get("conversation_fingerprint", ""),
         "fingerprint_version": auto.get("fingerprint_version", ""),
         "agent": auto.get("agent", "unknown"),
