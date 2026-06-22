@@ -971,6 +971,9 @@ INDEX_HTML = r"""<!doctype html>
     .support-main { min-width:0; flex:1; }
     .support-title { font-weight:950; color:#13552f; }
     .support-copy { color:var(--muted); font-size:12px; margin-top:2px; }
+    .support-privacy { margin-top:6px; color:#5d6761; font-size:10px; line-height:1.25; }
+    .support-privacy a { color:#13552f; font-weight:900; text-decoration:none; }
+    .support-privacy a:hover, .support-privacy a:focus { text-decoration:underline; }
     .support-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
     .support-actions a, .support-actions button { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; padding:8px 10px; font-size:12px; font-weight:900; min-height:34px; box-shadow:none; }
     .support-actions a.ranking { background:#dfeadd; color:#13552f; }
@@ -1155,7 +1158,6 @@ INDEX_HTML = r"""<!doctype html>
         <div class="topline">Donate a coding-agent session in a few local-first steps.</div>
       </div>
       <div class="hero-side">
-        <div class="privacy-note"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.</div>
         <div class="hero-progress">
           <div class="progress-label"><strong id="stepLabel">Step 1 of 3</strong><span id="stepPercentText">33% complete</span></div>
           <div id="progressRing" class="ring" style="--pct:33"><span id="progressRingText">33%</span></div>
@@ -1167,7 +1169,8 @@ INDEX_HTML = r"""<!doctype html>
         <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
         <div class="support-main">
           <div class="support-title">Help more donors find ContextEcho</div>
-          <div class="support-copy">Project activity and contribution links.</div>
+          <div class="support-copy">Star the GitHub repo or like the dataset by clicking the cards.</div>
+          <div class="support-privacy"><a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md" target="_blank" rel="noopener noreferrer">Donor privacy</a>: ContextEcho analyzes assistant behavior, not donor personality. Default: <a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md" target="_blank" rel="noopener noreferrer">full redacted</a>. Stronger privacy: <a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md" target="_blank" rel="noopener noreferrer">user-minimized</a>.</div>
           <div class="support-actions">
             <a class="ranking" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener noreferrer">Ranking</a>
             <a class="guide" href="https://accenture.github.io/ContextEcho/donate/#guideTitle" target="_blank" rel="noopener noreferrer">Guide</a>
