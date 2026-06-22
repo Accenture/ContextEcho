@@ -38,6 +38,8 @@ from donate.adapters.base import is_redacted_artifact
 DONATION_ROOT = Path.home() / "Downloads" / "ContextEcho_donations"
 DONATION_REGISTRY = DONATION_ROOT / ".donated_sessions.json"
 MAX_AUTO_REPAIR_PASSES = 3
+MIN_SESSION_GROWTH_RATIO = 0.20
+MIN_SESSION_GROWTH_TURNS = 50
 CLIENT_DISCONNECT_ERRNOS = {errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED}
 SUBMIT_JOBS: dict[str, dict] = {}
 SUBMIT_JOBS_LOCK = threading.Lock()
@@ -149,6 +151,29 @@ def load_donated_artifact_keys() -> set[str]:
     return {str(x) for x in data.get("artifact_keys", [])}
 
 
+def source_path_key(path: str | Path) -> str:
+    return hashlib.sha256(str(Path(path).expanduser()).encode("utf-8", errors="replace")).hexdigest()
+
+
+def load_donated_source_records() -> dict[str, dict]:
+    records: dict[str, dict] = {}
+    for item in load_donation_registry().get("submissions", []):
+        pkey = str(item.get("source_path_key") or "")
+        if not pkey:
+            continue
+        turns = int(item.get("turns") or 0)
+        previous = records.get(pkey)
+        if previous is None or turns > int(previous.get("turns") or 0):
+            records[pkey] = item
+    return records
+
+
+def session_update_ready(current_turns: int, previous_turns: int) -> bool:
+    delta = max(0, int(current_turns or 0) - int(previous_turns or 0))
+    growth = (delta / previous_turns) if previous_turns else (1.0 if delta else 0.0)
+    return bool(delta and (delta >= MIN_SESSION_GROWTH_TURNS or growth >= MIN_SESSION_GROWTH_RATIO))
+
+
 def donation_points_range(turns: str | int = 0, compactions: str | int = 0) -> tuple[int, int]:
     turns_n = int(turns or 0)
     compactions_n = int(compactions or 0)
@@ -192,6 +217,7 @@ def save_donation_record(source_path: str | Path = "", artifact_path: str | Path
     source = str(source_path or "")
     artifact = str(artifact_path or "")
     skey = session_key(source) if source else ""
+    spkey = source_path_key(source) if source else ""
     akey = artifact_key(artifact) if artifact and Path(artifact).expanduser().exists() else ""
     if skey:
         source_keys.add(skey)
@@ -205,6 +231,8 @@ def save_donation_record(source_path: str | Path = "", artifact_path: str | Path
     submissions.append({
         "submitted_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "source_key": skey,
+        "source_path_key": spkey,
+        "source_path": source,
         "artifact_key": akey,
         "submission": m.group(1) if m else "",
         "contributor_identity": contributor_identity(receipt),
@@ -245,6 +273,7 @@ def clear_donation_record(source_path: str | Path = "", artifact_path: str | Pat
     source = str(source_path or "")
     artifact = str(artifact_path or "")
     skey = session_key(source) if source else ""
+    spkey = source_path_key(source) if source else ""
     akey = artifact_key(artifact) if artifact and Path(artifact).expanduser().exists() else ""
     if not skey and not akey:
         return False
@@ -263,7 +292,11 @@ def clear_donation_record(source_path: str | Path = "", artifact_path: str | Pat
 
     kept_submissions = []
     for item in submissions:
-        if (skey and item.get("source_key") == skey) or (akey and item.get("artifact_key") == akey):
+        if (
+            (skey and item.get("source_key") == skey)
+            or (spkey and item.get("source_path_key") == spkey)
+            or (akey and item.get("artifact_key") == akey)
+        ):
             changed = True
             continue
         kept_submissions.append(item)
@@ -285,6 +318,15 @@ def clear_donation_record(source_path: str | Path = "", artifact_path: str | Pat
 def already_submitted(source_path: str | Path = "", artifact_path: str | Path = "") -> bool:
     if source_path and session_key(source_path) in load_donated_keys():
         return True
+    if source_path:
+        info = load_donated_source_records().get(source_path_key(source_path))
+        if info:
+            try:
+                current_turns = discover_mod.inspect_session(Path(source_path).expanduser()).get("turns", 0)
+            except Exception:
+                current_turns = int(info.get("turns") or 0)
+            if not session_update_ready(current_turns, int(info.get("turns") or 0)):
+                return True
     if artifact_path:
         p = Path(artifact_path).expanduser()
         if p.exists() and artifact_key(p) in load_donated_artifact_keys():
@@ -471,11 +513,22 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
 
 def annotate_donated(sessions: list[dict]) -> list[dict]:
     donated = load_donated_keys()
+    source_records = load_donated_source_records()
     out = []
     for session in sessions:
         row = dict(session)
         path = row.get("path")
-        row["donated"] = bool(path and session_key(path) in donated)
+        exact_donated = bool(path and session_key(path) in donated)
+        source_record = source_records.get(source_path_key(path)) if path else None
+        previous_turns = int((source_record or {}).get("turns") or 0)
+        current_turns = int(row.get("turns") or 0)
+        new_turns = max(0, current_turns - previous_turns)
+        update_ready = bool(source_record and not exact_donated and session_update_ready(current_turns, previous_turns))
+        row["donated"] = exact_donated or bool(source_record and not update_ready)
+        row["donated_before"] = bool(exact_donated or source_record)
+        row["donated_turns"] = previous_turns if source_record else 0
+        row["new_turns"] = new_turns if source_record else 0
+        row["update_ready"] = update_ready
         out.append(row)
     return out
 
@@ -1201,6 +1254,7 @@ let page = 0;
 const pageSize = 5;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
+let donatedRecords = JSON.parse(localStorage.getItem('contextechoDonatedRecordsV1') || '{}');
 let publicStats = {};
 let leaderboardPreviewPage = null;
 const statIcons = {
@@ -1216,8 +1270,21 @@ const statIcons = {
 };
 function iconSvg(name){ return statIcons[name] || ''; }
 function saveDonatedPaths(){ localStorage.setItem('contextechoDonatedPaths', JSON.stringify([...donatedPaths])); }
+function saveDonatedRecords(){ localStorage.setItem('contextechoDonatedRecordsV1', JSON.stringify(donatedRecords)); }
 function sessionLocalKey(s){
   return [s?.path || '', s?.records || '', s?.turns || '', s?.compactions || '', s?.last_active || s?.modified || ''].join('|');
+}
+function sessionPathKey(s){ return String(s?.path || ''); }
+function localDonationInfo(s){
+  const pathKey = sessionPathKey(s);
+  const record = pathKey ? donatedRecords[pathKey] : null;
+  const previousTurns = Number(s?.donated_turns || record?.turns || 0);
+  const currentTurns = Number(s?.turns || 0);
+  const newTurns = Math.max(0, Number(s?.new_turns || (previousTurns ? currentTurns - previousTurns : 0)));
+  const updateReady = !!s?.update_ready || !!(record && newTurns && (newTurns >= 50 || (previousTurns && newTurns / previousTurns >= 0.20)));
+  const exactDonated = !!s?.donated || donatedPaths.has(sessionLocalKey(s));
+  const donatedBefore = exactDonated || !!s?.donated_before || !!record;
+  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady};
 }
 function redactionCacheKey(){
   if(!selected) return '';
@@ -1239,11 +1306,11 @@ function restoreCachedRedaction(){
   refreshButtons();
   return true;
 }
-function annotateCachedDonations(rows){
-  return (rows || []).map(s => ({...s, donated: !!(s.donated || donatedPaths.has(sessionLocalKey(s)))}));
-}
 function allSessionsDonated(){
-  return sessions.length > 0 && sessions.every(s => !!s.donated || donatedPaths.has(sessionLocalKey(s)));
+  return sessions.length > 0 && sessions.every(s => {
+    const info = localDonationInfo(s);
+    return info.exactDonated || (info.donatedBefore && !info.updateReady);
+  });
 }
 function allSessionsDonatedMessage(){
   return `Thank you for donating all your scanned session data. ${sessions.length} session${sessions.length === 1 ? '' : 's'} on this machine are marked donated.`;
@@ -1278,8 +1345,9 @@ function goStep(n){
 }
 function refreshButtons(){
   if(activeOperation) return;
-  const selectedDonated = !!(selected && (selected.donated || donatedPaths.has(sessionLocalKey(selected))));
-  $('pickNext').disabled = !selected || allSessionsDonated();
+  const selectedInfo = selected ? localDonationInfo(selected) : null;
+  const selectedDonated = !!(selectedInfo && (selectedInfo.exactDonated || (selectedInfo.donatedBefore && !selectedInfo.updateReady)));
+  $('pickNext').disabled = !selected || selectedDonated;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
@@ -2000,12 +2068,19 @@ function renderSessions(){
   rows.forEach((s,i) => {
     const idx = start + i;
     const row = document.createElement('div');
-    const donated = !!s.donated || donatedPaths.has(sessionLocalKey(s));
+    const donationInfo = localDonationInfo(s);
+    const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
+    const updateReady = donationInfo.updateReady;
+    const statusPill = updateReady
+      ? `<span class="pill best">update ready · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns</span>`
+      : (donationInfo.donatedBefore
+        ? `<span class="pill donated">donated${donationInfo.newTurns ? ` · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns` : ''}</span>`
+        : '');
     row.className = donated ? 'session-row donated-row' : 'session-row';
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
-        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${donated ? '<span class="pill donated">donated</span>' : ''}</div>
+        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill}</div>
       </div>
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
@@ -2021,10 +2096,15 @@ function renderSessions(){
         try {
           await post('/api/clear_donated_label', {source_path:s.path || ''});
           donatedPaths.delete(sessionLocalKey(s));
+          delete donatedRecords[sessionPathKey(s)];
           s.donated = false;
+          s.donated_before = false;
+          s.update_ready = false;
+          s.new_turns = 0;
           if(selected && selected.path === s.path) selected.donated = false;
           submitted = false;
           saveDonatedPaths();
+          saveDonatedRecords();
           renderSessions();
           refreshButtons();
           status('discoverStatus', 'Local donated label cleared for this session. If the relay already received it, the relay may still reject the repeat attempt.');
@@ -2035,15 +2115,15 @@ function renderSessions(){
     }
     row.onclick = () => {
       if(donated){
-        status('discoverStatus', 'This session is already marked donated locally. Right-click this row to clear only its local label if the previous upload failed before reaching the relay.');
+        status('discoverStatus', donationInfo.newTurns ? `This session was donated before and has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'This session is already marked donated locally. Right-click this row to clear only its local label if the previous upload failed before reaching the relay.');
         return;
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
       row.classList.add('selected'); selected = s;
       redacted = null; appliedScrubTerms = []; redactionCache = new Map(); submitted = !!donated;
       renderSelectedCard(s, idx);
-      status('redactStatus', donated ? 'This session is already marked donated locally. Pick a different session to avoid duplicate submissions.' : '');
-      status('discoverStatus', '');
+      status('redactStatus', '');
+      status('discoverStatus', updateReady ? `This session was donated before and now has ${compactNumber(donationInfo.newTurns)} new turns. You can submit an updated version for maintainer review.` : '');
       refreshButtons();
     };
     list.appendChild(row);
@@ -2121,9 +2201,17 @@ $('clearDonatedBtn').onclick = async () => {
   try {
     await post('/api/clear_donated_labels', {});
     donatedPaths.clear();
+    donatedRecords = {};
     saveDonatedPaths();
-    sessions = sessions.map(s => ({...s, donated:false}));
-    if(selected) selected.donated = false;
+    saveDonatedRecords();
+    sessions = sessions.map(s => ({...s, donated:false, donated_before:false, update_ready:false, new_turns:0, donated_turns:0}));
+    if(selected) {
+      selected.donated = false;
+      selected.donated_before = false;
+      selected.update_ready = false;
+      selected.new_turns = 0;
+      selected.donated_turns = 0;
+    }
     submitted = false;
     renderSessions();
     refreshButtons();
@@ -2354,7 +2442,23 @@ $('submitBtn').onclick = async () => {
     if(!data) throw new Error('submit did not return a result');
     setBusy('submitProgress', true, 100);
     submitted = true;
-    if(selected && selected.path){ selected.donated = true; donatedPaths.add(sessionLocalKey(selected)); saveDonatedPaths(); renderSessions(); }
+    if(selected && selected.path){
+      selected.donated = true;
+      selected.donated_before = true;
+      selected.update_ready = false;
+      selected.new_turns = 0;
+      selected.donated_turns = Number(selected.turns || 0);
+      donatedPaths.add(sessionLocalKey(selected));
+      donatedRecords[sessionPathKey(selected)] = {
+        turns: Number(selected.turns || 0),
+        records: Number(selected.records || 0),
+        compactions: Number(selected.compactions || 0),
+        submitted_at: new Date().toISOString()
+      };
+      saveDonatedPaths();
+      saveDonatedRecords();
+      renderSessions();
+    }
     renderSubmitResult(data);
     status('submitStatus', allSessionsDonated() ? allSessionsDonatedMessage() : (data.duplicate ? 'This session was already received. It is now marked donated locally.' : 'Submission marked donated locally. Pick another session to submit more.'));
     refreshButtons();

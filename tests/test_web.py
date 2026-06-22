@@ -25,6 +25,7 @@ from donate.web import (
     local_pending_summary,
     parse_submit_output,
     save_donation_record,
+    session_update_ready,
     session_key,
     submit_auto_metadata,
     write_receipt,
@@ -89,6 +90,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("/api/clear_donated_label", INDEX_HTML)
         self.assertIn("does not bypass maintainer duplicate checks", INDEX_HTML)
         self.assertIn("Right-click this row to clear only its local label", INDEX_HTML)
+        self.assertIn("update ready", INDEX_HTML)
+        self.assertIn("new turns", INDEX_HTML)
+        self.assertIn("contextechoDonatedRecordsV1", INDEX_HTML)
+        self.assertIn("at least 50 new turns or 20% growth", INDEX_HTML)
         self.assertNotIn(">Clear label<", INDEX_HTML)
         self.assertNotIn(">Retry failed upload<", INDEX_HTML)
 
@@ -293,6 +298,42 @@ class WebTests(unittest.TestCase):
             rows = annotate_donated([{"path": path}, {"path": "/tmp/other.jsonl"}])
         self.assertTrue(rows[0]["donated"])
         self.assertFalse(rows[1]["donated"])
+
+    def test_session_update_ready_uses_relay_growth_threshold(self):
+        self.assertFalse(session_update_ready(119, 100))
+        self.assertTrue(session_update_ready(120, 100))
+        self.assertTrue(session_update_ready(150, 120))
+
+    def test_annotate_donated_marks_grown_source_update_ready(self):
+        path = "/tmp/example-session.jsonl"
+        record = {"source_path_key": "unused", "turns": 100}
+        with (
+            mock.patch("donate.web.load_donated_keys", return_value=set()),
+            mock.patch("donate.web.load_donated_source_records", return_value={"path-key": record}),
+            mock.patch("donate.web.source_path_key", return_value="path-key"),
+        ):
+            rows = annotate_donated([{"path": path, "turns": 130}])
+
+        self.assertFalse(rows[0]["donated"])
+        self.assertTrue(rows[0]["donated_before"])
+        self.assertEqual(rows[0]["donated_turns"], 100)
+        self.assertEqual(rows[0]["new_turns"], 30)
+        self.assertTrue(rows[0]["update_ready"])
+
+    def test_annotate_donated_marks_grown_source_below_threshold(self):
+        path = "/tmp/example-session.jsonl"
+        record = {"source_path_key": "unused", "turns": 100}
+        with (
+            mock.patch("donate.web.load_donated_keys", return_value=set()),
+            mock.patch("donate.web.load_donated_source_records", return_value={"path-key": record}),
+            mock.patch("donate.web.source_path_key", return_value="path-key"),
+        ):
+            rows = annotate_donated([{"path": path, "turns": 110}])
+
+        self.assertTrue(rows[0]["donated"])
+        self.assertTrue(rows[0]["donated_before"])
+        self.assertEqual(rows[0]["new_turns"], 10)
+        self.assertFalse(rows[0]["update_ready"])
 
     def test_save_donation_record_tracks_artifact_and_blocks_duplicates(self):
         with TemporaryDirectory() as td:
