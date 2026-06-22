@@ -928,7 +928,9 @@ INDEX_HTML = r"""<!doctype html>
     .folder-icon { width:76px; height:76px; border-radius:18px; display:grid; place-items:center; background:linear-gradient(135deg,#eef6d4,#f7faeb); }
     .folder-icon:before { content:""; width:42px; height:29px; border:3px solid var(--accent); border-radius:6px; box-sizing:border-box; box-shadow:0 -10px 0 -6px var(--accent); }
     .stats { display:grid; grid-template-columns:repeat(3,minmax(82px,1fr)); gap:10px; align-items:stretch; min-width:330px; }
-    .stat-card { min-height:78px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:10px; padding:8px 9px; box-shadow:0 5px 14px rgba(43,59,37,.06); }
+    .stat-card { min-height:78px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:10px; padding:8px 9px; box-shadow:0 5px 14px rgba(43,59,37,.06); color:inherit; text-decoration:none; transition:.15s ease; }
+    a.stat-card:hover, a.stat-card:focus { transform:translateY(-1px); border-color:#c9dcc5; box-shadow:0 8px 18px rgba(43,59,37,.1); outline:none; }
+    a.stat-card:focus-visible { outline:3px solid rgba(31,111,67,.18); }
     .stat-icon { width:28px; height:28px; margin:0 auto 5px; display:grid; place-items:center; border-radius:50%; background:#f6edd6; color:#d28b00; }
     .stat-icon svg { width:15px; height:15px; display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
     .stat-icon .icon-fill { fill:currentColor; stroke:none; }
@@ -971,8 +973,6 @@ INDEX_HTML = r"""<!doctype html>
     .support-copy { color:var(--muted); font-size:12px; margin-top:2px; }
     .support-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
     .support-actions a, .support-actions button { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; padding:8px 10px; font-size:12px; font-weight:900; min-height:34px; box-shadow:none; }
-    .support-actions a.github { background:#111b18; color:#fffef8; }
-    .support-actions a.dataset { background:#e8eddc; color:var(--ink); }
     .support-actions a.ranking { background:#dfeadd; color:#13552f; }
     .support-actions a.guide { background:#e8eddc; color:#13552f; }
     .discover-main { width:100%; border-radius:10px; padding:14px 20px; font-size:18px; box-shadow:0 12px 24px rgba(23,113,63,.2); }
@@ -1167,18 +1167,16 @@ INDEX_HTML = r"""<!doctype html>
         <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
         <div class="support-main">
           <div class="support-title">Help more donors find ContextEcho</div>
-          <div class="support-copy">A star or like improves visibility for this benchmark.</div>
+          <div class="support-copy">Project activity and contribution links.</div>
           <div class="support-actions">
-            <a class="github" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">Star on GitHub</a>
-            <a class="dataset" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">Like Dataset</a>
             <a class="ranking" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener noreferrer">Ranking</a>
             <a class="guide" href="https://accenture.github.io/ContextEcho/donate/#guideTitle" target="_blank" rel="noopener noreferrer">Guide</a>
           </div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
-          <div class="stat-card"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Dataset Downloads</div></div>
-          <div class="stat-card"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></div>
-          <div class="stat-card"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></div>
+          <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Downloads Last Month</div></a>
+          <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></a>
+          <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></a>
         </div>
       </div>
       <div class="steps">
@@ -1439,16 +1437,16 @@ function escapeHtml(s){
 }
 function renderProjectStats(){
   const cards = [
-    ['download', 'Dataset Downloads', publicStats.dataset_downloads],
-    ['star', 'GitHub Stars', publicStats.github_stars],
-    ['heart', 'Dataset Likes', publicStats.dataset_likes],
+    ['download', 'Downloads Last Month', publicStats.dataset_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
+    ['star', 'GitHub Stars', publicStats.github_stars, 'https://github.com/Accenture/ContextEcho'],
+    ['heart', 'Dataset Likes', publicStats.dataset_likes, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
   ];
-  $('projectStats').innerHTML = cards.map(([icon, label, value]) => `
-    <div class="stat-card">
+  $('projectStats').innerHTML = cards.map(([icon, label, value, href]) => `
+    <a class="stat-card" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
       <div class="stat-icon" data-icon="${escapeHtml(icon)}">${iconSvg(icon)}</div>
       <div class="stat-value">${escapeHtml(fmtStat(value))}</div>
       <div class="stat-label">${escapeHtml(label)}</div>
-    </div>
+    </a>
   `).join('');
   renderDatasetComposition();
 }
