@@ -905,9 +905,9 @@ INDEX_HTML = r"""<!doctype html>
     .step-pill.active:after, .step-pill.done:after { background:var(--accent); }
     .hero-side { display:flex; align-items:flex-start; gap:16px; justify-content:flex-end; max-width:780px; }
     .privacy-note { color:var(--muted); font-size:13px; line-height:1.35; text-align:right; max-width:560px; padding-top:4px; white-space:nowrap; }
-    .privacy-links { display:flex; justify-content:flex-end; gap:8px; margin-top:7px; }
-    .privacy-links a { text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; padding:7px 10px; font-size:12px; font-weight:900; min-height:30px; background:#e8eddc; color:#13552f; }
-    .privacy-links a.ranking { background:#dfeadd; }
+    .privacy-links { display:flex; justify-content:flex-end; gap:12px; margin-top:5px; }
+    .privacy-links a { color:#13552f; font-size:12px; font-weight:900; text-decoration:none; }
+    .privacy-links a:hover, .privacy-links a:focus { text-decoration:underline; }
     .privacy-note strong { color:#13552f; }
     .hero-progress { display:flex; align-items:center; gap:14px; padding-top:4px; min-width:190px; justify-content:flex-end; }
     .progress-label { text-align:right; color:var(--muted); font-size:14px; }
