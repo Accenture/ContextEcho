@@ -13,6 +13,7 @@ import datetime as dt
 import errno
 import hashlib
 import json
+import os
 import queue
 import re
 import subprocess
@@ -172,6 +173,41 @@ def session_update_ready(current_turns: int, previous_turns: int) -> bool:
     delta = max(0, int(current_turns or 0) - int(previous_turns or 0))
     growth = (delta / previous_turns) if previous_turns else (1.0 if delta else 0.0)
     return bool(delta and (delta >= MIN_SESSION_GROWTH_TURNS or growth >= MIN_SESSION_GROWTH_RATIO))
+
+
+def relay_url() -> str:
+    return os.environ.get("CONTEXTECHO_RELAY_URL", "").strip().rstrip("/")
+
+
+def relay_donation_status(sessions: list[dict]) -> list[dict]:
+    url = relay_url()
+    if not url or not sessions:
+        return []
+    payload = {
+        "sessions": [
+            {
+                "source_session_id": describe_mod.source_session_id(row),
+                "conversation_fingerprint": row.get("conversation_fingerprint", ""),
+                "turns": row.get("turns", 0),
+                "records": row.get("records", 0),
+            }
+            for row in sessions
+        ]
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = Request(
+        f"{url}/api/status",
+        data=data,
+        headers={"content-type": "application/json", "user-agent": "contextecho-donate"},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=4) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return []
+    statuses = result.get("statuses", []) if isinstance(result, dict) else []
+    return [x if isinstance(x, dict) else {} for x in statuses]
 
 
 def donation_points_range(turns: str | int = 0, compactions: str | int = 0) -> tuple[int, int]:
@@ -530,6 +566,21 @@ def annotate_donated(sessions: list[dict]) -> list[dict]:
         row["new_turns"] = new_turns if source_record else 0
         row["update_ready"] = update_ready
         out.append(row)
+    for row, status in zip(out, relay_donation_status(out)):
+        if not status.get("received"):
+            continue
+        previous_turns = int(status.get("turns") or row.get("donated_turns") or 0)
+        new_turns = int(status.get("new_turns") or max(0, int(row.get("turns") or 0) - previous_turns))
+        update_ready = bool(status.get("update_ready"))
+        path = row.get("path")
+        exact_donated = bool(path and session_key(path) in donated)
+        row["donated_before"] = True
+        row["donated_turns"] = max(int(row.get("donated_turns") or 0), previous_turns)
+        row["new_turns"] = max(int(row.get("new_turns") or 0), new_turns)
+        row["update_ready"] = bool(row.get("update_ready") or update_ready)
+        row["donated"] = bool(exact_donated or (not row["update_ready"]))
+        row["relay_received"] = True
+        row["relay_submission_id"] = status.get("submission_id", "")
     return out
 
 

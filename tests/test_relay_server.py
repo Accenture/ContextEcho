@@ -213,6 +213,34 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(records[0]["submission_id"], "public-session-chainassemble")
         self.assertTrue(records[0]["conversation_fingerprint"].startswith("conv-"))
 
+    def test_lineage_status_reports_received_and_update_ready(self) -> None:
+        seen = [
+            {
+                "submission_id": "submission-old",
+                "source_session_id": "source-1",
+                "conversation_fingerprint": "conv-1",
+                "turns": 100,
+                "records": 200,
+            }
+        ]
+
+        received = relay_server._lineage_status(
+            {"source_session_id": "source-1", "conversation_fingerprint": "conv-1", "turns": 110, "records": 205},
+            seen,
+        )
+        update_ready = relay_server._lineage_status(
+            {"source_session_id": "source-1", "conversation_fingerprint": "conv-1", "turns": 160, "records": 260},
+            seen,
+        )
+
+        self.assertTrue(received["received"])
+        self.assertFalse(received["update_ready"])
+        self.assertEqual(received["new_turns"], 10)
+        self.assertEqual(received["submission_id"], "submission-old")
+        self.assertTrue(update_ready["received"])
+        self.assertTrue(update_ready["update_ready"])
+        self.assertEqual(update_ready["new_turns"], 60)
+
 
 if __name__ == "__main__":
     unittest.main()

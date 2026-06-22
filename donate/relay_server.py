@@ -19,7 +19,7 @@ import uuid
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Header, HTTPException, UploadFile
 from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 
 from donate.adapters.base import conversation_fingerprint
@@ -304,6 +304,49 @@ def _near_duplicate_detail(manifest: dict, seen_records: list[dict]) -> str | No
     return None
 
 
+def _lineage_status(item: dict, seen_records: list[dict]) -> dict:
+    fingerprint = str(item.get("conversation_fingerprint") or "").strip()
+    source_id = str(item.get("source_session_id") or "").strip()
+    current_turns = _count_value(item.get("turns"))
+    current_records = _count_value(item.get("records"))
+    best: dict = {}
+    best_match_type = ""
+    for row in seen_records:
+        same_conversation = fingerprint and str(row.get("conversation_fingerprint") or "") == fingerprint
+        same_source = source_id and str(row.get("source_session_id") or "") == source_id
+        if not (same_conversation or same_source):
+            continue
+        old_turns = _count_value(row.get("turns"))
+        old_records = _count_value(row.get("records"))
+        if best and old_turns <= _count_value(best.get("turns")):
+            continue
+        best = row
+        best_match_type = "conversation_fingerprint" if same_conversation else "source_session_id"
+    if not best:
+        return {"received": False, "update_ready": False, "new_turns": 0, "new_records": 0}
+    old_turns = _count_value(best.get("turns"))
+    old_records = _count_value(best.get("records"))
+    turn_delta = max(0, current_turns - old_turns)
+    record_delta = max(0, current_records - old_records)
+    turn_growth = (turn_delta / old_turns) if old_turns else (1.0 if turn_delta else 0.0)
+    record_growth = (record_delta / old_records) if old_records else (1.0 if record_delta else 0.0)
+    update_ready = (
+        turn_delta >= MIN_SESSION_GROWTH_TURNS
+        or turn_growth >= MIN_SESSION_GROWTH_RATIO
+        or record_growth >= MIN_SESSION_GROWTH_RATIO
+    )
+    return {
+        "received": True,
+        "update_ready": bool(update_ready),
+        "new_turns": turn_delta,
+        "new_records": record_delta,
+        "turns": old_turns,
+        "records": old_records,
+        "submission_id": best.get("submission_id", ""),
+        "match_type": best_match_type,
+    }
+
+
 def _reset_seen_hashes() -> int:
     if not SEEN_HASHES.exists():
         return 0
@@ -499,6 +542,21 @@ def backfill_seen_hashes(
     _require_admin_token(x_admin_token)
     result = _backfill_seen_hashes_from_hf()
     return {"ok": True, "repos": BACKFILL_REPOS, **result}
+
+
+@app.post("/api/status")
+def donation_status(payload: Annotated[dict, Body()]) -> dict:
+    sessions = payload.get("sessions") if isinstance(payload, dict) else []
+    if not isinstance(sessions, list):
+        raise HTTPException(status_code=400, detail="sessions must be a list")
+    seen_records = _read_seen_records()
+    statuses = []
+    for item in sessions[:200]:
+        if not isinstance(item, dict):
+            statuses.append({"received": False, "update_ready": False, "new_turns": 0, "new_records": 0})
+            continue
+        statuses.append(_lineage_status(item, seen_records))
+    return {"ok": True, "statuses": statuses}
 
 
 @app.post("/api/donate")

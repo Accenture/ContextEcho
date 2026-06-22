@@ -337,6 +337,42 @@ class WebTests(unittest.TestCase):
         self.assertEqual(rows[0]["new_turns"], 10)
         self.assertFalse(rows[0]["update_ready"])
 
+    def test_annotate_donated_uses_relay_lineage_status(self):
+        path = "/tmp/example-session.jsonl"
+        with (
+            mock.patch("donate.web.load_donated_keys", return_value=set()),
+            mock.patch("donate.web.load_donated_source_records", return_value={}),
+            mock.patch(
+                "donate.web.relay_donation_status",
+                return_value=[{"received": True, "turns": 100, "new_turns": 10, "update_ready": False, "submission_id": "submission-old"}],
+            ),
+        ):
+            rows = annotate_donated([{"path": path, "turns": 110, "records": 200}])
+
+        self.assertTrue(rows[0]["donated"])
+        self.assertTrue(rows[0]["donated_before"])
+        self.assertEqual(rows[0]["donated_turns"], 100)
+        self.assertEqual(rows[0]["new_turns"], 10)
+        self.assertTrue(rows[0]["relay_received"])
+        self.assertEqual(rows[0]["relay_submission_id"], "submission-old")
+
+    def test_annotate_donated_uses_relay_update_ready_status(self):
+        path = "/tmp/example-session.jsonl"
+        with (
+            mock.patch("donate.web.load_donated_keys", return_value=set()),
+            mock.patch("donate.web.load_donated_source_records", return_value={}),
+            mock.patch(
+                "donate.web.relay_donation_status",
+                return_value=[{"received": True, "turns": 100, "new_turns": 60, "update_ready": True}],
+            ),
+        ):
+            rows = annotate_donated([{"path": path, "turns": 160, "records": 200}])
+
+        self.assertFalse(rows[0]["donated"])
+        self.assertTrue(rows[0]["donated_before"])
+        self.assertTrue(rows[0]["update_ready"])
+        self.assertEqual(rows[0]["new_turns"], 60)
+
     def test_save_donation_record_tracks_artifact_and_blocks_duplicates(self):
         with TemporaryDirectory() as td:
             registry = Path(td) / ".donated_sessions.json"
