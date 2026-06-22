@@ -13,6 +13,9 @@
     .hero { max-width:860px; }
     h1 { margin:0; font-size:48px; line-height:1.02; letter-spacing:0; }
     .lede { margin:16px 0 0; font-size:20px; line-height:1.45; color:var(--muted); max-width:760px; }
+    .intro-links { display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; }
+    .intro-links a { color:#13552f; font-weight:900; text-decoration:none; }
+    .intro-links a:hover, .intro-links a:focus { text-decoration:underline; }
     .privacy { margin-top:18px; color:#13552f; font-weight:800; }
     .command-card { border:1px solid #d8e6d5; background:var(--soft); border-radius:16px; padding:18px; margin-top:28px; }
     .command-label { font-size:13px; font-weight:900; color:#13552f; text-transform:uppercase; letter-spacing:.04em; }
@@ -119,6 +122,10 @@
       <div>
         <h1>Donate a coding-agent session to ContextEcho</h1>
         <p class="lede">Start a local scanner, pick a real Claude Code or Codex session, redact it on your machine, and submit only the verified redacted artifact.</p>
+        <div class="intro-links">
+          <a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md">Privacy details</a>
+          <a href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md">Current ranking</a>
+        </div>
         <div class="privacy">Raw session history stays local. The server receives only redacted files after you approve them.</div>
         <div class="public-overview">
           <div class="support-card">
@@ -182,8 +189,6 @@
           <div class="actions">
             <button class="primary" id="copyCommand" type="button">Copy Command</button>
             <a class="button local" id="openLocalWizard" role="button" aria-disabled="true" tabindex="-1">Continue in Local Wizard</a>
-            <a class="button secondary" href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md">Privacy Details</a>
-            <a class="button secondary" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md">Current Ranking</a>
           </div>
           <div id="bridgeStatus" class="bridge-status">Run the command once. When the local wizard starts, this page will detect it and enable Continue.</div>
         </div>
