@@ -279,6 +279,78 @@ class RelayServerTests(unittest.TestCase):
 
         self.assertEqual(cm.exception.status_code, 400)
 
+    def test_seen_record_summary_counts_records_and_totals(self) -> None:
+        summary = relay_server._seen_record_summary([
+            {
+                "submission_id": "submission-one",
+                "source_session_id": "source-1",
+                "conversation_fingerprint": "conv-1",
+                "turns": 100,
+                "records": 200,
+            },
+            {
+                "submission_id": "submission-two",
+                "source_session_id": "source-2",
+                "conversation_fingerprint": "conv-2",
+                "turns": "25",
+                "records": "50",
+            },
+        ])
+
+        self.assertEqual(summary["records"], 2)
+        self.assertEqual(summary["submissions"], 2)
+        self.assertEqual(summary["source_sessions"], 2)
+        self.assertEqual(summary["conversations"], 2)
+        self.assertEqual(summary["turns"], 125)
+        self.assertEqual(summary["jsonl_records"], 250)
+
+    def test_pending_submissions_from_hf_reads_manifest_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            manifest = Path(td) / "manifest.json"
+            manifest.write_text(
+                json.dumps({
+                    "agent": "Codex CLI",
+                    "model": "gpt-5",
+                    "turns": 120,
+                    "records": 456,
+                    "compactions": 3,
+                    "source_session_id": "source-abc",
+                    "conversation_fingerprint": "conv-abc",
+                    "credit_name": "Donor",
+                    "contributor_email": "donor@example.com",
+                    "contributor_institute": "Institute",
+                    "privacy_tier": "full_redacted",
+                }),
+                encoding="utf-8",
+            )
+            api = mock.Mock()
+            api.list_repo_files.return_value = [
+                "pending/submission-abc/session.redacted.jsonl",
+                "pending/submission-abc/manifest.json",
+                "pending/submission-abc/CONSENT.md",
+            ]
+
+            def fake_download(*, filename: str, **_kwargs: object) -> str:
+                self.assertEqual(filename, "pending/submission-abc/manifest.json")
+                return str(manifest)
+
+            with (
+                mock.patch("donate.relay_server.HfApi", return_value=api),
+                mock.patch("donate.relay_server.hf_hub_download", side_effect=fake_download),
+                mock.patch("donate.relay_server.STAGING_REPO", "owner/staging"),
+            ):
+                result = relay_server._pending_submissions_from_hf()
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(len(result["submissions"]), 1)
+        row = result["submissions"][0]
+        self.assertEqual(row["submission_id"], "submission-abc")
+        self.assertEqual(row["agent"], "Codex CLI")
+        self.assertEqual(row["turns"], 120)
+        self.assertTrue(row["has_session"])
+        self.assertTrue(row["has_manifest"])
+        self.assertTrue(row["has_consent"])
+
 
 if __name__ == "__main__":
     unittest.main()

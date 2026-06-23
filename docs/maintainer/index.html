@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ContextEcho Maintainer Console</title>
+  <style>
+    :root { --ink:#10211a; --muted:#5f6b65; --green:#167843; --line:#dfe7dc; --soft:#f6f9f1; --warn:#9d5a00; --danger:#9b201c; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:linear-gradient(120deg,#fff7d9 0%,#f8fbf3 50%,#dcefe1 100%); }
+    main { max-width:1320px; margin:0 auto; padding:32px 20px 54px; }
+    .shell { background:#fffef8; border:1px solid var(--line); border-radius:22px; padding:28px; box-shadow:0 24px 60px rgba(37,54,42,.12); }
+    header { display:flex; justify-content:space-between; align-items:flex-start; gap:22px; }
+    h1 { margin:0; font-size:38px; line-height:1.08; letter-spacing:0; }
+    .lede { margin:9px 0 0; color:var(--muted); font-size:18px; line-height:1.4; }
+    .top-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    button, a.button { border:0; border-radius:10px; padding:11px 14px; font-weight:900; font-size:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; color:var(--ink); background:#e9eedf; }
+    button.primary { background:var(--green); color:white; box-shadow:0 10px 24px rgba(22,120,67,.18); }
+    button.danger { background:#f7dedb; color:var(--danger); }
+    button:disabled { opacity:.55; cursor:not-allowed; box-shadow:none; }
+    a { color:#13552f; font-weight:850; text-decoration:none; }
+    a:hover, a:focus { text-decoration:underline; }
+    .token-card { margin-top:24px; border:1px solid #d8e6d5; border-radius:16px; background:var(--soft); padding:18px; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end; }
+    label { display:block; font-weight:900; margin-bottom:6px; }
+    input, textarea { width:100%; border:1px solid #d9e0d7; border-radius:10px; padding:11px 12px; font:inherit; background:white; color:var(--ink); }
+    textarea { min-height:110px; resize:vertical; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; }
+    .hint { color:var(--muted); font-size:13px; line-height:1.4; margin-top:6px; }
+    .status { margin-top:14px; color:var(--muted); font-size:14px; min-height:20px; }
+    .status.ok { color:#13552f; font-weight:850; }
+    .status.error { color:var(--danger); font-weight:850; }
+    .tabs { margin-top:24px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:10px; }
+    .tab { background:transparent; border-radius:10px; }
+    .tab.active { background:var(--green); color:white; }
+    .panel { display:none; margin-top:22px; }
+    .panel.active { display:block; }
+    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+    .card { border:1px solid var(--line); background:white; border-radius:14px; padding:16px; }
+    .metric-label { color:var(--muted); font-size:13px; font-weight:850; }
+    .metric-value { margin-top:6px; font-size:30px; line-height:1; font-weight:950; }
+    .metric-detail { margin-top:8px; color:var(--muted); font-size:13px; line-height:1.35; }
+    .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin:0 0 12px; }
+    h2 { margin:0; font-size:24px; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .toolbar input { min-width:260px; }
+    table { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
+    th, td { text-align:left; padding:11px 12px; border-bottom:1px solid #edf1e9; vertical-align:top; font-size:14px; }
+    th { background:#f3f6ef; color:#4e5b54; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    tr:last-child td { border-bottom:0; }
+    code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.92em; background:#eef3e9; border-radius:6px; padding:2px 5px; }
+    .pill { display:inline-flex; align-items:center; border-radius:999px; padding:4px 8px; font-size:12px; font-weight:900; background:#dff2da; color:#13552f; }
+    .pill.warn { background:#fff0d8; color:var(--warn); }
+    .pill.bad { background:#f7dedb; color:var(--danger); }
+    .two-col { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:16px; }
+    .danger-zone { border-color:#efc2be; background:#fff8f7; }
+    .mono-block { white-space:pre-wrap; overflow:auto; max-height:360px; border:1px solid var(--line); background:#111b18; color:#fffef8; border-radius:12px; padding:14px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; line-height:1.45; }
+    @media (max-width:920px) { header, .token-card, .two-col { grid-template-columns:1fr; display:grid; } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:620px) { main { padding:18px 10px 36px; } .shell { padding:18px; } .grid { grid-template-columns:1fr; } h1 { font-size:30px; } .toolbar input { min-width:0; } }
+  </style>
+</head>
+<body>
+<main>
+  <section class="shell">
+    <header>
+      <div>
+        <h1>ContextEcho Maintainer Console</h1>
+        <p class="lede">Check collection status, inspect relay records, backfill duplicate memory, and reset one submission when a donor needs to resubmit.</p>
+      </div>
+      <div class="top-actions">
+        <a class="button" href="../donate/">Donor page</a>
+        <a class="button" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md">Leaderboard</a>
+        <a class="button" href="https://huggingface.co/datasets/contextecho2026/persona-drift-staging/community">HF staging</a>
+      </div>
+    </header>
+
+    <section class="token-card">
+      <div>
+        <label for="relayUrl">Relay URL</label>
+        <input id="relayUrl" value="https://contextecho2026-context-echo-donation-relay.hf.space">
+        <div class="hint">The token is kept in this browser tab's session storage only. It is never committed to GitHub Pages.</div>
+      </div>
+      <div>
+        <label for="adminToken">Admin token</label>
+        <input id="adminToken" type="password" autocomplete="off" placeholder="paste maintainer token">
+      </div>
+      <div class="toolbar">
+        <button class="primary" id="connectBtn">Connect</button>
+        <button id="clearTokenBtn">Clear token</button>
+      </div>
+    </section>
+    <div id="globalStatus" class="status"></div>
+
+    <nav class="tabs" aria-label="Maintainer console sections">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="pending">Pending</button>
+      <button class="tab" data-tab="records">Relay Records</button>
+      <button class="tab" data-tab="lineage">Lineage Check</button>
+      <button class="tab" data-tab="danger">Danger Zone</button>
+    </nav>
+
+    <section id="overview" class="panel active">
+      <div class="section-head">
+        <h2>Dataset And Relay Status</h2>
+        <div class="toolbar"><button id="refreshOverview">Refresh</button><button id="backfillTop">Backfill relay</button></div>
+      </div>
+      <div class="grid" id="metricGrid"></div>
+      <div class="card" style="margin-top:14px">
+        <div class="metric-label">Relay configuration</div>
+        <div id="relayConfig" class="metric-detail"></div>
+      </div>
+    </section>
+
+    <section id="pending" class="panel">
+      <div class="section-head">
+        <h2>Pending Staging Submissions</h2>
+        <div class="toolbar"><button id="loadPending">Load pending</button><input id="pendingFilter" placeholder="Filter submission, donor, institute"></div>
+      </div>
+      <div id="pendingStatus" class="status"></div>
+      <div id="pendingTable"></div>
+    </section>
+
+    <section id="records" class="panel">
+      <div class="section-head">
+        <h2>Relay Seen Records</h2>
+        <div class="toolbar"><button id="loadRecords">Load records</button><input id="recordFilter" placeholder="Filter by submission, source, fingerprint"></div>
+      </div>
+      <div id="recordStatus" class="status"></div>
+      <div id="recordTable"></div>
+    </section>
+
+    <section id="lineage" class="panel">
+      <div class="two-col">
+        <div class="card">
+          <h2>Lineage / Update Check</h2>
+          <p class="hint">Paste metadata from a manifest to check whether it is already received, an update-ready descendant, or new.</p>
+          <label for="lineageJson">Session metadata JSON</label>
+          <textarea id="lineageJson">{
+  "source_session_id": "",
+  "conversation_fingerprint": "",
+  "turns": 0,
+  "records": 0
+}</textarea>
+          <div class="toolbar" style="margin-top:12px"><button class="primary" id="runLineage">Check lineage</button></div>
+        </div>
+        <div class="card">
+          <h2>Result</h2>
+          <div id="lineageStatus" class="status"></div>
+          <pre id="lineageResult" class="mono-block">{}</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="danger" class="panel">
+      <div class="two-col">
+        <div class="card danger-zone">
+          <h2>Reset One Relay Record</h2>
+          <p class="hint">Use this when a donor must resubmit after a test or missing metadata. This only removes relay duplicate memory. Delete or close the Hugging Face staging PR manually if needed.</p>
+          <label for="resetSubmission">Submission ID</label>
+          <input id="resetSubmission" placeholder="submission-xxxxxxxx">
+          <div class="toolbar" style="margin-top:12px"><button class="danger" id="resetOne">Remove relay record</button></div>
+          <div id="resetStatus" class="status"></div>
+        </div>
+        <div class="card">
+          <h2>Backfill Relay Memory</h2>
+          <p class="hint">Rebuilds relay duplicate/lineage memory from staging and release repos. Use this after relay restart or after manually cleaning records.</p>
+          <button class="primary" id="backfillBtn">Backfill seen records</button>
+          <div id="backfillStatus" class="status"></div>
+          <pre id="backfillResult" class="mono-block">{}</pre>
+        </div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const state = { summary:null, pending:[], records:[] };
+const tokenKey = 'contextechoMaintainerToken';
+const relayKey = 'contextechoMaintainerRelayUrl';
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function compact(value){
+  const n = Number(value || 0);
+  if(!Number.isFinite(n)) return '0';
+  return n.toLocaleString();
+}
+function status(id, text, kind=''){
+  const el = $(id);
+  el.textContent = text;
+  el.className = `status ${kind}`.trim();
+}
+function relayUrl(){
+  return $('relayUrl').value.replace(/\/+$/, '');
+}
+function adminToken(){
+  return $('adminToken').value.trim();
+}
+async function api(path, opts={}){
+  if(!adminToken()) throw new Error('Enter the admin token first.');
+  const headers = {'X-Admin-Token': adminToken(), ...(opts.headers || {})};
+  const res = await fetch(`${relayUrl()}${path}`, {...opts, headers});
+  const text = await res.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { data = {raw:text}; }
+  if(!res.ok) throw new Error(data.detail || data.error || res.statusText);
+  return data;
+}
+function saveSession(){
+  sessionStorage.setItem(tokenKey, adminToken());
+  sessionStorage.setItem(relayKey, relayUrl());
+}
+function restoreSession(){
+  const savedToken = sessionStorage.getItem(tokenKey);
+  const savedRelay = sessionStorage.getItem(relayKey);
+  if(savedToken) $('adminToken').value = savedToken;
+  if(savedRelay) $('relayUrl').value = savedRelay;
+}
+
+async function loadSummary(){
+  saveSession();
+  status('globalStatus', 'Loading relay summary...');
+  const data = await api('/api/admin/summary');
+  state.summary = data;
+  renderSummary(data);
+  status('globalStatus', 'Connected to relay.', 'ok');
+}
+function renderSummary(data){
+  const seen = data.seen || {};
+  const metrics = [
+    ['Relay records', seen.records],
+    ['Submissions', seen.submissions],
+    ['Total turns', seen.turns],
+    ['JSONL records', seen.jsonl_records],
+    ['Source sessions', seen.source_sessions],
+    ['Conversations', seen.conversations],
+    ['Max upload', `${Math.round((data.max_session_bytes || 0) / 1024 / 1024)} MB`],
+    ['Growth policy', `${data.growth_policy?.min_turns || 0} turns or ${Math.round((data.growth_policy?.min_ratio || 0) * 100)}%`],
+  ];
+  $('metricGrid').innerHTML = metrics.map(([label,value]) => `
+    <div class="card"><div class="metric-label">${escapeHtml(label)}</div><div class="metric-value">${escapeHtml(compact(value))}</div></div>
+  `).join('');
+  $('relayConfig').innerHTML = `
+    <div><strong>Staging repo:</strong> <code>${escapeHtml(data.staging_repo)}</code></div>
+    <div><strong>Backfill repos:</strong> ${(data.backfill_repos || []).map(x => `<code>${escapeHtml(x)}</code>`).join(' ')}</div>
+    <div><strong>HF token configured:</strong> ${data.has_token ? '<span class="pill">yes</span>' : '<span class="pill bad">no</span>'}</div>
+  `;
+}
+
+async function loadPending(){
+  saveSession();
+  status('pendingStatus', 'Loading pending submissions...');
+  const data = await api('/api/admin/submissions');
+  state.pending = data.submissions || [];
+  renderPending();
+  const extra = data.errors?.length ? ` (${data.errors.length} warning${data.errors.length === 1 ? '' : 's'})` : '';
+  status('pendingStatus', `Loaded ${state.pending.length} pending submission${state.pending.length === 1 ? '' : 's'}${extra}.`, 'ok');
+}
+function pendingRows(){
+  const q = $('pendingFilter').value.toLowerCase().trim();
+  return state.pending.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
+}
+function renderPending(){
+  const rows = pendingRows();
+  $('pendingTable').innerHTML = table(
+    ['Submission', 'Donor', 'Institute', 'Session', 'Stats', 'Files'],
+    rows.map(row => [
+      `<code>${escapeHtml(row.submission_id)}</code>`,
+      `${escapeHtml(row.contributor || '')}<div class="hint">${escapeHtml(row.email || '')}</div>`,
+      escapeHtml(row.institute || ''),
+      `${escapeHtml(row.agent || '')}<div class="hint">${escapeHtml(row.model || '')}</div>`,
+      `${compact(row.turns)} turns<div class="hint">${compact(row.records)} records · ${compact(row.compactions)} ctx</div>`,
+      `${filePill(row.has_session, 'session')} ${filePill(row.has_manifest, 'manifest')} ${filePill(row.has_consent, 'consent')}`,
+    ])
+  );
+}
+function filePill(ok, label){
+  return `<span class="pill ${ok ? '' : 'bad'}">${escapeHtml(label)}</span>`;
+}
+
+async function loadRecords(){
+  saveSession();
+  status('recordStatus', 'Loading relay records...');
+  const data = await api('/api/admin/seen-records');
+  state.records = data.records || [];
+  renderRecords();
+  status('recordStatus', `Loaded ${state.records.length} relay record${state.records.length === 1 ? '' : 's'}.`, 'ok');
+}
+function recordRows(){
+  const q = $('recordFilter').value.toLowerCase().trim();
+  return state.records.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
+}
+function shortHash(value){
+  const text = String(value || '');
+  return text.length > 14 ? `${text.slice(0, 14)}...` : text;
+}
+function renderRecords(){
+  const rows = recordRows();
+  $('recordTable').innerHTML = table(
+    ['Submission', 'Turns', 'Records', 'Source', 'Fingerprint', 'Artifact', 'Action'],
+    rows.map(row => [
+      `<code>${escapeHtml(row.submission_id || '')}</code>`,
+      compact(row.turns),
+      compact(row.records),
+      `<code>${escapeHtml(shortHash(row.source_session_id))}</code>`,
+      `<code>${escapeHtml(shortHash(row.conversation_fingerprint))}</code>`,
+      `<code>${escapeHtml(shortHash(row.artifact_hash))}</code>`,
+      `<button data-reset="${escapeHtml(row.submission_id || '')}">Reset</button>`,
+    ])
+  );
+  document.querySelectorAll('[data-reset]').forEach(btn => {
+    btn.onclick = () => {
+      $('resetSubmission').value = btn.dataset.reset || '';
+      showTab('danger');
+      $('resetSubmission').focus();
+    };
+  });
+}
+function table(heads, rows){
+  if(!rows.length) return '<div class="card"><div class="hint">No rows found.</div></div>';
+  return `<table><thead><tr>${heads.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+async function runLineage(){
+  status('lineageStatus', 'Checking lineage...');
+  const payload = JSON.parse($('lineageJson').value || '{}');
+  const data = await api('/api/admin/lineage-status', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload),
+  });
+  $('lineageResult').textContent = JSON.stringify(data.status || data, null, 2);
+  status('lineageStatus', data.status?.received ? (data.status.update_ready ? 'Received before; update is ready.' : 'Received before; update is below threshold.') : 'No matching relay record found.', data.status?.received ? 'ok' : '');
+}
+
+async function resetOne(){
+  const submission = $('resetSubmission').value.trim();
+  if(!submission) return status('resetStatus', 'Enter a submission ID.', 'error');
+  if(!confirm(`Remove relay duplicate memory for ${submission}? This does not delete Hugging Face files.`)) return;
+  status('resetStatus', 'Removing relay record...');
+  const data = await api('/api/admin/seen-hashes/record', {
+    method:'DELETE',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({submission_id:submission}),
+  });
+  status('resetStatus', `Removed ${data.removed || 0}; remaining ${data.remaining || 0}.`, data.removed ? 'ok' : '');
+  if(state.records.length) await loadRecords();
+  if(state.summary) await loadSummary();
+}
+
+async function backfill(){
+  status('backfillStatus', 'Backfilling relay memory...');
+  const data = await api('/api/admin/backfill-seen-hashes', {method:'POST'});
+  $('backfillResult').textContent = JSON.stringify(data, null, 2);
+  status('backfillStatus', `Scanned ${data.scanned || 0}; added ${data.added || 0}.`, data.ok ? 'ok' : '');
+  if(state.records.length) await loadRecords();
+  if(state.summary) await loadSummary();
+}
+
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(panel => panel.classList.toggle('active', panel.id === name));
+}
+document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => showTab(btn.dataset.tab));
+$('connectBtn').onclick = () => loadSummary().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
+$('clearTokenBtn').onclick = () => {
+  sessionStorage.removeItem(tokenKey);
+  $('adminToken').value = '';
+  status('globalStatus', 'Token cleared from this browser tab.');
+};
+$('refreshOverview').onclick = () => loadSummary().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
+$('backfillTop').onclick = () => { showTab('danger'); backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error')); };
+$('loadPending').onclick = () => loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error'));
+$('loadRecords').onclick = () => loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error'));
+$('pendingFilter').oninput = renderPending;
+$('recordFilter').oninput = renderRecords;
+$('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));
+$('resetOne').onclick = () => resetOne().catch(e => status('resetStatus', `ERROR: ${e.message}`, 'error'));
+$('backfillBtn').onclick = () => backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error'));
+
+restoreSession();
+if(adminToken()) loadSummary().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
+</script>
+</body>
+</html>

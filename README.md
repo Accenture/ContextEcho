@@ -226,6 +226,12 @@ the one-line local scanner command; the scanner opens the browser wizard,
 discovers local Claude Code/Codex sessions automatically, and keeps raw session
 history on the donor machine.
 
+The hosted maintainer console lives at
+[`docs/maintainer/index.html`](docs/maintainer/index.html). It shows relay
+status, pending staging submissions, relay duplicate/lineage records, backfill
+controls, and one-record reset actions. Admin actions require the relay admin
+token, which is stored only in the browser tab session.
+
 Supported donor platforms: macOS, Linux, Windows PowerShell, and Windows via
 WSL/Git Bash.
 

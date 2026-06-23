@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Body, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 
 from donate.adapters.base import conversation_fingerprint
@@ -58,6 +59,19 @@ REQUIRED_MANIFEST_FIELDS = {
 }
 
 app = FastAPI(title="ContextEcho Donation Relay", version="0.1")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        origin.strip()
+        for origin in os.environ.get(
+            "CONTEXTECHO_RELAY_CORS_ORIGINS",
+            "https://accenture.github.io,http://127.0.0.1:8000,http://localhost:8000",
+        ).split(",")
+        if origin.strip()
+    ],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Admin-Token"],
+)
 
 
 def _sha256(data: bytes) -> str:
@@ -112,6 +126,31 @@ def _seen_record(artifact_hash: str, submission_id: str, manifest: dict) -> dict
         "source_session_id": manifest.get("source_session_id", ""),
         "records": manifest.get("records", 0),
         "turns": manifest.get("turns", 0),
+    }
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _seen_record_summary(records: list[dict]) -> dict:
+    submissions = {str(row.get("submission_id") or "") for row in records if row.get("submission_id")}
+    sources = {str(row.get("source_session_id") or "") for row in records if row.get("source_session_id")}
+    conversations = {
+        str(row.get("conversation_fingerprint") or "")
+        for row in records
+        if row.get("conversation_fingerprint")
+    }
+    return {
+        "records": len(records),
+        "submissions": len(submissions),
+        "source_sessions": len(sources),
+        "conversations": len(conversations),
+        "turns": sum(_safe_int(row.get("turns")) for row in records),
+        "jsonl_records": sum(_safe_int(row.get("records")) for row in records),
     }
 
 
@@ -174,6 +213,52 @@ def _release_session_paths(files: list[str]) -> list[str]:
         for filename in files
         if filename.startswith("data/sessions/session_") and filename.endswith(".jsonl")
     )
+
+
+def _pending_submission_prefixes(files: list[str]) -> list[str]:
+    prefixes = set()
+    for filename in files:
+        parts = filename.split("/")
+        if len(parts) >= 3 and parts[0] == "pending" and parts[1].startswith("submission-"):
+            prefixes.add("/".join(parts[:2]))
+    return sorted(prefixes)
+
+
+def _pending_submissions_from_hf() -> dict:
+    token = os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
+    api = HfApi(token=token)
+    errors: list[str] = []
+    submissions: list[dict] = []
+    try:
+        files = api.list_repo_files(repo_id=STAGING_REPO, repo_type="dataset")
+    except Exception as exc:
+        return {"ok": False, "submissions": [], "errors": [f"{STAGING_REPO}: list failed: {exc}"]}
+    for prefix in _pending_submission_prefixes(files):
+        submission_id = prefix.split("/")[-1]
+        manifest_path = f"{prefix}/manifest.json"
+        manifest = _read_hf_json(STAGING_REPO, manifest_path, token, files)
+        if not manifest:
+            errors.append(f"{prefix}: manifest unavailable")
+        submissions.append({
+            "submission_id": submission_id,
+            "prefix": prefix,
+            "has_session": f"{prefix}/session.redacted.jsonl" in files,
+            "has_manifest": manifest_path in files,
+            "has_consent": f"{prefix}/CONSENT.md" in files,
+            "agent": manifest.get("agent", ""),
+            "model": manifest.get("model", ""),
+            "turns": manifest.get("turns", 0),
+            "records": manifest.get("records", 0),
+            "compactions": manifest.get("compactions", 0),
+            "source_session_id": manifest.get("source_session_id", ""),
+            "conversation_fingerprint": manifest.get("conversation_fingerprint", ""),
+            "contributor": manifest.get("credit_name") or manifest.get("contributor") or "",
+            "email": manifest.get("contributor_email", ""),
+            "institute": manifest.get("contributor_institute", ""),
+            "submitted_utc": manifest.get("submitted_utc", ""),
+            "privacy_tier": manifest.get("privacy_tier", ""),
+        })
+    return {"ok": True, "submissions": submissions, "errors": errors[:20]}
 
 
 def _read_hf_file(repo_id: str, filename: str, token: str | None) -> bytes:
@@ -557,6 +642,62 @@ def health() -> dict:
         "has_token": bool(os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")),
         "max_session_bytes": MAX_SESSION_BYTES,
     }
+
+
+@app.get("/api/admin/summary")
+def admin_summary(
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    records = _read_seen_records()
+    return {
+        "ok": True,
+        "staging_repo": STAGING_REPO,
+        "backfill_repos": BACKFILL_REPOS,
+        "has_token": bool(os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")),
+        "max_session_bytes": MAX_SESSION_BYTES,
+        "growth_policy": {
+            "min_turns": MIN_SESSION_GROWTH_TURNS,
+            "min_ratio": MIN_SESSION_GROWTH_RATIO,
+        },
+        "seen": _seen_record_summary(records),
+    }
+
+
+@app.get("/api/admin/seen-records")
+def admin_seen_records(
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    records = sorted(
+        _read_seen_records(),
+        key=lambda row: str(row.get("submission_id") or ""),
+    )
+    return {
+        "ok": True,
+        "summary": _seen_record_summary(records),
+        "records": records,
+    }
+
+
+@app.get("/api/admin/submissions")
+def admin_submissions(
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    result = _pending_submissions_from_hf()
+    return {"ok": True, "staging_repo": STAGING_REPO, **result}
+
+
+@app.post("/api/admin/lineage-status")
+def admin_lineage_status(
+    payload: Annotated[dict, Body()],
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="payload must be an object")
+    return {"ok": True, "status": _lineage_status(payload, _read_seen_records())}
 
 
 @app.delete("/api/admin/seen-hashes")
