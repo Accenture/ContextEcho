@@ -205,6 +205,13 @@ def _submission_id_from_prefix(prefix: str) -> str:
     return re.sub(r"[^A-Za-z0-9_-]+", "-", prefix.strip("/")) or "backfilled"
 
 
+def _backfill_submission_id(prefix: str, manifest: dict) -> str:
+    prefix_id = _submission_id_from_prefix(prefix)
+    if prefix_id.startswith("submission-"):
+        return prefix_id
+    return str(manifest.get("reviewed_submission_id") or manifest.get("session_id") or prefix_id)
+
+
 def _session_prefixes(files: list[str]) -> list[str]:
     prefixes = set()
     for filename in files:
@@ -347,7 +354,7 @@ def _backfill_seen_hashes_from_hf() -> dict:
             manifest_path = f"{prefix}/manifest.json" if prefix else "manifest.json"
             try:
                 manifest = _read_hf_json(repo_id, manifest_path, token, files)
-                submission_id = str(manifest.get("reviewed_submission_id") or manifest.get("session_id") or _submission_id_from_prefix(prefix))
+                submission_id = _backfill_submission_id(prefix, manifest)
                 record = _backfill_record_from_hf(repo_id, session_path, manifest_path, submission_id, files, token)
                 if record["artifact_hash"] in seen_hashes:
                     continue

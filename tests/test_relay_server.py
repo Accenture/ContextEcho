@@ -118,7 +118,7 @@ class RelayServerTests(unittest.TestCase):
 
         self.assertEqual(result["scanned"], 1)
         self.assertEqual(result["added"], 1)
-        self.assertEqual(records[0]["submission_id"], "donation-old")
+        self.assertEqual(records[0]["submission_id"], "submission-old")
         self.assertTrue(records[0]["artifact_hash"])
         self.assertTrue(records[0]["conversation_fingerprint"].startswith("conv-"))
         self.assertEqual(records[0]["fingerprint_version"], "structure-v1")
