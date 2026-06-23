@@ -411,6 +411,51 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(record["contributor_email"], "")
         self.assertEqual(record["contributor_institute"], "Updated Institute")
 
+    def test_approve_metadata_update_applies_seen_record_and_status(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+                mock.patch("donate.relay_server.METADATA_UPDATES", state_dir / "metadata_updates.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+                mock.patch("donate.relay_server._apply_metadata_update_to_staging_manifest", return_value=False),
+            ):
+                relay_server._append_seen_record({
+                    "artifact_hash": "hash-1",
+                    "submission_id": "submission-one",
+                    "source_session_id": "source-1",
+                    "conversation_fingerprint": "conv-1",
+                    "credit_name": "Old Donor",
+                    "contributor_email": "old@example.com",
+                    "contributor_institute": "Old Lab",
+                    "public_anonymous": False,
+                    "turns": 100,
+                    "records": 200,
+                })
+                request = relay_server._metadata_update_request({
+                    "submission_id": "submission-one",
+                    "credit_name": "New Donor",
+                    "contributor_email": "new@example.com",
+                    "contributor_institute": "New Lab",
+                    "public_anonymous": True,
+                })
+                result = relay_server._approve_metadata_update(request["request_id"])
+                records = relay_server._read_seen_records()
+                requests = relay_server._metadata_update_requests()
+                events = relay_server._read_jsonl(state_dir / "submission_events.jsonl")
+
+        self.assertEqual(result["seen_updated"], 1)
+        self.assertFalse(result["staging_manifest_updated"])
+        self.assertEqual(records[0]["credit_name"], "New Donor")
+        self.assertEqual(records[0]["contributor_email"], "new@example.com")
+        self.assertEqual(records[0]["contributor_institute"], "New Lab")
+        self.assertTrue(records[0]["public_anonymous"])
+        self.assertEqual(requests[0]["request_id"], request["request_id"])
+        self.assertEqual(requests[0]["status"], "approved")
+        self.assertEqual(requests[0]["credit_name"], "New Donor")
+        self.assertEqual(events[-1]["event"], "metadata_update_approved")
+
     def test_seen_record_summary_counts_records_and_totals(self) -> None:
         summary = relay_server._seen_record_summary([
             {

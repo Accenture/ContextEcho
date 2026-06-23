@@ -70,6 +70,14 @@ class WebTests(unittest.TestCase):
         self.assertIn("useLocalFallback", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
 
+    def test_maintainer_metadata_updates_can_be_approved(self):
+        html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")
+        self.assertIn("/api/admin/metadata-updates/approve", html)
+        self.assertIn("data-approve-metadata", html)
+        self.assertIn("function approveMetadata", html)
+        self.assertIn("Relay records updated", html)
+        self.assertIn("Staging manifest updated", html)
+
     def test_submit_requires_contributor_identity_fields(self):
         self.assertIn("Contributor info is required", INDEX_HTML)
         self.assertIn('id="contributorName" placeholder="your name or handle" required', INDEX_HTML)

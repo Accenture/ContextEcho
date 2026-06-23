@@ -411,17 +411,45 @@ function metadataRows(){
 function renderMetadata(){
   const rows = metadataRows();
   $('metadataTable').innerHTML = table(
-    ['Submitted', 'Request', 'Submission', 'Name', 'Email', 'Institute', 'Public'],
+    ['Submitted', 'Request', 'Submission', 'Name', 'Email', 'Institute', 'Public', 'Action'],
     rows.map(row => [
       `<code>${escapeHtml(row.submitted_utc || '')}</code>`,
-      `<code>${escapeHtml(row.request_id || '')}</code><div class="hint">${escapeHtml(row.status || 'pending')}</div>`,
+      `<code>${escapeHtml(row.request_id || '')}</code><div class="hint">${escapeHtml(row.status || 'pending')}${row.approved_utc ? ` · ${escapeHtml(row.approved_utc)}` : ''}</div>`,
       `<code>${escapeHtml(row.submission_id || '')}</code>`,
       escapeHtml(row.credit_name || ''),
       escapeHtml(row.contributor_email || ''),
       escapeHtml(row.contributor_institute || ''),
       row.public_anonymous ? '<span class="pill warn">anonymous</span>' : '<span class="pill">public</span>',
+      row.status === 'approved'
+        ? '<span class="pill">approved</span>'
+        : `<button data-approve-metadata="${escapeHtml(row.request_id || '')}">Approve</button>`,
     ])
   );
+  document.querySelectorAll('[data-approve-metadata]').forEach(btn => {
+    btn.onclick = () => approveMetadata(btn.dataset.approveMetadata || '');
+  });
+}
+
+async function approveMetadata(requestId){
+  if(!requestId) return;
+  const row = state.metadataUpdates.find(item => item.request_id === requestId) || {};
+  const submission = row.submission_id || 'this submission';
+  if(!confirm(`Approve metadata update ${requestId} for ${submission}? This updates relay memory and the staging manifest when available.`)) return;
+  status('metadataStatus', `Approving ${requestId}...`);
+  const data = await api('/api/admin/metadata-updates/approve', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({request_id:requestId}),
+  });
+  const parts = [`Approved ${requestId}.`];
+  parts.push(`Relay records updated: ${data.seen_updated || 0}.`);
+  parts.push(data.staging_manifest_updated ? 'Staging manifest updated.' : 'No staging manifest update was made.');
+  await loadMetadata();
+  if(state.records.length) await loadRecords();
+  if(state.pending.length) await loadPending();
+  if(state.events.length) await loadEvents();
+  if(state.summary) await loadSummary();
+  status('metadataStatus', parts.join(' '), 'ok');
 }
 
 async function loadRecords(){

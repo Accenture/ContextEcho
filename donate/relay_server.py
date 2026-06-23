@@ -182,6 +182,135 @@ def _metadata_update_request(payload: dict) -> dict:
     return record
 
 
+def _metadata_update_patch(record: dict) -> dict:
+    patch: dict[str, object] = {}
+    if str(record.get("credit_name") or "").strip():
+        patch["credit_name"] = str(record.get("credit_name") or "").strip()
+    if str(record.get("contributor_email") or "").strip():
+        patch["contributor_email"] = str(record.get("contributor_email") or "").strip()
+    if str(record.get("contributor_institute") or "").strip():
+        patch["contributor_institute"] = str(record.get("contributor_institute") or "").strip()
+    if "public_anonymous" in record:
+        patch["public_anonymous"] = bool(record.get("public_anonymous"))
+    return patch
+
+
+def _metadata_update_requests(limit: int = 200) -> list[dict]:
+    merged: dict[str, dict] = {}
+    order: list[str] = []
+    for row in _read_jsonl(METADATA_UPDATES, limit=1000):
+        request_id = str(row.get("request_id") or "").strip()
+        if not request_id:
+            continue
+        if request_id not in merged:
+            merged[request_id] = {}
+            order.append(request_id)
+        merged[request_id].update(row)
+    rows = [merged[request_id] for request_id in order]
+    rows.sort(key=lambda row: str(row.get("approved_utc") or row.get("submitted_utc") or ""), reverse=True)
+    return rows[: max(1, min(limit, 1000))]
+
+
+def _find_metadata_update_request(request_id: str) -> dict:
+    for row in _metadata_update_requests(limit=1000):
+        if row.get("request_id") == request_id:
+            return row
+    raise HTTPException(status_code=404, detail="metadata update request not found")
+
+
+def _append_metadata_update_status(request_id: str, status: str, **fields: object) -> dict:
+    record = {
+        "request_id": request_id,
+        "status": status,
+        f"{status}_utc": _utc_now(),
+    }
+    record.update({k: v for k, v in fields.items() if v not in (None, "")})
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with METADATA_UPDATES.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, sort_keys=True) + "\n")
+    return record
+
+
+def _apply_metadata_update_to_seen(request: dict) -> int:
+    submission_id = str(request.get("submission_id") or "").strip()
+    patch = _metadata_update_patch(request)
+    if not patch:
+        raise HTTPException(status_code=400, detail="metadata update request has no fields to apply")
+    records = _read_seen_records()
+    changed = 0
+    for row in records:
+        if str(row.get("submission_id") or "") != submission_id:
+            continue
+        for key, value in patch.items():
+            row[key] = value
+        changed += 1
+    if changed:
+        _write_seen_records(records)
+    return changed
+
+
+def _apply_metadata_update_to_staging_manifest(request: dict) -> bool:
+    token = os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
+    if not token:
+        return False
+    submission_id = str(request.get("submission_id") or "").strip()
+    manifest_path = f"pending/{submission_id}/manifest.json"
+    api = HfApi(token=token)
+    try:
+        files = api.list_repo_files(repo_id=STAGING_REPO, repo_type="dataset")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Hugging Face list failed: {exc}") from exc
+    if manifest_path not in files:
+        return False
+    manifest = _read_hf_json(STAGING_REPO, manifest_path, token, files)
+    if not manifest:
+        return False
+    manifest.update(_metadata_update_patch(request))
+    manifest["metadata_updated_utc"] = _utc_now()
+    manifest["metadata_update_request_id"] = str(request.get("request_id") or "")
+    data = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    try:
+        api.create_commit(
+            repo_id=STAGING_REPO,
+            repo_type="dataset",
+            operations=[CommitOperationAdd(path_in_repo=manifest_path, path_or_fileobj=data)],
+            commit_message=f"Approve metadata update: {submission_id}",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Hugging Face manifest update failed: {exc}") from exc
+    return True
+
+
+def _approve_metadata_update(request_id: str) -> dict:
+    request = _find_metadata_update_request(request_id)
+    if request.get("status") == "approved":
+        return {"request": request, "seen_updated": 0, "staging_manifest_updated": False, "already_approved": True}
+    seen_updated = _apply_metadata_update_to_seen(request)
+    staging_updated = _apply_metadata_update_to_staging_manifest(request)
+    status_record = _append_metadata_update_status(
+        request_id,
+        "approved",
+        submission_id=request.get("submission_id", ""),
+        seen_updated=seen_updated,
+        staging_manifest_updated=staging_updated,
+    )
+    _append_submission_event(
+        "metadata_update_approved",
+        request_id=request_id,
+        submission_id=request.get("submission_id", ""),
+        seen_updated=seen_updated,
+        staging_manifest_updated=staging_updated,
+    )
+    merged = dict(request)
+    merged.update(status_record)
+    return {
+        "request": merged,
+        "seen_updated": seen_updated,
+        "staging_manifest_updated": staging_updated,
+        "already_approved": False,
+    }
+
+
 def _record_seen_hash(artifact_hash: str, submission_id: str, manifest: dict) -> None:
     _append_seen_record(_seen_record(artifact_hash, submission_id, manifest))
 
@@ -817,11 +946,23 @@ def admin_metadata_updates(
     limit: int = 200,
 ) -> dict:
     _require_admin_token(x_admin_token)
-    requests = list(reversed(_read_jsonl(METADATA_UPDATES, limit)))
+    requests = _metadata_update_requests(limit)
     return {
         "ok": True,
         "requests": requests,
     }
+
+
+@app.post("/api/admin/metadata-updates/approve")
+def admin_approve_metadata_update(
+    payload: Annotated[dict, Body()],
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    request_id = str((payload if isinstance(payload, dict) else {}).get("request_id") or "").strip()
+    if not request_id:
+        raise HTTPException(status_code=400, detail="request_id is required")
+    return {"ok": True, **_approve_metadata_update(request_id)}
 
 
 @app.get("/api/admin/submissions")
