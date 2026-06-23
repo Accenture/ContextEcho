@@ -139,31 +139,33 @@
     }
     .support-card {
       display:grid;
-      grid-template-columns:126px minmax(0,1fr);
-      gap:16px;
-      min-height:318px;
-      padding:22px;
+      grid-template-columns:104px minmax(0,1fr);
+      gap:12px;
+      min-height:0;
+      padding:16px;
       background:linear-gradient(135deg,#fff9e6,#f3faee);
     }
+    .support-card .support-title { font-size:17px; line-height:1.12; }
+    .support-card .support-copy { font-size:12.5px; line-height:1.28; max-width:360px; }
     .mascot {
       position:relative;
-      align-self:center;
-      width:112px;
-      height:124px;
+      align-self:end;
+      width:92px;
+      height:102px;
     }
-    .mascot-head { position:absolute; left:27px; top:10px; width:48px; height:48px; border-radius:50%; background:#f2bd82; box-shadow:inset 0 -5px 0 rgba(0,0,0,.08); }
-    .mascot-head:before, .mascot-head:after { content:""; position:absolute; top:21px; width:5px; height:5px; border-radius:50%; background:#16221d; }
-    .mascot-head:before { left:15px; }
-    .mascot-head:after { right:15px; }
-    .mascot-body { position:absolute; left:22px; top:58px; width:58px; height:48px; border-radius:22px 22px 9px 9px; background:#167843; }
-    .mascot-hands { position:absolute; left:4px; top:91px; width:88px; height:17px; border-radius:999px; background:#f2bd82; }
-    .mascot-laptop { position:absolute; left:43px; top:74px; width:70px; height:48px; border-radius:8px 8px 4px 4px; background:#d7d8d3; transform:skew(-8deg); box-shadow:0 7px 0 #b9bbb5; }
-    .mascot-laptop:after { content:""; position:absolute; left:29px; top:20px; width:7px; height:7px; border-radius:50%; background:white; opacity:.9; }
-    .mascot-star { position:absolute; right:10px; top:10px; color:var(--gold); font-size:38px; line-height:1; }
-    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:20px; }
+    .mascot-head { position:absolute; left:22px; top:11px; width:40px; height:40px; border-radius:50%; background:#f2bd82; box-shadow:inset 0 -4px 0 rgba(0,0,0,.08); }
+    .mascot-head:before, .mascot-head:after { content:""; position:absolute; top:18px; width:4px; height:4px; border-radius:50%; background:#16221d; }
+    .mascot-head:before { left:13px; }
+    .mascot-head:after { right:13px; }
+    .mascot-body { position:absolute; left:18px; top:51px; width:49px; height:40px; border-radius:20px 20px 8px 8px; background:#167843; }
+    .mascot-hands { position:absolute; left:4px; top:78px; width:75px; height:15px; border-radius:999px; background:#f2bd82; }
+    .mascot-laptop { position:absolute; left:43px; top:67px; width:48px; height:34px; border-radius:7px 7px 3px 3px; background:#d7d8d3; transform:skew(-8deg); box-shadow:0 5px 0 #b9bbb5; }
+    .mascot-laptop:after { content:""; position:absolute; left:20px; top:14px; width:6px; height:6px; border-radius:50%; background:white; opacity:.9; }
+    .mascot-star { position:absolute; right:12px; top:4px; color:var(--gold); font-size:30px; line-height:1; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
     .stat-card {
-      min-height:132px;
-      padding:16px 12px;
+      min-height:112px;
+      padding:12px 10px;
       display:flex;
       flex-direction:column;
       align-items:center;
@@ -179,20 +181,19 @@
     }
     .stat-card:hover, .stat-card:focus { transform:translateY(-1px); border-color:#c7dcc4; text-decoration:none; outline:none; }
     .stat-icon {
-      width:42px;
-      height:42px;
+      width:36px;
+      height:36px;
       border-radius:50%;
       display:grid;
       place-items:center;
       color:var(--green);
       background:#e9f2e5;
-      margin-bottom:12px;
+      margin-bottom:9px;
     }
     .stat-icon[data-icon="star"] { background:#f6edd6; color:var(--gold); }
     .stat-icon[data-icon="heart"] { background:#f6eadb; color:var(--red); }
-    .stat-value { font-size:26px; line-height:1; font-weight:950; }
-    .stat-label { margin-top:7px; color:#2f3833; font-size:12px; line-height:1.15; font-weight:900; }
-    .support-actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+    .stat-value { font-size:23px; line-height:1; font-weight:950; }
+    .stat-label { margin-top:6px; color:#2f3833; font-size:11px; line-height:1.12; font-weight:900; }
     button, a.button {
       border:0;
       border-radius:10px;
@@ -453,7 +454,7 @@
       main { padding:8px 8px 34px; }
       .shell { padding:20px; }
       h1 { font-size:34px; }
-      .privacy-row, .support-card, .stats, .support-actions, .actions, .command-tabs { grid-template-columns:1fr; }
+      .privacy-row, .support-card, .stats, .actions, .command-tabs { grid-template-columns:1fr; }
       .composition-row { grid-template-columns:34px minmax(98px,1fr) 70px; }
       .composition-track { grid-column:2 / 4; }
       .flow { grid-template-columns:1fr; }
@@ -546,14 +547,6 @@
               <div class="stat-icon" data-icon="heart"></div>
               <div class="stat-value" data-stat-value="likes">5</div>
               <div class="stat-label">Dataset Likes<br>Click to like</div>
-            </a>
-          </div>
-          <div class="support-actions">
-            <a class="button outline" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">
-              <span class="mini-icon" data-icon="github"></span>Star on GitHub <span aria-hidden="true">-></span>
-            </a>
-            <a class="button outline heart" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
-              <span class="mini-icon" data-icon="heart"></span>Like the Dataset <span aria-hidden="true">-></span>
             </a>
           </div>
         </div>
