@@ -5,10 +5,12 @@ import contextlib
 import io
 import tempfile
 import unittest
+import os
+import time
 from pathlib import Path
 
 from donate.discover import MIN_RESEARCH_TURNS, discover, discover_iter, inspect_session, is_research_candidate
-from donate.adapters.base import is_redacted_artifact
+from donate.adapters.base import date_from_timestamp, is_redacted_artifact
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -17,6 +19,21 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 class DiscoverTests(unittest.TestCase):
+    def test_timestamp_dates_are_displayed_in_local_timezone(self) -> None:
+        old_tz = os.environ.get("TZ")
+        try:
+            os.environ["TZ"] = "America/Los_Angeles"
+            if hasattr(time, "tzset"):
+                time.tzset()
+            self.assertEqual(date_from_timestamp("2026-06-23T01:25:00Z"), "2026-06-22")
+        finally:
+            if old_tz is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = old_tz
+            if hasattr(time, "tzset"):
+                time.tzset()
+
     def test_redacted_artifact_detection(self) -> None:
         self.assertTrue(is_redacted_artifact(Path("session.redacted.jsonl")))
         self.assertTrue(is_redacted_artifact(Path("/tmp/ContextEcho_donations/run/session.jsonl")))
@@ -58,9 +75,9 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["records"], 4)
         self.assertEqual(info["turns"], 1)
         self.assertEqual(info["compactions"], 0)
-        self.assertEqual(info["started"], "2026-01-02")
-        self.assertEqual(info["last_active"], "2026-01-04")
-        self.assertEqual(info["modified"], "2026-01-04")
+        self.assertEqual(info["started"], "2026-01-01")
+        self.assertEqual(info["last_active"], "2026-01-03")
+        self.assertEqual(info["modified"], "2026-01-03")
         self.assertEqual(info["project"], "work-agent-project")
         self.assertRegex(info["session_label"], r"^work-agent-project · [0-9a-f]{4}$")
         self.assertTrue(info["conversation_fingerprint"].startswith("conv-"))

@@ -110,7 +110,10 @@ def date_from_timestamp(value: str) -> str | None:
         return None
     try:
         normalized = text.replace("Z", "+00:00")
-        return dt.datetime.fromisoformat(normalized).date().isoformat()
+        parsed = dt.datetime.fromisoformat(normalized)
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone()
+        return parsed.date().isoformat()
     except Exception:
         match = re.match(r"(\d{4}-\d{2}-\d{2})", text)
         return match.group(1) if match else None
