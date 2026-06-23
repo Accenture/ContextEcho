@@ -24,6 +24,7 @@ from donate.web import (
     load_donated_artifact_keys,
     local_pending_summary,
     parse_submit_output,
+    required_contributor_fields,
     save_donation_record,
     session_update_ready,
     session_key,
@@ -46,6 +47,20 @@ class WebTests(unittest.TestCase):
         self.assertIn("scrollIntoView({behavior:'smooth', block:'start'})", INDEX_HTML)
         self.assertIn("pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicCreditName)", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
+
+    def test_submit_requires_contributor_identity_fields(self):
+        self.assertIn("Contributor info is required", INDEX_HTML)
+        self.assertIn('id="contributorName" placeholder="your name or handle" required', INDEX_HTML)
+        self.assertIn('id="contributorEmail" type="email" placeholder="you@example.com" required', INDEX_HTML)
+        self.assertIn('id="contributorInstitute" placeholder="University / company / independent" required', INDEX_HTML)
+        self.assertIn("function contributorFieldsComplete()", INDEX_HTML)
+        self.assertIn("Name, email, and institute are required before submission", INDEX_HTML)
+        with self.assertRaisesRegex(ValueError, "Missing: email"):
+            required_contributor_fields({"contributor": "Donor", "email": "", "institute": "Lab"})
+        self.assertEqual(
+            required_contributor_fields({"contributor": " Donor ", "email": "d@example.com", "institute": " Lab "}),
+            {"contributor": "Donor", "email": "d@example.com", "institute": "Lab"},
+        )
 
     def test_search_panel_can_run_cleanup_directly(self):
         self.assertIn("Redact and Verify Again", INDEX_HTML)

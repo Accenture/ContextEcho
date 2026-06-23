@@ -112,6 +112,23 @@ def submit_auto_metadata(data: dict, session: Path) -> dict:
     return _auto_from_existing_manifest(session)
 
 
+def required_contributor_fields(data: dict) -> dict[str, str]:
+    fields = {
+        "contributor": str(data.get("contributor", "") or "").strip(),
+        "email": str(data.get("email", "") or "").strip(),
+        "institute": str(data.get("institute", "") or "").strip(),
+    }
+    labels = {
+        "contributor": "name or handle",
+        "email": "email",
+        "institute": "institute",
+    }
+    missing = [labels[key] for key, value in fields.items() if not value]
+    if missing:
+        raise ValueError(f"Name, email, and institute are required before submission. Missing: {', '.join(missing)}.")
+    return fields
+
+
 def session_key(path: str | Path) -> str:
     p = Path(path).expanduser()
     parts = [str(p)]
@@ -1273,12 +1290,12 @@ INDEX_HTML = r"""<!doctype html>
 
   <section id="step3" class="card step">
     <h2>3. Submit</h2>
-    <p class="muted">Contributor info is used for credit, leaderboard accounting, and release acknowledgments. Leave blank to stay anonymous.</p>
+    <p class="muted">Contributor info is required for credit, leaderboard accounting, duplicate handling, and release acknowledgments.</p>
     <p class="muted">The tool writes manifest + consent, confirms the verified redacted artifact, uploads it, and saves a local receipt.</p>
     <div class="submit-grid">
-      <div><label>Name or GitHub/HF handle <span class="muted">(for credit, optional)</span></label><input id="contributorName" placeholder="anonymous" /></div>
-      <div><label>Email <span class="muted">(optional)</span></label><input id="contributorEmail" placeholder="you@example.com" /></div>
-      <div><label>Institute <span class="muted">(optional)</span></label><input id="contributorInstitute" placeholder="University / company / independent" /></div>
+      <div><label>Name or GitHub/HF handle <span class="muted">(required)</span></label><input id="contributorName" placeholder="your name or handle" required /></div>
+      <div><label>Email <span class="muted">(required)</span></label><input id="contributorEmail" type="email" placeholder="you@example.com" required /></div>
+      <div><label>Institute <span class="muted">(required)</span></label><input id="contributorInstitute" placeholder="University / company / independent" required /></div>
     </div>
     <div id="submitLeaderboardPreview" class="submit-leaderboard"></div>
     <div class="row actions">
@@ -1399,7 +1416,7 @@ function refreshButtons(){
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
-  $('submitBtn').disabled = !(redacted && redacted.verify_passed) || submitted || selectedDonated;
+  $('submitBtn').disabled = !(redacted && redacted.verify_passed && contributorFieldsComplete()) || submitted || selectedDonated;
 }
 function setUiProcessing(on){
   activeOperation = !!on;
@@ -1426,6 +1443,9 @@ function compactionNote(s){
   return 'Context compaction events detected in the local agent log.';
 }
 function status(id, text){ $(id).textContent = text; }
+function contributorFieldsComplete(){
+  return ['contributorName','contributorEmail','contributorInstitute'].every(id => ($(id).value || '').trim());
+}
 function fmtStat(n){
   if(n === null || n === undefined || n === '') return '—';
   n = Number(n);
@@ -2274,7 +2294,10 @@ $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
 $('submitPrev').onclick = () => goStep(2);
 ['contributorName','contributorEmail','contributorInstitute'].forEach(id => {
-  $(id).oninput = renderSubmitLeaderboardPreview;
+  $(id).oninput = () => {
+    renderSubmitLeaderboardPreview();
+    refreshButtons();
+  };
 });
 $('searchBtn').onclick = async () => {
   if(!redacted) return;
@@ -2410,7 +2433,13 @@ async function runRedactVerify(extraTerms = [], opts = {}){
 }
 $('redactBtn').onclick = () => runRedactVerify();
 $('submitBtn').onclick = async () => {
-  if(!redacted || !confirm('Upload verified redacted artifacts as a PR?')) return;
+  if(!redacted) return;
+  if(!contributorFieldsComplete()){
+    status('submitStatus', 'ERROR: Name, email, and institute are required before submission.');
+    refreshButtons();
+    return;
+  }
+  if(!confirm('Upload verified redacted artifacts as a PR?')) return;
   setUiProcessing(true);
   $('submitBtn').disabled = true;
   $('submitResult').classList.remove('show');
@@ -2812,6 +2841,7 @@ class Handler(BaseHTTPRequestHandler):
         session = Path(data.get("redacted_file", "")).expanduser()
         if not session.exists():
             raise ValueError(f"not found: {session}")
+        contributor_fields = required_contributor_fields(data)
         if emit:
             emit({"event": "progress", "percent": 20, "message": "Checking verified redacted file..."})
         auto = submit_auto_metadata(data, session)
@@ -2822,9 +2852,9 @@ class Handler(BaseHTTPRequestHandler):
             auto=auto,
             domain=infer_domain(auto),
             language=infer_language(auto),
-            contributor=str(data.get("contributor", "") or "anonymous"),
-            email=str(data.get("email", "") or ""),
-            institute=str(data.get("institute", "") or ""),
+            contributor=contributor_fields["contributor"],
+            email=contributor_fields["email"],
+            institute=contributor_fields["institute"],
             privacy_tier=str(data.get("privacy_tier") or "full_redacted"),
             public_anonymous=bool(data.get("public_anonymous")),
         )
