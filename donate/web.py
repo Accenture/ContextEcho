@@ -1429,6 +1429,23 @@ function sessionPathKey(s){ return String(s?.path || ''); }
 function normalizeSubmissionId(value){
   return String(value || '').replace(/^pending\//, '').replace(/\/$/, '');
 }
+function localContributorRecord(s){
+  const pathKey = sessionPathKey(s);
+  const record = pathKey ? donatedRecords[pathKey] : {};
+  return {
+    creditName: s?.local_credit_name || record?.credit_name || '',
+    email: s?.local_contributor_email || record?.contributor_email || '',
+    institute: s?.local_institute || record?.institute || '',
+    publicAnonymous: !!(s?.local_public_anonymous || record?.public_anonymous)
+  };
+}
+function prefillContributorFields(session, overwrite=false){
+  const info = localContributorRecord(session || {});
+  if(info.creditName && (overwrite || !$('contributorName').value)) $('contributorName').value = info.creditName;
+  if(info.email && (overwrite || !$('contributorEmail').value)) $('contributorEmail').value = info.email;
+  if(info.institute && (overwrite || !$('contributorInstitute').value)) $('contributorInstitute').value = info.institute;
+  if($('publicAnonymous') && (overwrite || info.publicAnonymous)) $('publicAnonymous').checked = info.publicAnonymous;
+}
 function localDonationInfo(s){
   const pathKey = sessionPathKey(s);
   const relayChecked = !!s?.relay_checked;
@@ -1449,10 +1466,7 @@ function beginMetadataUpdate(session, submissionId){
   metadataUpdateSession = session || null;
   selected = session || selected;
   goStep(3);
-  if(session?.local_credit_name) $('contributorName').value = session.local_credit_name;
-  if(session?.local_contributor_email) $('contributorEmail').value = session.local_contributor_email;
-  if(session?.local_institute) $('contributorInstitute').value = session.local_institute;
-  if($('publicAnonymous')) $('publicAnonymous').checked = !!session?.local_public_anonymous;
+  prefillContributorFields(session, true);
   renderSubmitLeaderboardPreview();
   status('submitStatus', `Editing contributor info for ${submissionId}. Change the fields above, then click Send Info Update.`);
   refreshButtons();
@@ -1534,7 +1548,10 @@ function goStep(n){
   $('stepPercentText').textContent = `${pct}% complete`;
   $('progressRing').style.setProperty('--pct', pct);
   $('progressRingText').textContent = `${pct}%`;
-  if(n === 3) renderSubmitLeaderboardPreview();
+  if(n === 3) {
+    prefillContributorFields(selected, false);
+    renderSubmitLeaderboardPreview();
+  }
 }
 function refreshButtons(){
   if(activeOperation) return;
@@ -2683,6 +2700,10 @@ $('submitBtn').onclick = async () => {
         compactions: Number(selected.compactions || 0),
         submission: data.receipt?.submission || '',
         submission_id: normalizeSubmissionId(data.receipt?.submission || ''),
+        credit_name: data.receipt?.credit_name || data.receipt?.contributor || $('contributorName').value || '',
+        contributor_email: data.receipt?.contributor_email || $('contributorEmail').value || '',
+        institute: data.receipt?.institute || $('contributorInstitute').value || '',
+        public_anonymous: !!data.receipt?.public_anonymous,
         submitted_at: new Date().toISOString()
       };
       saveDonatedPaths();
