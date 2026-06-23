@@ -230,7 +230,7 @@ def relay_donation_status(sessions: list[dict]) -> list[dict]:
         method="POST",
     )
     try:
-        with urlopen(req, timeout=4) as resp:
+        with urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read().decode("utf-8"))
     except Exception:
         return []

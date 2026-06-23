@@ -678,6 +678,26 @@ def _lineage_status(item: dict, seen_records: list[dict]) -> dict:
     }
 
 
+def _status_seen_records() -> list[dict]:
+    seen_records = _read_seen_records()
+    auto_backfill = os.environ.get("CONTEXTECHO_RELAY_STATUS_AUTOBACKFILL", "1").strip().lower()
+    if seen_records or auto_backfill in {"0", "false", "no", "off"}:
+        return seen_records
+    try:
+        _append_submission_event("status_autobackfill_started")
+        result = _backfill_seen_hashes_from_hf()
+        _append_submission_event(
+            "status_autobackfill_finished",
+            scanned=result.get("scanned", 0),
+            added=result.get("added", 0),
+            refreshed=result.get("refreshed", 0),
+        )
+    except Exception as exc:
+        _append_submission_event("status_autobackfill_failed", error=str(exc)[:500])
+        return seen_records
+    return _read_seen_records()
+
+
 def _reset_seen_hashes() -> int:
     if not SEEN_HASHES.exists():
         _append_submission_event("reset_all", removed=0)
@@ -1018,7 +1038,7 @@ def donation_status(payload: Annotated[dict, Body()]) -> dict:
     sessions = payload.get("sessions") if isinstance(payload, dict) else []
     if not isinstance(sessions, list):
         raise HTTPException(status_code=400, detail="sessions must be a list")
-    seen_records = _read_seen_records()
+    seen_records = _status_seen_records()
     statuses = []
     for item in sessions[:200]:
         if not isinstance(item, dict):

@@ -314,6 +314,32 @@ class RelayServerTests(unittest.TestCase):
         self.assertTrue(update_ready["update_ready"])
         self.assertEqual(update_ready["new_turns"], 60)
 
+    def test_status_seen_records_auto_backfills_empty_state(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+                mock.patch("donate.relay_server._backfill_seen_hashes_from_hf", return_value={"scanned": 1, "added": 1, "refreshed": 0}) as backfill,
+            ):
+                def write_record() -> None:
+                    relay_server._append_seen_record({
+                        "artifact_hash": "hash-1",
+                        "submission_id": "submission-one",
+                        "source_session_id": "source-1",
+                        "conversation_fingerprint": "conv-1",
+                        "turns": 100,
+                        "records": 200,
+                    })
+
+                backfill.side_effect = lambda: (write_record() or {"scanned": 1, "added": 1, "refreshed": 0})
+                records = relay_server._status_seen_records()
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["submission_id"], "submission-one")
+        backfill.assert_called_once()
+
     def test_remove_seen_records_removes_only_matching_submission(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             state_dir = Path(td)
