@@ -42,6 +42,7 @@
     .hint { color:var(--muted); font-size:13px; line-height:1.4; margin-top:6px; }
     .status { margin-top:14px; color:var(--muted); font-size:14px; min-height:20px; }
     .status.ok { color:#13552f; font-weight:850; }
+    .status.warn { color:var(--warn); font-weight:850; }
     .status.error { color:var(--danger); font-weight:850; }
     .connection-status { margin:0; min-height:0; display:inline-flex; align-items:center; gap:12px; border:1px solid #dce4df; border-radius:10px; background:#f8faf6; padding:10px 16px; min-width:240px; color:#5e6b65; }
     .connection-status .status-mark { width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:white; background:#9aa69f; flex:0 0 auto; }
@@ -255,7 +256,7 @@
           <p class="hint">Use this when a donor must resubmit after a test or missing metadata. This only removes relay duplicate memory. Delete or close the Hugging Face staging PR manually if needed.</p>
           <label for="resetSubmission">Submission ID</label>
           <input id="resetSubmission" placeholder="submission-xxxxxxxx">
-          <div class="toolbar" style="margin-top:12px"><button class="danger" id="resetOne">Remove relay record</button></div>
+          <div class="toolbar" style="margin-top:12px"><button class="danger" id="resetOne" type="button">Remove relay record</button></div>
           <div id="resetStatus" class="status"></div>
         </div>
         <div class="card">
@@ -492,9 +493,17 @@ async function resetOne(){
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({submission_id:submission}),
   });
-  status('resetStatus', `Removed ${data.removed || 0}; remaining ${data.remaining || 0}.`, data.removed ? 'ok' : '');
+  const removed = Number(data.removed || 0);
+  const ids = (data.removed_submission_ids || []).join(', ');
+  const matched = (data.matched_by || []).join(', ');
+  if(removed){
+    status('resetStatus', `Removed ${removed} relay duplicate-memory record${removed === 1 ? '' : 's'}${ids ? `: ${ids}` : ''}. Remaining relay records: ${data.remaining || 0}. Hugging Face staging files were not deleted.`, 'ok');
+  } else {
+    status('resetStatus', `No relay duplicate-memory record matched ${submission}${matched ? ` by ${matched}` : ''}. Nothing was removed; remaining relay records: ${data.remaining || 0}.`, 'warn');
+  }
   if(state.records.length) await loadRecords();
   if(state.summary) await loadSummary();
+  if(state.events.length) await loadEvents();
 }
 
 async function backfill(){
