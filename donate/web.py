@@ -299,13 +299,16 @@ def save_donation_record(source_path: str | Path = "", artifact_path: str | Path
         m = re.search(r"\[submit\]\s*Submission ID:\s*(submission-[A-Za-z0-9_-]+)", output)
     receipt = receipt or {}
     points_low, points_high = donation_points_range(receipt.get("turns", 0), receipt.get("compactions", 0))
+    submission = m.group(1) if m else ""
+    submission_id = submission.replace("pending/", "").strip("/")
     submissions.append({
         "submitted_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "source_key": skey,
         "source_path_key": spkey,
         "source_path": source,
         "artifact_key": akey,
-        "submission": m.group(1) if m else "",
+        "submission": submission,
+        "submission_id": submission_id,
         "contributor_identity": contributor_identity(receipt),
         "credit_name": receipt.get("credit_name", ""),
         "public_anonymous": bool(receipt.get("public_anonymous")),
@@ -1054,6 +1057,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill.good { background:#e8ecd7; color:#5c5d16; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#dceafa; color:#1e4f87; }
+    .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
     .fit-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; }
     .fit-legend span { display:inline-flex; align-items:center; gap:5px; }
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
@@ -1371,16 +1375,20 @@ function sessionLocalKey(s){
   return [s?.path || '', s?.records || '', s?.turns || '', s?.compactions || '', s?.last_active || s?.modified || ''].join('|');
 }
 function sessionPathKey(s){ return String(s?.path || ''); }
+function normalizeSubmissionId(value){
+  return String(value || '').replace(/^pending\//, '').replace(/\/$/, '');
+}
 function localDonationInfo(s){
   const pathKey = sessionPathKey(s);
   const record = pathKey ? donatedRecords[pathKey] : null;
+  const supportId = normalizeSubmissionId(s?.relay_submission_id || record?.submission_id || record?.submission || '');
   const previousTurns = Number(s?.donated_turns || record?.turns || 0);
   const currentTurns = Number(s?.turns || 0);
   const newTurns = Math.max(0, Number(s?.new_turns || (previousTurns ? currentTurns - previousTurns : 0)));
   const updateReady = !!s?.update_ready || !!(record && newTurns && (newTurns >= 50 || (previousTurns && newTurns / previousTurns >= 0.20)));
   const exactDonated = !!s?.donated || donatedPaths.has(sessionLocalKey(s));
   const donatedBefore = exactDonated || !!s?.donated_before || !!record;
-  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady};
+  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId};
 }
 function redactionCacheKey(){
   if(!selected) return '';
@@ -2226,17 +2234,28 @@ function renderSessions(){
       : (donationInfo.donatedBefore
         ? `<span class="pill donated">donated${donationInfo.newTurns ? ` · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns` : ''}</span>`
         : '');
+    const supportPill = donationInfo.supportId
+      ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
+      : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
-        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill}</div>
+        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill} ${supportPill}</div>
       </div>
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
       <div class="session-fit"><span class="pill ${fit(s)}">${fit(s)}</span></div>
     `;
+    row.querySelectorAll('[data-copy-submission]').forEach(el => {
+      el.onclick = event => {
+        event.stopPropagation();
+        const id = el.dataset.copySubmission || '';
+        navigator.clipboard?.writeText(id).catch(()=>{});
+        status('discoverStatus', `Copied maintainer reset ID: ${id}`);
+      };
+    });
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     if(donated){
       row.oncontextmenu = async (event) => {
@@ -2582,6 +2601,8 @@ $('submitBtn').onclick = async () => {
         turns: Number(selected.turns || 0),
         records: Number(selected.records || 0),
         compactions: Number(selected.compactions || 0),
+        submission: data.receipt?.submission || '',
+        submission_id: normalizeSubmissionId(data.receipt?.submission || ''),
         submitted_at: new Date().toISOString()
       };
       saveDonatedPaths();

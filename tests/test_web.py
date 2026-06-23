@@ -1,5 +1,6 @@
 import unittest
 import errno
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
@@ -48,6 +49,12 @@ class WebTests(unittest.TestCase):
         self.assertIn("scrollToSubmitResult", INDEX_HTML)
         self.assertIn("scrollIntoView({behavior:'smooth', block:'start'})", INDEX_HTML)
         self.assertIn("pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicCreditName)", INDEX_HTML)
+
+    def test_donated_rows_show_copyable_support_submission_id(self):
+        self.assertIn("support-id", INDEX_HTML)
+        self.assertIn("data-copy-submission", INDEX_HTML)
+        self.assertIn("Copied maintainer reset ID", INDEX_HTML)
+        self.assertIn("normalizeSubmissionId", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
 
     def test_submit_requires_contributor_identity_fields(self):
@@ -440,6 +447,8 @@ class WebTests(unittest.TestCase):
                 self.assertIn(artifact_key(artifact), load_donated_artifact_keys())
                 self.assertTrue(already_submitted(source, artifact))
                 self.assertTrue(already_submitted("", artifact))
+                saved = json.loads(registry.read_text())
+                self.assertEqual(saved["submissions"][0]["submission_id"], "submission-abc12345")
 
     def test_clear_donation_registry_removes_local_duplicate_memory(self):
         with TemporaryDirectory() as td:
