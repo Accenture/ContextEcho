@@ -51,7 +51,7 @@ def _progress(msg: str, enabled: bool) -> None:
 
 
 def is_research_candidate(info: dict, min_turns: int = MIN_RESEARCH_TURNS) -> bool:
-    """Return whether a discovered session has enough signal to request donation."""
+    """Return whether a discovered session already has strong research signal."""
     turns = int(info.get("turns") or 0)
     compactions = int(info.get("compactions") or 0)
     return turns >= min_turns or compactions >= 1
@@ -84,11 +84,7 @@ def discover_iter(max_per_agent: int | None = 50):
                 "path": str(resolved),
             }
             info = adapter.inspect(resolved)
-            # Skip sessions with too little benchmark signal. Compactions are
-            # accepted because they indicate long-context behavior even when
-            # the visible user-turn count is modest.
-            if not is_research_candidate(info):
-                continue
+            info["research_candidate"] = is_research_candidate(info)
             found.append(info)
         yield {
             "event": "adapter_done",
@@ -115,12 +111,12 @@ def discover(max_per_agent: int | None = 50, progress: bool = False) -> list[dic
             limit = event.get("adapter_limit")
             limit_txt = "" if limit is None else f"/{limit}"
             _progress(
-                f"{event['agent']}: inspecting {event['adapter_inspected']}{limit_txt} candidates, found {found} usable",
+                f"{event['agent']}: inspecting {event['adapter_inspected']}{limit_txt} candidates, found {found} sessions",
                 progress,
             )
         elif kind == "adapter_done":
             _progress(
-                f"{event['agent']}: inspected {event['adapter_inspected']}, found {event['found']} usable total",
+                f"{event['agent']}: inspected {event['adapter_inspected']}, found {event['found']} sessions total",
                 progress,
             )
         elif kind == "done":
@@ -128,7 +124,7 @@ def discover(max_per_agent: int | None = 50, progress: bool = False) -> list[dic
             found = int(event.get("found") or 0)
             sessions = list(event.get("sessions") or [])
     if progress:
-        print(f"\r[discover] done: inspected {inspected} candidates, found {found} usable session(s).")
+        print(f"\r[discover] done: inspected {inspected} candidates, found {found} session(s).")
     return sessions
 
 

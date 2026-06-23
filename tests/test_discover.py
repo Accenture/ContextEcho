@@ -8,6 +8,7 @@ import unittest
 import os
 import time
 from pathlib import Path
+from unittest import mock
 
 from donate.discover import MIN_RESEARCH_TURNS, discover, discover_iter, inspect_session, is_research_candidate
 from donate.adapters.base import date_from_timestamp, is_redacted_artifact
@@ -233,6 +234,28 @@ class DiscoverTests(unittest.TestCase):
         self.assertFalse(is_research_candidate({"turns": MIN_RESEARCH_TURNS - 1, "compactions": 0, "records": 500}))
         self.assertTrue(is_research_candidate({"turns": MIN_RESEARCH_TURNS, "compactions": 0}))
         self.assertTrue(is_research_candidate({"turns": 1, "compactions": 1}))
+
+    def test_discover_includes_sessions_that_need_improvement(self) -> None:
+        class FakeAdapter:
+            agent = "Fake"
+
+            def discover_paths(self):
+                return [Path("/tmp/short-session.jsonl")]
+
+            def inspect(self, path):
+                return {
+                    "path": str(path),
+                    "project": "short-session",
+                    "agent": "Fake",
+                    "turns": 3,
+                    "compactions": 0,
+                }
+
+        with mock.patch("donate.discover.ADAPTERS", [FakeAdapter()]):
+            sessions = discover(max_per_agent=50, progress=False)
+
+        self.assertEqual(len(sessions), 1)
+        self.assertFalse(sessions[0]["research_candidate"])
 
     def test_discover_progress_can_be_disabled_for_json_callers(self) -> None:
         buf = io.StringIO()

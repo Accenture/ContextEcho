@@ -126,8 +126,10 @@ class WebTests(unittest.TestCase):
         self.assertNotIn(">Clear label<", INDEX_HTML)
         self.assertNotIn(">Retry failed upload<", INDEX_HTML)
 
-    def test_pick_session_explains_research_value_threshold(self):
-        self.assertIn("100+ turns or context compactions", INDEX_HTML)
+    def test_pick_session_explains_research_value_fit(self):
+        self.assertIn("All sessions are shown", INDEX_HTML)
+        self.assertIn("improve means keep chatting", INDEX_HTML)
+        self.assertIn("'good':'improve'", INDEX_HTML)
         self.assertIn("s.session_label || s.project", INDEX_HTML)
         self.assertNotIn("Choose session file manually", INDEX_HTML)
         self.assertNotIn("/api/import_session", INDEX_HTML)

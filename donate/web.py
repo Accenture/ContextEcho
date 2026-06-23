@@ -1025,8 +1025,8 @@ INDEX_HTML = r"""<!doctype html>
     .next-button { min-width:170px; font-size:16px; }
     .pill { display:inline-block; border-radius:999px; padding:3px 8px; font-size:12px; font-weight:800; background:#edf1e4; }
     .pill.best { background:#dff1d9; color:#13552f; }
-    .pill.long { background:#e8ecd7; color:#5c5d16; }
-    .pill.short { background:#f3e5d2; color:#7a420a; }
+    .pill.good { background:#e8ecd7; color:#5c5d16; }
+    .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#dceafa; color:#1e4f87; }
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
     .result { display:none; border:1px solid var(--line); border-radius:18px; padding:16px; background:#fbfff4; margin-top:12px; }
@@ -1211,7 +1211,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="folder-icon"></div>
           <div>
             <h2>1. Pick a Session</h2>
-            <p class="muted">Choose a real session with 100+ turns or context compactions.</p>
+            <p class="muted">All sessions are shown. Green is best; improve means keep chatting.</p>
           </div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
@@ -1375,7 +1375,7 @@ function allSessionsDonatedMessage(){
   return `Thank you for donating all your scanned session data. ${sessions.length} session${sessions.length === 1 ? '' : 's'} on this machine are marked donated.`;
 }
 function noSessionsMessage(){
-  return 'Thanks for considering a ContextEcho donation. We did not find any usable Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.';
+  return 'Thanks for considering a ContextEcho donation. We did not find any Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.';
 }
 function privacyTier(){ return document.querySelector('input[name="privacyTier"]:checked')?.value || 'full_redacted'; }
 function parseScrubTerms(value){
@@ -1430,7 +1430,7 @@ function setUiProcessing(on){
   });
   if(!activeOperation) refreshButtons();
 }
-function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>0?'best':(t>=100?'long':'short'); }
+function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>0?'best':(t>=100||c>0?'good':'improve'); }
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 function compactionNote(s){
   const agent = String(s.agent || '').toLowerCase();
@@ -2159,7 +2159,7 @@ function renderSessions(){
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
     const emptyText = searched
-      ? `<div class="empty-sessions thanks">Thanks for considering a ContextEcho donation.<span>We did not find any usable Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.</span></div>`
+      ? `<div class="empty-sessions thanks">Thanks for considering a ContextEcho donation.<span>We did not find any Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.</span></div>`
       : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
     list.innerHTML = `<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div>${emptyText}`;
   }
@@ -2273,9 +2273,9 @@ $('discoverBtn').onclick = async () => {
           const limit = ev.adapter_limit || 50;
           const pct = max === 'all' ? Math.min(90, 5 + ev.inspected) : Math.min(90, ((ev.inspected || 0) / (limit * 2)) * 90);
           setProgress(pct);
-          status('discoverStatus', `${ev.agent}: inspected ${ev.adapter_inspected}${ev.adapter_limit ? '/' + ev.adapter_limit : ''}; found ${ev.found} usable so far.`);
+          status('discoverStatus', `${ev.agent}: inspected ${ev.adapter_inspected}${ev.adapter_limit ? '/' + ev.adapter_limit : ''}; found ${ev.found} sessions so far.`);
         } else if(ev.event === 'adapter_done'){
-          status('discoverStatus', `${ev.agent}: done. ${ev.found} usable sessions so far.`);
+          status('discoverStatus', `${ev.agent}: done. ${ev.found} sessions so far.`);
         } else if(ev.event === 'done'){
           final = ev;
           setProgress(100);
@@ -2285,7 +2285,7 @@ $('discoverBtn').onclick = async () => {
     sessions = (final && final.sessions) || [];
     page = 0;
     discoverTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
-    status('discoverStatus', sessions.length === 0 ? noSessionsMessage() : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} usable sessions. Click a row to select.`));
+    status('discoverStatus', sessions.length === 0 ? noSessionsMessage() : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} sessions. Click a row to select.`));
     renderSessions();
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
   } catch(e) { status('discoverStatus','ERROR: '+friendlyRequestError(e, 'discovery scan')); }

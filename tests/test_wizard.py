@@ -19,8 +19,9 @@ class WizardTests(unittest.TestCase):
         self.assertEqual(format_turns(59482), "59.5k")
         self.assertEqual(format_turns(480), "480")
         self.assertEqual(quality_tag({"turns": 100, "compactions": 1}), "best")
-        self.assertEqual(quality_tag({"turns": 100, "compactions": 0}), "long")
-        self.assertEqual(quality_tag({"turns": 99, "compactions": 5}), "short")
+        self.assertEqual(quality_tag({"turns": 100, "compactions": 0}), "good")
+        self.assertEqual(quality_tag({"turns": 99, "compactions": 5}), "good")
+        self.assertEqual(quality_tag({"turns": 99, "compactions": 0}), "improve")
 
     def test_default_output_dir_uses_downloads(self) -> None:
         with mock.patch("pathlib.Path.home", return_value=Path("/home/tester")):
