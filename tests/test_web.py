@@ -59,6 +59,9 @@ class WebTests(unittest.TestCase):
         self.assertIn("/api/metadata_update", INDEX_HTML)
         self.assertIn("Send Info Update", INDEX_HTML)
         self.assertIn("Editing contributor info for", INDEX_HTML)
+        self.assertIn("session.local_credit_name", INDEX_HTML)
+        self.assertIn("session.local_contributor_email", INDEX_HTML)
+        self.assertIn("session.local_institute", INDEX_HTML)
         self.assertIn("Info update request sent", INDEX_HTML)
         self.assertNotIn("New public/credit name for this donation", INDEX_HTML)
         self.assertIn("Copied maintainer reset ID", INDEX_HTML)
@@ -389,7 +392,15 @@ class WebTests(unittest.TestCase):
 
     def test_annotate_donated_marks_grown_source_below_threshold(self):
         path = "/tmp/example-session.jsonl"
-        record = {"source_path_key": "unused", "turns": 100, "submission": "pending/submission-local123/"}
+        record = {
+            "source_path_key": "unused",
+            "turns": 100,
+            "submission": "pending/submission-local123/",
+            "credit_name": "Local Donor",
+            "contributor_email": "local@example.com",
+            "institute": "Local Institute",
+            "public_anonymous": True,
+        }
         with (
             mock.patch("donate.web.load_donated_keys", return_value=set()),
             mock.patch("donate.web.load_donated_source_records", return_value={"path-key": record}),
@@ -402,6 +413,10 @@ class WebTests(unittest.TestCase):
         self.assertEqual(rows[0]["new_turns"], 10)
         self.assertFalse(rows[0]["update_ready"])
         self.assertEqual(rows[0]["local_submission_id"], "submission-local123")
+        self.assertEqual(rows[0]["local_credit_name"], "Local Donor")
+        self.assertEqual(rows[0]["local_contributor_email"], "local@example.com")
+        self.assertEqual(rows[0]["local_institute"], "Local Institute")
+        self.assertTrue(rows[0]["local_public_anonymous"])
 
     def test_annotate_donated_lets_relay_not_received_override_local_record(self):
         path = "/tmp/example-session.jsonl"

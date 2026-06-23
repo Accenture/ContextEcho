@@ -631,6 +631,10 @@ def annotate_donated(sessions: list[dict]) -> list[dict]:
         row["new_turns"] = new_turns if source_record else 0
         row["update_ready"] = update_ready
         row["local_submission_id"] = normalize_submission_id((source_record or {}).get("submission_id") or (source_record or {}).get("submission"))
+        row["local_credit_name"] = (source_record or {}).get("credit_name", "")
+        row["local_contributor_email"] = (source_record or {}).get("contributor_email", "")
+        row["local_institute"] = (source_record or {}).get("institute", "")
+        row["local_public_anonymous"] = bool((source_record or {}).get("public_anonymous"))
         out.append(row)
     relay_statuses = relay_donation_status(out)
     relay_checked = bool(relay_statuses) and len(relay_statuses) == len(out)
@@ -1445,6 +1449,11 @@ function beginMetadataUpdate(session, submissionId){
   metadataUpdateSession = session || null;
   selected = session || selected;
   goStep(3);
+  if(session?.local_credit_name) $('contributorName').value = session.local_credit_name;
+  if(session?.local_contributor_email) $('contributorEmail').value = session.local_contributor_email;
+  if(session?.local_institute) $('contributorInstitute').value = session.local_institute;
+  if($('publicAnonymous')) $('publicAnonymous').checked = !!session?.local_public_anonymous;
+  renderSubmitLeaderboardPreview();
   status('submitStatus', `Editing contributor info for ${submissionId}. Change the fields above, then click Send Info Update.`);
   refreshButtons();
   $('contributorName').focus();
