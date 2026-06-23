@@ -51,10 +51,19 @@ class WebTests(unittest.TestCase):
     def test_submit_requires_contributor_identity_fields(self):
         self.assertIn("Contributor info is required", INDEX_HTML)
         self.assertIn('id="contributorName" placeholder="your name or handle" required', INDEX_HTML)
-        self.assertIn('id="contributorEmail" type="email" placeholder="you@example.com" required', INDEX_HTML)
+        self.assertIn('id="contributorEmail" type="email" list="emailSuggestions" placeholder="you@example.com" required', INDEX_HTML)
+        self.assertIn('datalist id="emailSuggestions"', INDEX_HTML)
         self.assertIn('id="contributorInstitute" placeholder="University / company / independent" required', INDEX_HTML)
         self.assertIn("function contributorFieldsComplete()", INDEX_HTML)
-        self.assertIn("Name, email, and institute are required before submission", INDEX_HTML)
+        self.assertIn("function missingContributorMessage()", INDEX_HTML)
+        self.assertIn("button-blocked", INDEX_HTML)
+        self.assertIn("Please fill ${missing.join(', ')} before submitting.", INDEX_HTML)
+        self.assertIn("function completeEmailDomain()", INDEX_HTML)
+        self.assertIn("commonEmailDomains", INDEX_HTML)
+        self.assertIn("function updateEmailSuggestions()", INDEX_HTML)
+        self.assertIn("'outlook.com'", INDEX_HTML)
+        self.assertIn("if(matches.length === 1)", INDEX_HTML)
+        self.assertIn("$('contributorEmail').onblur = completeEmailDomain", INDEX_HTML)
         with self.assertRaisesRegex(ValueError, "Missing: email"):
             required_contributor_fields({"contributor": "Donor", "email": "", "institute": "Lab"})
         self.assertEqual(

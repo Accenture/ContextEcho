@@ -938,6 +938,8 @@ INDEX_HTML = r"""<!doctype html>
     button.secondary { background:#e8eddc; color:var(--ink); box-shadow:none; }
     button:hover:not(:disabled) { transform:translateY(-1px); }
     button:disabled { opacity:.5; cursor:not-allowed; }
+    button.button-blocked { opacity:.55; cursor:not-allowed; transform:none; }
+    button.button-blocked:hover { transform:none; }
     body.is-processing button { opacity:.5; cursor:not-allowed; pointer-events:none; }
     input, textarea { width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:14px; padding:11px 13px; background:white; color:var(--ink); font:inherit; }
     input:focus, textarea:focus { outline:3px solid rgba(31,111,67,.16); border-color:#7cb67d; }
@@ -1289,7 +1291,7 @@ INDEX_HTML = r"""<!doctype html>
     <p class="muted">The tool writes manifest + consent, confirms the verified redacted artifact, uploads it, and saves a local receipt.</p>
     <div class="submit-grid">
       <div><label>Name or GitHub/HF handle <span class="muted">(required)</span></label><input id="contributorName" placeholder="your name or handle" required /></div>
-      <div><label>Email <span class="muted">(required)</span></label><input id="contributorEmail" type="email" placeholder="you@example.com" required /></div>
+      <div><label>Email <span class="muted">(required)</span></label><input id="contributorEmail" type="email" list="emailSuggestions" placeholder="you@example.com" required /><datalist id="emailSuggestions"></datalist></div>
       <div><label>Institute <span class="muted">(required)</span></label><input id="contributorInstitute" placeholder="University / company / independent" required /></div>
     </div>
     <div id="submitLeaderboardPreview" class="submit-leaderboard"></div>
@@ -1405,11 +1407,15 @@ function refreshButtons(){
   if(activeOperation) return;
   const selectedInfo = selected ? localDonationInfo(selected) : null;
   const selectedDonated = !!(selectedInfo && (selectedInfo.exactDonated || (selectedInfo.donatedBefore && !selectedInfo.updateReady)));
+  const canSubmitArtifact = !!(redacted && redacted.verify_passed) && !submitted && !selectedDonated;
+  const missingContributorFields = canSubmitArtifact && !contributorFieldsComplete();
   $('pickNext').disabled = !selected || selectedDonated;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
-  $('submitBtn').disabled = !(redacted && redacted.verify_passed && contributorFieldsComplete()) || submitted || selectedDonated;
+  $('submitBtn').disabled = !canSubmitArtifact;
+  $('submitBtn').classList.toggle('button-blocked', missingContributorFields);
+  $('submitBtn').title = missingContributorFields ? missingContributorMessage() : '';
 }
 function setUiProcessing(on){
   activeOperation = !!on;
@@ -1438,6 +1444,54 @@ function compactionNote(s){
 function status(id, text){ $(id).textContent = text; }
 function contributorFieldsComplete(){
   return ['contributorName','contributorEmail','contributorInstitute'].every(id => ($(id).value || '').trim());
+}
+function missingContributorFields(){
+  return [
+    ['contributorName', 'name or handle'],
+    ['contributorEmail', 'email'],
+    ['contributorInstitute', 'institute']
+  ].filter(([id]) => !($(id).value || '').trim()).map(([, label]) => label);
+}
+function missingContributorMessage(){
+  const missing = missingContributorFields();
+  return missing.length ? `Please fill ${missing.join(', ')} before submitting.` : '';
+}
+const commonEmailDomains = [
+  'gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com',
+  'proton.me', 'protonmail.com', 'aol.com', 'live.com', 'msn.com',
+  'me.com', 'mac.com', 'qq.com', '163.com'
+];
+function emailParts(){
+  const input = $('contributorEmail');
+  const value = (input.value || '').trim();
+  const at = value.indexOf('@');
+  if(at <= 0) return {local:'', domain:'', value};
+  return {local:value.slice(0, at), domain:value.slice(at + 1).toLowerCase(), value};
+}
+function updateEmailSuggestions(){
+  const list = $('emailSuggestions');
+  const {local, domain} = emailParts();
+  if(!local){
+    list.innerHTML = '';
+    return;
+  }
+  const matches = commonEmailDomains
+    .filter(d => !domain || d.startsWith(domain))
+    .slice(0, 8);
+  list.innerHTML = matches.map(d => `<option value="${escapeHtml(local)}@${escapeHtml(d)}"></option>`).join('');
+}
+function completeEmailDomain(){
+  const input = $('contributorEmail');
+  const {local, domain} = emailParts();
+  if(!local || !domain || domain.includes('.')) return;
+  const matches = commonEmailDomains.filter(d => d.startsWith(domain));
+  if(matches.length === 1){
+    input.value = `${local}@${matches[0]}`;
+    status('submitStatus', `Email domain completed with @${matches[0]}. Edit it if needed.`);
+    updateEmailSuggestions();
+    renderSubmitLeaderboardPreview();
+    refreshButtons();
+  }
 }
 function fmtStat(n){
   if(n === null || n === undefined || n === '') return '—';
@@ -2278,10 +2332,12 @@ $('redactNext').onclick = () => goStep(3);
 $('submitPrev').onclick = () => goStep(2);
 ['contributorName','contributorEmail','contributorInstitute'].forEach(id => {
   $(id).oninput = () => {
+    if(id === 'contributorEmail') updateEmailSuggestions();
     renderSubmitLeaderboardPreview();
     refreshButtons();
   };
 });
+$('contributorEmail').onblur = completeEmailDomain;
 $('searchBtn').onclick = async () => {
   if(!redacted) return;
   setUiProcessing(true);
@@ -2418,7 +2474,7 @@ $('redactBtn').onclick = () => runRedactVerify();
 $('submitBtn').onclick = async () => {
   if(!redacted) return;
   if(!contributorFieldsComplete()){
-    status('submitStatus', 'ERROR: Name, email, and institute are required before submission.');
+    status('submitStatus', `ERROR: ${missingContributorMessage()}`);
     refreshButtons();
     return;
   }
