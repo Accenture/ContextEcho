@@ -19,6 +19,8 @@ from donate.web import (
     clear_donation_registry,
     create_server,
     duplicate_submit_detail,
+    donation_fit,
+    donation_ready,
     friendly_submit_error,
     is_duplicate_submit_output,
     load_donated_artifact_keys,
@@ -128,8 +130,14 @@ class WebTests(unittest.TestCase):
 
     def test_pick_session_explains_research_value_fit(self):
         self.assertIn("All sessions are shown", INDEX_HTML)
-        self.assertIn("improve means keep chatting", INDEX_HTML)
+        self.assertIn("Best and good are ready to donate", INDEX_HTML)
+        self.assertIn("100+ turns and 2+ ctx cmp", INDEX_HTML)
+        self.assertIn("50+ turns and 1+ ctx cmp", INDEX_HTML)
+        self.assertIn("keep chatting before donating", INDEX_HTML)
         self.assertIn("'good':'improve'", INDEX_HTML)
+        self.assertIn("sessionReady(s)", INDEX_HTML)
+        self.assertIn("This session is not ready to donate yet", INDEX_HTML)
+        self.assertIn("donation_ready(auto.get", Path("donate/web.py").read_text(encoding="utf-8"))
         self.assertIn("s.session_label || s.project", INDEX_HTML)
         self.assertNotIn("Choose session file manually", INDEX_HTML)
         self.assertNotIn("/api/import_session", INDEX_HTML)
@@ -138,6 +146,15 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("contextechoDiscoveryCacheV1", INDEX_HTML)
         self.assertIn("/api/health", Path("donate/web.py").read_text(encoding="utf-8"))
         self.assertIn("access-control-allow-origin", Path("donate/web.py").read_text(encoding="utf-8"))
+
+    def test_donation_fit_thresholds(self):
+        self.assertEqual(donation_fit(100, 2), "best")
+        self.assertEqual(donation_fit(99, 2), "good")
+        self.assertEqual(donation_fit(50, 1), "good")
+        self.assertEqual(donation_fit(100, 0), "improve")
+        self.assertEqual(donation_fit(49, 1), "improve")
+        self.assertTrue(donation_ready(50, 1))
+        self.assertFalse(donation_ready(100, 0))
 
     def test_privacy_switch_restores_cached_verified_redaction(self):
         self.assertIn("let redactionCache = new Map()", INDEX_HTML)

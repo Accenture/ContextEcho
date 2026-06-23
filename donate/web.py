@@ -41,6 +41,10 @@ DONATION_REGISTRY = DONATION_ROOT / ".donated_sessions.json"
 MAX_AUTO_REPAIR_PASSES = 3
 MIN_SESSION_GROWTH_RATIO = 0.20
 MIN_SESSION_GROWTH_TURNS = 50
+GOOD_SESSION_TURNS = 50
+GOOD_SESSION_COMPACTIONS = 1
+BEST_SESSION_TURNS = 100
+BEST_SESSION_COMPACTIONS = 2
 CLIENT_DISCONNECT_ERRNOS = {errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED}
 SUBMIT_JOBS: dict[str, dict] = {}
 SUBMIT_JOBS_LOCK = threading.Lock()
@@ -231,6 +235,20 @@ def donation_points_range(turns: str | int = 0, compactions: str | int = 0) -> t
     turns_n = int(turns or 0)
     compactions_n = int(compactions or 0)
     return (3, 5) if turns_n >= 100 or compactions_n >= 1 else (2, 4)
+
+
+def donation_fit(turns: str | int = 0, compactions: str | int = 0) -> str:
+    turns_n = int(turns or 0)
+    compactions_n = int(compactions or 0)
+    if turns_n >= BEST_SESSION_TURNS and compactions_n >= BEST_SESSION_COMPACTIONS:
+        return "best"
+    if turns_n >= GOOD_SESSION_TURNS and compactions_n >= GOOD_SESSION_COMPACTIONS:
+        return "good"
+    return "improve"
+
+
+def donation_ready(turns: str | int = 0, compactions: str | int = 0) -> bool:
+    return donation_fit(turns, compactions) != "improve"
 
 
 def contributor_identity(receipt: dict) -> str:
@@ -997,7 +1015,13 @@ INDEX_HTML = r"""<!doctype html>
     .sessions-card { min-height:342px; }
     .session-head { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
     .session-head h2 { font-size:21px; }
+    .session-summary { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; align-items:center; }
     .count-badge { border-radius:10px; padding:6px 12px; color:var(--accent); background:#eaf4e5; font-weight:900; }
+    .fit-summary { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+    .fit-chip { border-radius:999px; padding:5px 8px; font-size:11px; font-weight:900; background:#edf1e4; color:#44504a; }
+    .fit-chip.best { background:#dff1d9; color:#13552f; }
+    .fit-chip.good { background:#e8ecd7; color:#5c5d16; }
+    .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(250px,1fr) 110px 80px 66px 82px; gap:18px; align-items:center; }
     .session-table-head { padding:10px 14px; background:#f2f5ef; color:#5a625d; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
@@ -1009,6 +1033,8 @@ INDEX_HTML = r"""<!doctype html>
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
     .session-row.donated-row { cursor:not-allowed; opacity:.72; background:#f7f9f4; }
     .session-row.donated-row:hover { background:#f7f9f4; }
+    .session-row.improve-row { cursor:not-allowed; background:#fff9f0; opacity:.82; }
+    .session-row.improve-row:hover { background:#fff9f0; }
     .session-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .all-donated-note { margin:12px; border:1px solid #b9d6b0; background:#f2fbef; border-radius:14px; padding:14px 16px; color:#145832; font-weight:900; }
     .all-donated-note span { display:block; margin-top:4px; color:#52605a; font-weight:650; }
@@ -1028,6 +1054,8 @@ INDEX_HTML = r"""<!doctype html>
     .pill.good { background:#e8ecd7; color:#5c5d16; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#dceafa; color:#1e4f87; }
+    .fit-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; }
+    .fit-legend span { display:inline-flex; align-items:center; gap:5px; }
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
     .result { display:none; border:1px solid var(--line); border-radius:18px; padding:16px; background:#fbfff4; margin-top:12px; }
     .result.show { display:block; }
@@ -1211,7 +1239,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="folder-icon"></div>
           <div>
             <h2>1. Pick a Session</h2>
-            <p class="muted">All sessions are shown. Green is best; improve means keep chatting.</p>
+            <p class="muted">All sessions are shown. Best and good are ready to donate; improve means keep chatting.</p>
           </div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
@@ -1222,11 +1250,19 @@ INDEX_HTML = r"""<!doctype html>
       <div class="card sessions-card">
         <div class="session-head">
           <h2>Recently discovered sessions</h2>
-          <span id="sessionCount" class="count-badge">0 found</span>
+          <div class="session-summary">
+            <span id="sessionCount" class="count-badge">0 found</span>
+            <div id="fitSummary" class="fit-summary" aria-live="polite"></div>
+          </div>
         </div>
         <div id="sessionList" class="session-list">
           <div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div>
           <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
+        </div>
+        <div class="fit-legend">
+          <span><span class="pill best">best</span> 100+ turns and 2+ ctx cmp</span>
+          <span><span class="pill good">good</span> 50+ turns and 1+ ctx cmp</span>
+          <span><span class="pill improve">improve</span> keep chatting before donating</span>
         </div>
         <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
         <div id="pager" class="row" style="display:none; margin-top:18px; justify-content:center">
@@ -1405,9 +1441,10 @@ function refreshButtons(){
   if(activeOperation) return;
   const selectedInfo = selected ? localDonationInfo(selected) : null;
   const selectedDonated = !!(selectedInfo && (selectedInfo.exactDonated || (selectedInfo.donatedBefore && !selectedInfo.updateReady)));
+  const selectedImprove = selected ? fit(selected) === 'improve' : false;
   const canSubmitArtifact = !!(redacted && redacted.verify_passed) && !submitted && !selectedDonated;
   const contributorComplete = contributorFieldsComplete();
-  $('pickNext').disabled = !selected || selectedDonated;
+  $('pickNext').disabled = !selected || selectedDonated || selectedImprove;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
@@ -1430,7 +1467,14 @@ function setUiProcessing(on){
   });
   if(!activeOperation) refreshButtons();
 }
-function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>0?'best':(t>=100||c>0?'good':'improve'); }
+function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>=2?'best':(t>=50&&c>=1?'good':'improve'); }
+function sessionReady(s){ return fit(s) !== 'improve'; }
+function fitCounts(){
+  return sessions.reduce((acc, s) => {
+    acc[fit(s)] = (acc[fit(s)] || 0) + 1;
+    return acc;
+  }, {best:0, good:0, improve:0});
+}
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 function compactionNote(s){
   const agent = String(s.agent || '').toLowerCase();
@@ -2156,6 +2200,10 @@ function renderSessions(){
   const rows = sessions.slice(start, start + pageSize);
   const allDonated = allSessionsDonated();
   $('sessionCount').textContent = `${sessions.length} found`;
+  const counts = fitCounts();
+  $('fitSummary').innerHTML = sessions.length
+    ? `<span class="fit-chip best">best ${counts.best || 0}</span><span class="fit-chip good">good ${counts.good || 0}</span><span class="fit-chip improve">improve ${counts.improve || 0}</span>`
+    : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
     const emptyText = searched
@@ -2171,13 +2219,14 @@ function renderSessions(){
     const row = document.createElement('div');
     const donationInfo = localDonationInfo(s);
     const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
+    const ready = sessionReady(s);
     const updateReady = donationInfo.updateReady;
     const statusPill = updateReady
       ? `<span class="pill best">update ready · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns</span>`
       : (donationInfo.donatedBefore
         ? `<span class="pill donated">donated${donationInfo.newTurns ? ` · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns` : ''}</span>`
         : '');
-    row.className = donated ? 'session-row donated-row' : 'session-row';
+    row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
@@ -2188,7 +2237,7 @@ function renderSessions(){
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
       <div class="session-fit"><span class="pill ${fit(s)}">${fit(s)}</span></div>
     `;
-    if (selected && selected.path === s.path && !donated) row.classList.add('selected');
+    if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     if(donated){
       row.oncontextmenu = async (event) => {
         event.preventDefault();
@@ -2215,6 +2264,10 @@ function renderSessions(){
       };
     }
     row.onclick = () => {
+      if(!ready){
+        status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 50+ turns and 1+ context compaction.');
+        return;
+      }
       if(donated){
         status('discoverStatus', donationInfo.newTurns ? `This session was donated before and has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'This session is already marked donated locally. Right-click this row to clear only its local label if the previous upload failed before reaching the relay.');
         return;
@@ -2915,6 +2968,9 @@ class Handler(BaseHTTPRequestHandler):
                 "Pick another session, or use Clear local donated labels only if the previous "
                 "submission truly failed."
             )
+        auto = submit_auto_metadata(data, session)
+        if not donation_ready(auto.get("turns", 0), auto.get("compactions", 0)):
+            raise ValueError("This session is not ready to donate yet. Keep working until it reaches 50+ turns and 1+ context compaction.")
         if emit:
             emit({"event": "progress", "percent": 30, "message": "Writing manifest and consent files..."})
         describe_result = self._describe_payload(data)
