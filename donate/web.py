@@ -190,6 +190,10 @@ def load_donated_source_records() -> dict[str, dict]:
     return records
 
 
+def normalize_submission_id(value: object) -> str:
+    return str(value or "").replace("pending/", "").strip("/")
+
+
 def session_update_ready(current_turns: int, previous_turns: int) -> bool:
     delta = max(0, int(current_turns or 0) - int(previous_turns or 0))
     growth = (delta / previous_turns) if previous_turns else (1.0 if delta else 0.0)
@@ -300,7 +304,7 @@ def save_donation_record(source_path: str | Path = "", artifact_path: str | Path
     receipt = receipt or {}
     points_low, points_high = donation_points_range(receipt.get("turns", 0), receipt.get("compactions", 0))
     submission = m.group(1) if m else ""
-    submission_id = submission.replace("pending/", "").strip("/")
+    submission_id = normalize_submission_id(submission)
     submissions.append({
         "submitted_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "source_key": skey,
@@ -603,6 +607,7 @@ def annotate_donated(sessions: list[dict]) -> list[dict]:
         row["donated_turns"] = previous_turns if source_record else 0
         row["new_turns"] = new_turns if source_record else 0
         row["update_ready"] = update_ready
+        row["local_submission_id"] = normalize_submission_id((source_record or {}).get("submission_id") or (source_record or {}).get("submission"))
         out.append(row)
     for row, status in zip(out, relay_donation_status(out)):
         if not status.get("received"):
@@ -1381,7 +1386,7 @@ function normalizeSubmissionId(value){
 function localDonationInfo(s){
   const pathKey = sessionPathKey(s);
   const record = pathKey ? donatedRecords[pathKey] : null;
-  const supportId = normalizeSubmissionId(s?.relay_submission_id || record?.submission_id || record?.submission || '');
+  const supportId = normalizeSubmissionId(s?.relay_submission_id || s?.local_submission_id || record?.submission_id || record?.submission || '');
   const previousTurns = Number(s?.donated_turns || record?.turns || 0);
   const currentTurns = Number(s?.turns || 0);
   const newTurns = Math.max(0, Number(s?.new_turns || (previousTurns ? currentTurns - previousTurns : 0)));

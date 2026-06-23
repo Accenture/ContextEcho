@@ -381,7 +381,7 @@ class WebTests(unittest.TestCase):
 
     def test_annotate_donated_marks_grown_source_below_threshold(self):
         path = "/tmp/example-session.jsonl"
-        record = {"source_path_key": "unused", "turns": 100}
+        record = {"source_path_key": "unused", "turns": 100, "submission": "pending/submission-local123/"}
         with (
             mock.patch("donate.web.load_donated_keys", return_value=set()),
             mock.patch("donate.web.load_donated_source_records", return_value={"path-key": record}),
@@ -393,6 +393,7 @@ class WebTests(unittest.TestCase):
         self.assertTrue(rows[0]["donated_before"])
         self.assertEqual(rows[0]["new_turns"], 10)
         self.assertFalse(rows[0]["update_ready"])
+        self.assertEqual(rows[0]["local_submission_id"], "submission-local123")
 
     def test_annotate_donated_uses_relay_lineage_status(self):
         path = "/tmp/example-session.jsonl"
