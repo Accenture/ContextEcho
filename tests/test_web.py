@@ -52,6 +52,8 @@ class WebTests(unittest.TestCase):
 
     def test_donated_rows_show_copyable_support_submission_id(self):
         self.assertIn("support-id", INDEX_HTML)
+        self.assertIn("local-record", INDEX_HTML)
+        self.assertIn("Local receipt only; relay does not currently have this submission", INDEX_HTML)
         self.assertIn("data-copy-submission", INDEX_HTML)
         self.assertIn("data-update-info", INDEX_HTML)
         self.assertIn("/api/metadata_update", INDEX_HTML)

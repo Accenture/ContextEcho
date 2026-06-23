@@ -1100,6 +1100,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#dceafa; color:#1e4f87; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
+    .pill.local-record { background:#fff0d8; color:#7a420a; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
     .fit-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; }
     .fit-legend span { display:inline-flex; align-items:center; gap:5px; }
@@ -1429,14 +1430,15 @@ function localDonationInfo(s){
   const relayChecked = !!s?.relay_checked;
   const useLocalFallback = !relayChecked;
   const record = useLocalFallback && pathKey ? donatedRecords[pathKey] : null;
-  const supportId = normalizeSubmissionId(s?.relay_submission_id || (useLocalFallback ? (s?.local_submission_id || record?.submission_id || record?.submission || '') : ''));
+  const localRecordId = normalizeSubmissionId(s?.local_unconfirmed_submission_id || (useLocalFallback ? (s?.local_submission_id || record?.submission_id || record?.submission || '') : ''));
+  const supportId = normalizeSubmissionId(s?.relay_submission_id || (useLocalFallback ? localRecordId : ''));
   const previousTurns = Number(s?.donated_turns || record?.turns || 0);
   const currentTurns = Number(s?.turns || 0);
   const newTurns = Math.max(0, Number(s?.new_turns || (previousTurns ? currentTurns - previousTurns : 0)));
   const updateReady = !!s?.update_ready || !!(record && newTurns && (newTurns >= 50 || (previousTurns && newTurns / previousTurns >= 0.20)));
   const exactDonated = !!s?.donated || (useLocalFallback && donatedPaths.has(sessionLocalKey(s)));
   const donatedBefore = exactDonated || !!s?.donated_before || !!record;
-  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId};
+  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId};
 }
 function beginMetadataUpdate(session, submissionId){
   metadataUpdateSubmissionId = submissionId;
@@ -2318,6 +2320,9 @@ function renderSessions(){
     const supportPill = donationInfo.supportId
       ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
       : '';
+    const localRecordPill = !donationInfo.supportId && donationInfo.localRecordId
+      ? `<span class="pill local-record" data-copy-submission="${escapeHtml(donationInfo.localRecordId)}" title="Local receipt only; relay does not currently have this submission">local record ${escapeHtml(donationInfo.localRecordId)}</span>`
+      : '';
     const updateInfoPill = donationInfo.supportId && donationInfo.donatedBefore
       ? `<span class="pill update-info" data-update-info="${escapeHtml(donationInfo.supportId)}" title="Request a name, email, or institute update">Update info</span>`
       : '';
@@ -2325,7 +2330,7 @@ function renderSessions(){
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
-        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill} ${supportPill} ${updateInfoPill}</div>
+        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill} ${supportPill} ${localRecordPill} ${updateInfoPill}</div>
       </div>
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
