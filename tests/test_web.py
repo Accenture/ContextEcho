@@ -81,10 +81,13 @@ class WebTests(unittest.TestCase):
         self.assertIn("Keep this tab open and the computer awake", INDEX_HTML)
         self.assertIn("sessionLocalKey", INDEX_HTML)
 
-    def test_private_word_input_uses_redact_language(self):
-        self.assertIn("Private words to redact", INDEX_HTML)
-        self.assertIn("Use this only if a private word remains", INDEX_HTML)
+    def test_private_word_redaction_uses_post_verify_check(self):
+        self.assertNotIn("Private words to redact", INDEX_HTML)
+        self.assertNotIn("Use this only if a private word remains", INDEX_HTML)
         self.assertNotIn("Private words to remove on the next redaction run", INDEX_HTML)
+        self.assertNotIn("removal box", INDEX_HTML)
+        self.assertIn("Check whether a private word is still present", INDEX_HTML)
+        self.assertIn("use Check File to redact it", INDEX_HTML)
 
     def test_malformed_jsonl_failure_uses_regenerate_language(self):
         self.assertIn("not a private word", INDEX_HTML)

@@ -1259,11 +1259,6 @@ INDEX_HTML = r"""<!doctype html>
     </div>
     <div class="redact-info-strip"><strong>Automatic redaction covers:</strong> paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</div>
     <label><input id="safeConfirm" type="checkbox" style="width:auto"> I confirm this session is safe to donate.</label>
-    <div id="scrubRow" class="row compact-input-row" style="margin-top:12px">
-      <label>Private words to redact <span class="muted">(optional)</span></label>
-      <input id="scrub" placeholder="your name, Project Codename, private repo name" />
-    </div>
-    <div class="scrub-helper"><strong>Use this only if a private word remains.</strong> Type the exact word or phrase, then click Redact and Verify.</div>
     <div class="row redact-action-row">
       <button id="redactBtn" disabled>Redact and Verify</button>
     </div>
@@ -1355,8 +1350,7 @@ function redactionCacheKey(){
   if(!selected) return '';
   return [
     sessionLocalKey(selected),
-    privacyTier(),
-    parseScrubTerms($('scrub')?.value || '').join('\u001f')
+    privacyTier()
   ].join('\u001e');
 }
 function restoreCachedRedaction(){
@@ -1388,8 +1382,7 @@ function parseScrubTerms(value){
   return [...new Set(String(value || '').split(',').map(x => x.trim()).filter(Boolean))];
 }
 function newScrubTerms(){
-  const applied = new Set(appliedScrubTerms);
-  return parseScrubTerms($('scrub').value).filter(term => !applied.has(term));
+  return [];
 }
 function hasDetectSecretsFailure(data){
   const blocking = ((data || {}).verify_report || {}).blocking || {};
@@ -1513,7 +1506,7 @@ function verifyFailureSummary(data){
 	  if(blocking.malformed_jsonl){
 	    return `Verify failed: ${labels}. The redacted output has a formatting issue, not a private word. Click Redact and Verify again to regenerate or normalize the redacted file.`;
 	  }
-	  return `Verify failed: residual ${labels}. Add the shown private word(s) to the removal box, then click Redact and Verify again.`;
+	  return `Verify failed: residual ${labels}. Click Redact and Verify Again for the shown private word(s), or use Check File after redaction.`;
 	}
 function suggestedScrubTerms(data){
   const blocking = ((data || {}).verify_report || {}).blocking || {};
@@ -1583,10 +1576,10 @@ function renderRedactResult(data){
       ${suggestedTerms.length ? `
         <div class="scrub-suggestion">
           <code>${escapeHtml(suggestedText)}</code>
-          <button class="secondary" type="button" id="useSuggestedScrub">Add to removal box</button>
+          <button class="secondary" type="button" id="useSuggestedScrub">Redact and Verify Again</button>
         </div>
       ` : ''}
-      <div class="hint"><strong>Next:</strong> ${blocking.detect_secrets ? 'the tool already tried automatic credential cleanup. Reveal the redacted file and remove the credential-shaped line or token manually, then run Redact and Verify again.' : 'add the remaining private word(s) to the “Private words to remove” box, then click Redact and Verify again. For paths, add the username/project part, not the full path.'}</div>
+      <div class="hint"><strong>Next:</strong> ${blocking.detect_secrets ? 'the tool already tried automatic credential cleanup. Reveal the redacted file and remove the credential-shaped line or token manually, then run Redact and Verify again.' : 'click Redact and Verify Again for the shown private word(s). For paths, use the username/project part, not the full path.'}</div>
     </div>
   `;
   const removedCount = entries.reduce((acc, item) => acc + Number(item[1] || 0), 0);
@@ -2279,16 +2272,6 @@ document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
     refreshButtons();
   };
 });
-$('scrub').oninput = () => {
-  redacted = null;
-  appliedScrubTerms = [];
-  $('reviewConfirm').checked = false;
-  $('redactResult').classList.remove('show');
-  $('searchPanel').classList.remove('show');
-  $('searchResult').classList.remove('show');
-  if(!restoreCachedRedaction()) status('redactStatus', 'Private words changed. Click Redact and Verify again to update the redacted file.');
-  refreshButtons();
-};
 $('pickNext').onclick = () => goStep(2);
 $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
@@ -2367,9 +2350,9 @@ async function runRedactVerify(extraTerms = [], opts = {}){
       (pendingScrubTerms.length || hasDetectSecretsFailure(redacted))
     );
     const previousStats = canRepair ? {...(redacted.stats || {})} : null;
-    const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : $('scrub').value;
+    const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : '';
     if(redacted && redacted.verify_passed && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
-      status('redactStatus', 'No new private words to redact. Review the current redacted file or add another word.');
+      status('redactStatus', 'No new private words to redact. Review the current redacted file or use Check File for another word.');
       renderRedactResult(redacted);
       refreshButtons();
       return;
@@ -2416,12 +2399,12 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     if(redacted.verify_passed){
       appliedScrubTerms = canRepair
         ? [...new Set([...appliedScrubTerms, ...pendingScrubTerms])]
-        : parseScrubTerms($('scrub').value);
+        : [];
       redactionCache.set(redactionCacheKey(), {data:redacted, appliedScrubTerms:[...appliedScrubTerms]});
     }
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
-    status('redactStatus', redacted.verify_passed ? 'Review the result above. If a private word remains, add it to the removal box and rerun. Otherwise check the review box to continue.' : verifyFailureSummary(redacted));
+    status('redactStatus', redacted.verify_passed ? 'Review the result above. If a private word remains, use Check File to redact it. Otherwise check the review box to continue.' : verifyFailureSummary(redacted));
     refreshButtons();
   } catch(e) { status('redactStatus','ERROR: '+friendlyRequestError(e, 'redaction and verification')); }
   finally {
