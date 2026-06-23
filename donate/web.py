@@ -2262,38 +2262,13 @@ function renderSessions(){
       };
     });
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
-    if(donated){
-      row.oncontextmenu = async (event) => {
-        event.preventDefault();
-        const ok = confirm('Clear the local donated label for this session? Use this only if the previous upload failed before reaching the relay. This does not bypass maintainer duplicate checks or retract submitted data.');
-        if(!ok) return;
-        try {
-          await post('/api/clear_donated_label', {source_path:s.path || ''});
-          donatedPaths.delete(sessionLocalKey(s));
-          delete donatedRecords[sessionPathKey(s)];
-          s.donated = false;
-          s.donated_before = false;
-          s.update_ready = false;
-          s.new_turns = 0;
-          if(selected && selected.path === s.path) selected.donated = false;
-          submitted = false;
-          saveDonatedPaths();
-          saveDonatedRecords();
-          renderSessions();
-          refreshButtons();
-          status('discoverStatus', 'Local donated label cleared for this session. If the relay already received it, the relay may still reject the repeat attempt.');
-        } catch(e) {
-          status('discoverStatus','ERROR: '+e.message);
-        }
-      };
-    }
     row.onclick = () => {
       if(!ready){
         status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 50+ turns and 1+ context compaction.');
         return;
       }
       if(donated){
-        status('discoverStatus', donationInfo.newTurns ? `This session was donated before and has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'This session is already marked donated locally. Right-click this row to clear only its local label if the previous upload failed before reaching the relay.');
+        status('discoverStatus', donationInfo.newTurns ? `This session was donated before and has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'This session is already marked donated. Click the ID pill to copy the maintainer reset ID if support is needed.');
         return;
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
@@ -2313,7 +2288,7 @@ function renderSessions(){
     $('selectedCard').innerHTML = '';
     $('selectedCard').classList.remove('show');
     $('reviewConfirm').checked = false;
-    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated on this machine. Right-click an individual row to clear only its local label if that upload failed before reaching the relay.</span></div>`);
+    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated. Click an ID pill to copy the maintainer reset ID if support is needed.</span></div>`);
   }
   const totalPages = Math.max(1, Math.ceil(sessions.length / pageSize));
   $('pageInfo').textContent = `Page ${page + 1} of ${totalPages} · showing ${sessions.length ? start + 1 : 0}-${Math.min(start + pageSize, sessions.length)} of ${sessions.length}`;
@@ -2771,10 +2746,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_open_path()
             elif self.path == "/api/search_redacted":
                 self._handle_search_redacted()
-            elif self.path == "/api/clear_donated_label":
-                self._handle_clear_donated_label()
-            elif self.path == "/api/clear_donated_labels":
-                self._handle_clear_donated_labels()
             else:
                 self._json({"error": "not found"}, 404)
         except ClientDisconnected:
@@ -3098,26 +3069,6 @@ class Handler(BaseHTTPRequestHandler):
         if not job:
             raise ValueError("submit job not found")
         self._json(job)
-
-    def _handle_clear_donated_labels(self) -> None:
-        existed = clear_donation_registry()
-        self._json({
-            "cleared": True,
-            "server_registry_existed": existed,
-            "message": "Local donated labels cleared. Submitted data and maintainer records are unchanged.",
-        })
-
-    def _handle_clear_donated_label(self) -> None:
-        data = self._read_json()
-        source_path = str(data.get("source_path") or "")
-        artifact_path = str(data.get("artifact_path") or "")
-        if not source_path and not artifact_path:
-            raise ValueError("source_path or artifact_path is required")
-        cleared = clear_donation_record(source_path=source_path, artifact_path=artifact_path)
-        self._json({
-            "cleared": cleared,
-            "message": "Local donated label cleared for this session. Submitted data and maintainer records are unchanged.",
-        })
 
     def _handle_open_path(self) -> None:
         data = self._read_json()
