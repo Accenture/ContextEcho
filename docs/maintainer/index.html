@@ -286,6 +286,13 @@ async function loadRecords(){
   renderRecords();
   status('recordStatus', `Loaded ${state.records.length} relay record${state.records.length === 1 ? '' : 's'}.`, 'ok');
 }
+async function autoloadAll(){
+  await loadSummary();
+  await Promise.all([
+    loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error')),
+    loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error')),
+  ]);
+}
 function recordRows(){
   const q = $('recordFilter').value.toLowerCase().trim();
   return state.records.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
@@ -362,7 +369,7 @@ function showTab(name){
   document.querySelectorAll('.panel').forEach(panel => panel.classList.toggle('active', panel.id === name));
 }
 document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => showTab(btn.dataset.tab));
-$('connectBtn').onclick = () => loadSummary().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
+$('connectBtn').onclick = () => autoloadAll().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
 $('clearTokenBtn').onclick = () => {
   sessionStorage.removeItem(tokenKey);
   $('adminToken').value = '';
@@ -379,7 +386,7 @@ $('resetOne').onclick = () => resetOne().catch(e => status('resetStatus', `ERROR
 $('backfillBtn').onclick = () => backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error'));
 
 restoreSession();
-if(adminToken()) loadSummary().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
+if(adminToken()) autoloadAll().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
 </script>
 </body>
 </html>
