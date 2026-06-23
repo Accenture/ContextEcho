@@ -33,6 +33,7 @@ LFS_JSONL_RULE = "*.jsonl filter=lfs diff=lfs merge=lfs -text"
 STATE_DIR = Path(os.environ.get("CONTEXTECHO_RELAY_STATE_DIR", ".relay_state"))
 SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
 SUBMISSION_EVENTS = STATE_DIR / "submission_events.jsonl"
+METADATA_UPDATES = STATE_DIR / "metadata_updates.jsonl"
 ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
 MIN_SESSION_GROWTH_RATIO = float(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO", "0.20"))
 MIN_SESSION_GROWTH_TURNS = int(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS", "50"))
@@ -130,6 +131,56 @@ def _read_submission_events(limit: int = 200) -> list[dict]:
         if isinstance(row, dict):
             rows.append(row)
     return rows[-max(1, min(limit, 1000)) :]
+
+
+def _read_jsonl(path: Path, limit: int = 200) -> list[dict]:
+    if not path.exists():
+        return []
+    rows = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows[-max(1, min(limit, 1000)) :]
+
+
+def _metadata_update_request(payload: dict) -> dict:
+    submission_id = str(payload.get("submission_id") or "").strip()
+    if not re.fullmatch(r"submission-[A-Za-z0-9_-]+", submission_id):
+        raise HTTPException(status_code=400, detail="submission_id must look like submission-xxxxxxxx")
+    credit_name = str(payload.get("credit_name") or payload.get("contributor") or "").strip()
+    email = str(payload.get("contributor_email") or payload.get("email") or "").strip()
+    institute = str(payload.get("contributor_institute") or payload.get("institute") or "").strip()
+    missing = [label for label, value in (("name", credit_name), ("email", email), ("institute", institute)) if not value]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"missing required metadata: {', '.join(missing)}")
+    record = {
+        "request_id": f"metadata-{uuid.uuid4().hex[:8]}",
+        "submitted_utc": _utc_now(),
+        "status": "pending",
+        "submission_id": submission_id,
+        "credit_name": credit_name,
+        "contributor_email": email,
+        "contributor_institute": institute,
+        "public_anonymous": bool(payload.get("public_anonymous")),
+        "source_session_id": str(payload.get("source_session_id") or "").strip(),
+        "conversation_fingerprint": str(payload.get("conversation_fingerprint") or "").strip(),
+        "reason": str(payload.get("reason") or "donor requested contributor metadata update").strip(),
+    }
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with METADATA_UPDATES.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, sort_keys=True) + "\n")
+    _append_submission_event(
+        "metadata_update_requested",
+        request_id=record["request_id"],
+        submission_id=submission_id,
+        contributor_email=email,
+        contributor_institute=institute,
+    )
+    return record
 
 
 def _record_seen_hash(artifact_hash: str, submission_id: str, manifest: dict) -> None:
@@ -743,6 +794,19 @@ def admin_submission_events(
     }
 
 
+@app.get("/api/admin/metadata-updates")
+def admin_metadata_updates(
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+    limit: int = 200,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    requests = list(reversed(_read_jsonl(METADATA_UPDATES, limit)))
+    return {
+        "ok": True,
+        "requests": requests,
+    }
+
+
 @app.get("/api/admin/submissions")
 def admin_submissions(
     x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
@@ -804,6 +868,18 @@ def donation_status(payload: Annotated[dict, Body()]) -> dict:
             continue
         statuses.append(_lineage_status(item, seen_records))
     return {"ok": True, "statuses": statuses}
+
+
+@app.post("/api/metadata-update")
+def metadata_update(payload: Annotated[dict, Body()]) -> dict:
+    record = _metadata_update_request(payload if isinstance(payload, dict) else {})
+    return {
+        "ok": True,
+        "request_id": record["request_id"],
+        "submission_id": record["submission_id"],
+        "status": record["status"],
+        "message": "Contributor metadata update request received for maintainer review.",
+    }
 
 
 @app.post("/api/donate")

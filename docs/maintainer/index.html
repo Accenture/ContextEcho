@@ -182,6 +182,7 @@
     <nav class="tabs" aria-label="Maintainer console sections">
       <button class="tab active" data-tab="overview">Overview</button>
       <button class="tab" data-tab="pending">Pending</button>
+      <button class="tab" data-tab="metadata">Metadata Updates</button>
       <button class="tab" data-tab="records">Relay Records</button>
       <button class="tab" data-tab="audit">Audit</button>
       <button class="tab" data-tab="lineage">Lineage Check</button>
@@ -207,6 +208,15 @@
       </div>
       <div id="pendingStatus" class="status"></div>
       <div id="pendingTable"></div>
+    </section>
+
+    <section id="metadata" class="panel">
+      <div class="section-head">
+        <h2>Metadata Update Requests</h2>
+        <div class="toolbar"><button id="loadMetadata">Load updates</button><input id="metadataFilter" placeholder="Filter submission, email, institute"></div>
+      </div>
+      <div id="metadataStatus" class="status"></div>
+      <div id="metadataTable"></div>
     </section>
 
     <section id="records" class="panel">
@@ -273,7 +283,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], records:[], events:[] };
+const state = { summary:null, pending:[], metadataUpdates:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -386,6 +396,34 @@ function filePill(ok, label){
   return `<span class="pill ${ok ? '' : 'bad'}">${escapeHtml(label)}</span>`;
 }
 
+async function loadMetadata(){
+  saveSession();
+  status('metadataStatus', 'Loading metadata update requests...');
+  const data = await api('/api/admin/metadata-updates?limit=500');
+  state.metadataUpdates = data.requests || [];
+  renderMetadata();
+  status('metadataStatus', `Loaded ${state.metadataUpdates.length} metadata update request${state.metadataUpdates.length === 1 ? '' : 's'}.`, 'ok');
+}
+function metadataRows(){
+  const q = $('metadataFilter').value.toLowerCase().trim();
+  return state.metadataUpdates.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
+}
+function renderMetadata(){
+  const rows = metadataRows();
+  $('metadataTable').innerHTML = table(
+    ['Submitted', 'Request', 'Submission', 'Name', 'Email', 'Institute', 'Public'],
+    rows.map(row => [
+      `<code>${escapeHtml(row.submitted_utc || '')}</code>`,
+      `<code>${escapeHtml(row.request_id || '')}</code><div class="hint">${escapeHtml(row.status || 'pending')}</div>`,
+      `<code>${escapeHtml(row.submission_id || '')}</code>`,
+      escapeHtml(row.credit_name || ''),
+      escapeHtml(row.contributor_email || ''),
+      escapeHtml(row.contributor_institute || ''),
+      row.public_anonymous ? '<span class="pill warn">anonymous</span>' : '<span class="pill">public</span>',
+    ])
+  );
+}
+
 async function loadRecords(){
   saveSession();
   status('recordStatus', 'Loading relay records...');
@@ -398,6 +436,7 @@ async function autoloadAll(){
   await loadSummary();
   await Promise.all([
     loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error')),
+    loadMetadata().catch(e => status('metadataStatus', `ERROR: ${e.message}`, 'error')),
     loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error')),
     loadEvents().catch(e => status('eventStatus', `ERROR: ${e.message}`, 'error')),
   ]);
@@ -542,9 +581,11 @@ $('clearTokenBtn').onclick = () => {
 $('refreshOverview').onclick = () => loadSummary().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
 $('backfillTop').onclick = () => { showTab('danger'); backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error')); };
 $('loadPending').onclick = () => loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error'));
+$('loadMetadata').onclick = () => loadMetadata().catch(e => status('metadataStatus', `ERROR: ${e.message}`, 'error'));
 $('loadRecords').onclick = () => loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error'));
 $('loadEvents').onclick = () => loadEvents().catch(e => status('eventStatus', `ERROR: ${e.message}`, 'error'));
 $('pendingFilter').oninput = renderPending;
+$('metadataFilter').oninput = renderMetadata;
 $('recordFilter').oninput = renderRecords;
 $('eventFilter').oninput = renderEvents;
 $('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));

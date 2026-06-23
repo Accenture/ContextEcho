@@ -53,6 +53,9 @@ class WebTests(unittest.TestCase):
     def test_donated_rows_show_copyable_support_submission_id(self):
         self.assertIn("support-id", INDEX_HTML)
         self.assertIn("data-copy-submission", INDEX_HTML)
+        self.assertIn("data-update-info", INDEX_HTML)
+        self.assertIn("/api/metadata_update", INDEX_HTML)
+        self.assertIn("Metadata update request sent", INDEX_HTML)
         self.assertIn("Copied maintainer reset ID", INDEX_HTML)
         self.assertIn("normalizeSubmissionId", INDEX_HTML)
         self.assertIn("useLocalFallback", INDEX_HTML)

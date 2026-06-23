@@ -25,6 +25,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from donate import describe as describe_mod
@@ -233,6 +234,28 @@ def relay_donation_status(sessions: list[dict]) -> list[dict]:
         return []
     statuses = result.get("statuses", []) if isinstance(result, dict) else []
     return [x if isinstance(x, dict) else {} for x in statuses]
+
+
+def relay_metadata_update(payload: dict) -> dict:
+    url = relay_url()
+    if not url:
+        raise ValueError("Relay URL is not configured; cannot send metadata update request.")
+    data = json.dumps(payload).encode("utf-8")
+    req = Request(
+        f"{url}/api/metadata-update",
+        data=data,
+        headers={"content-type": "application/json", "user-agent": "contextecho-donate"},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise ValueError(f"metadata update failed: HTTP {exc.code} {detail}") from exc
+    except Exception as exc:
+        raise ValueError(f"metadata update failed: {exc}") from exc
+    return result if isinstance(result, dict) else {"ok": False}
 
 
 def donation_points_range(turns: str | int = 0, compactions: str | int = 0) -> tuple[int, int]:
@@ -1077,6 +1100,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#dceafa; color:#1e4f87; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
+    .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
     .fit-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; }
     .fit-legend span { display:inline-flex; align-items:center; gap:5px; }
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
@@ -1410,6 +1434,25 @@ function localDonationInfo(s){
   const exactDonated = !!s?.donated || (useLocalFallback && donatedPaths.has(sessionLocalKey(s)));
   const donatedBefore = exactDonated || !!s?.donated_before || !!record;
   return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId};
+}
+async function requestMetadataUpdate(session, submissionId){
+  const name = prompt('New public/credit name for this donation:', $('contributorName')?.value || '');
+  if(name === null) return;
+  const email = prompt('New contact email for maintainer support:', $('contributorEmail')?.value || '');
+  if(email === null) return;
+  const institute = prompt('New institute/affiliation:', $('contributorInstitute')?.value || '');
+  if(institute === null) return;
+  const publicAnonymous = confirm('Show this donation anonymously on the public leaderboard? OK = anonymous, Cancel = public credit name.');
+  const result = await post('/api/metadata_update', {
+    submission_id: submissionId,
+    credit_name: name,
+    contributor_email: email,
+    contributor_institute: institute,
+    public_anonymous: publicAnonymous,
+    source_session_id: session?.source_session_id || '',
+    conversation_fingerprint: session?.conversation_fingerprint || ''
+  });
+  status('discoverStatus', result.request_id ? `Metadata update request sent for maintainer review: ${result.request_id}` : 'Metadata update request sent for maintainer review.');
 }
 function redactionCacheKey(){
   if(!selected) return '';
@@ -2258,11 +2301,14 @@ function renderSessions(){
     const supportPill = donationInfo.supportId
       ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
       : '';
+    const updateInfoPill = donationInfo.supportId && donationInfo.donatedBefore
+      ? `<span class="pill update-info" data-update-info="${escapeHtml(donationInfo.supportId)}" title="Request a name, email, or institute update">Update info</span>`
+      : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
-        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill} ${supportPill}</div>
+        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill} ${supportPill} ${updateInfoPill}</div>
       </div>
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
@@ -2275,6 +2321,12 @@ function renderSessions(){
         const id = el.dataset.copySubmission || '';
         navigator.clipboard?.writeText(id).catch(()=>{});
         status('discoverStatus', `Copied maintainer reset ID: ${id}`);
+      };
+    });
+    row.querySelectorAll('[data-update-info]').forEach(el => {
+      el.onclick = event => {
+        event.stopPropagation();
+        requestMetadataUpdate(s, el.dataset.updateInfo || '').catch(e => status('discoverStatus', 'ERROR: '+e.message));
       };
     });
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
@@ -2762,6 +2814,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_open_path()
             elif self.path == "/api/search_redacted":
                 self._handle_search_redacted()
+            elif self.path == "/api/metadata_update":
+                self._handle_metadata_update()
             else:
                 self._json({"error": "not found"}, 404)
         except ClientDisconnected:
@@ -3085,6 +3139,28 @@ class Handler(BaseHTTPRequestHandler):
         if not job:
             raise ValueError("submit job not found")
         self._json(job)
+
+    def _handle_metadata_update(self) -> None:
+        data = self._read_json()
+        payload = {
+            "submission_id": str(data.get("submission_id") or "").strip(),
+            "credit_name": str(data.get("credit_name") or "").strip(),
+            "contributor_email": str(data.get("contributor_email") or "").strip(),
+            "contributor_institute": str(data.get("contributor_institute") or "").strip(),
+            "public_anonymous": bool(data.get("public_anonymous")),
+            "source_session_id": str(data.get("source_session_id") or "").strip(),
+            "conversation_fingerprint": str(data.get("conversation_fingerprint") or "").strip(),
+            "reason": "donor requested contributor metadata update",
+        }
+        missing = [label for label, value in (
+            ("submission ID", payload["submission_id"]),
+            ("name", payload["credit_name"]),
+            ("email", payload["contributor_email"]),
+            ("institute", payload["contributor_institute"]),
+        ) if not value]
+        if missing:
+            raise ValueError(f"Missing required field(s): {', '.join(missing)}")
+        self._json(relay_metadata_update(payload))
 
     def _handle_open_path(self) -> None:
         data = self._read_json()

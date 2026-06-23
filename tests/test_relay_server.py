@@ -298,6 +298,29 @@ class RelayServerTests(unittest.TestCase):
 
         self.assertEqual([row["event"] for row in result["events"]], ["reset_one", "submitted"])
 
+    def test_metadata_update_request_is_persisted_and_audited(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.METADATA_UPDATES", state_dir / "metadata_updates.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+            ):
+                record = relay_server._metadata_update_request({
+                    "submission_id": "submission-abc12345",
+                    "credit_name": "New Name",
+                    "contributor_email": "new@example.com",
+                    "contributor_institute": "New Institute",
+                    "public_anonymous": True,
+                })
+                requests = relay_server._read_jsonl(state_dir / "metadata_updates.jsonl")
+                events = relay_server._read_jsonl(state_dir / "submission_events.jsonl")
+
+        self.assertEqual(record["status"], "pending")
+        self.assertEqual(requests[0]["submission_id"], "submission-abc12345")
+        self.assertEqual(requests[0]["credit_name"], "New Name")
+        self.assertEqual(events[0]["event"], "metadata_update_requested")
+
     def test_seen_record_summary_counts_records_and_totals(self) -> None:
         summary = relay_server._seen_record_summary([
             {
