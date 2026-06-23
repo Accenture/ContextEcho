@@ -139,14 +139,20 @@
     }
     .support-card {
       display:grid;
-      grid-template-columns:104px minmax(0,1fr);
-      gap:12px;
+      grid-template-columns:1fr;
+      gap:10px;
       min-height:0;
       padding:16px;
       background:linear-gradient(135deg,#fff9e6,#f3faee);
     }
     .support-card .support-title { font-size:17px; line-height:1.12; }
     .support-card .support-copy { font-size:12.5px; line-height:1.28; max-width:360px; }
+    .support-metrics {
+      display:grid;
+      grid-template-columns:92px minmax(0,1fr);
+      gap:12px;
+      align-items:end;
+    }
     .mascot {
       position:relative;
       align-self:end;
@@ -162,7 +168,7 @@
     .mascot-laptop { position:absolute; left:43px; top:67px; width:48px; height:34px; border-radius:7px 7px 3px 3px; background:#d7d8d3; transform:skew(-8deg); box-shadow:0 5px 0 #b9bbb5; }
     .mascot-laptop:after { content:""; position:absolute; left:20px; top:14px; width:6px; height:6px; border-radius:50%; background:white; opacity:.9; }
     .mascot-star { position:absolute; right:12px; top:4px; color:var(--gold); font-size:30px; line-height:1; }
-    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
     .stat-card {
       min-height:112px;
       padding:12px 10px;
@@ -455,7 +461,8 @@
       main { padding:8px 8px 34px; }
       .shell { padding:20px; }
       h1 { font-size:34px; }
-      .privacy-row, .support-card, .stats, .actions, .command-tabs { grid-template-columns:1fr; }
+      .privacy-row, .support-card, .support-metrics, .stats, .actions, .command-tabs { grid-template-columns:1fr; }
+      .mascot { justify-self:center; }
       .composition-row { grid-template-columns:34px minmax(98px,1fr) 70px; }
       .composition-track { grid-column:2 / 4; }
       .flow { grid-template-columns:1fr; }
@@ -523,16 +530,18 @@
 
     <div class="main-grid">
       <section class="support-card">
-        <div class="mascot" aria-hidden="true">
-          <div class="mascot-star">★</div>
-          <div class="mascot-head"></div>
-          <div class="mascot-body"></div>
-          <div class="mascot-hands"></div>
-          <div class="mascot-laptop"></div>
-        </div>
         <div>
           <div class="support-title">Help more donors find ContextEcho</div>
           <div class="support-copy">Star the GitHub repo or like the dataset, even if you're not ready to donate today.</div>
+        </div>
+        <div class="support-metrics">
+          <div class="mascot" aria-hidden="true">
+            <div class="mascot-star">★</div>
+            <div class="mascot-head"></div>
+            <div class="mascot-body"></div>
+            <div class="mascot-hands"></div>
+            <div class="mascot-laptop"></div>
+          </div>
           <div class="stats" aria-live="polite">
             <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
               <div class="stat-icon" data-icon="download"></div>
@@ -698,7 +707,7 @@ const commands = {
   },
   windows: {
     text: 'powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.ps1 | iex"',
-    help: 'Use this in Windows Terminal, PowerShell, or Command Prompt. Raw sessions still stay local.'
+    help: 'Use this in Windows Terminal, PowerShell, or Command Prompt.'
   }
 };
 
