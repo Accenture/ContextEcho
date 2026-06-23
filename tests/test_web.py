@@ -445,7 +445,17 @@ class WebTests(unittest.TestCase):
             mock.patch("donate.web.load_donated_source_records", return_value={}),
             mock.patch(
                 "donate.web.relay_donation_status",
-                return_value=[{"received": True, "turns": 100, "new_turns": 10, "update_ready": False, "submission_id": "submission-old"}],
+                return_value=[{
+                    "received": True,
+                    "turns": 100,
+                    "new_turns": 10,
+                    "update_ready": False,
+                    "submission_id": "submission-old",
+                    "credit_name": "Existing Donor",
+                    "contributor_email": "donor@example.com",
+                    "contributor_institute": "Existing Lab",
+                    "public_anonymous": True,
+                }],
             ),
         ):
             rows = annotate_donated([{"path": path, "turns": 110, "records": 200}])
@@ -456,6 +466,10 @@ class WebTests(unittest.TestCase):
         self.assertEqual(rows[0]["new_turns"], 10)
         self.assertTrue(rows[0]["relay_received"])
         self.assertEqual(rows[0]["relay_submission_id"], "submission-old")
+        self.assertEqual(rows[0]["local_credit_name"], "Existing Donor")
+        self.assertEqual(rows[0]["local_contributor_email"], "donor@example.com")
+        self.assertEqual(rows[0]["local_institute"], "Existing Lab")
+        self.assertTrue(rows[0]["local_public_anonymous"])
 
     def test_annotate_donated_uses_relay_update_ready_status(self):
         path = "/tmp/example-session.jsonl"

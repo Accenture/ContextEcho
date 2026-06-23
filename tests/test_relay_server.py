@@ -91,6 +91,10 @@ class RelayServerTests(unittest.TestCase):
             manifest.write_text(
                 json.dumps({
                     "session_id": "donation-old",
+                    "credit_name": "Existing Donor",
+                    "contributor_email": "donor@example.com",
+                    "contributor_institute": "Existing Lab",
+                    "public_anonymous": True,
                     "records": 1,
                     "turns": 1,
                 }),
@@ -122,6 +126,10 @@ class RelayServerTests(unittest.TestCase):
         self.assertTrue(records[0]["artifact_hash"])
         self.assertTrue(records[0]["conversation_fingerprint"].startswith("conv-"))
         self.assertEqual(records[0]["fingerprint_version"], "structure-v1")
+        self.assertEqual(records[0]["credit_name"], "Existing Donor")
+        self.assertEqual(records[0]["contributor_email"], "donor@example.com")
+        self.assertEqual(records[0]["contributor_institute"], "Existing Lab")
+        self.assertTrue(records[0]["public_anonymous"])
 
     def test_backfill_seen_hashes_reads_public_release_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -219,6 +227,10 @@ class RelayServerTests(unittest.TestCase):
                 "submission_id": "submission-old",
                 "source_session_id": "source-1",
                 "conversation_fingerprint": "conv-1",
+                "credit_name": "Existing Donor",
+                "contributor_email": "donor@example.com",
+                "contributor_institute": "Existing Lab",
+                "public_anonymous": True,
                 "turns": 100,
                 "records": 200,
             }
@@ -237,6 +249,10 @@ class RelayServerTests(unittest.TestCase):
         self.assertFalse(received["update_ready"])
         self.assertEqual(received["new_turns"], 10)
         self.assertEqual(received["submission_id"], "submission-old")
+        self.assertEqual(received["credit_name"], "Existing Donor")
+        self.assertEqual(received["contributor_email"], "donor@example.com")
+        self.assertEqual(received["contributor_institute"], "Existing Lab")
+        self.assertTrue(received["public_anonymous"])
         self.assertTrue(update_ready["received"])
         self.assertTrue(update_ready["update_ready"])
         self.assertEqual(update_ready["new_turns"], 60)

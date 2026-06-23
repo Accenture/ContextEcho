@@ -203,7 +203,11 @@ def _seen_record(artifact_hash: str, submission_id: str, manifest: dict) -> dict
     return {
         "artifact_hash": artifact_hash,
         "conversation_fingerprint": manifest.get("conversation_fingerprint", ""),
+        "contributor_email": manifest.get("contributor_email", ""),
+        "contributor_institute": manifest.get("contributor_institute", ""),
+        "credit_name": manifest.get("credit_name") or manifest.get("contributor") or "",
         "fingerprint_version": manifest.get("fingerprint_version", ""),
+        "public_anonymous": bool(manifest.get("public_anonymous")),
         "submission_id": submission_id,
         "source_session_id": manifest.get("source_session_id", ""),
         "records": manifest.get("records", 0),
@@ -528,6 +532,10 @@ def _lineage_status(item: dict, seen_records: list[dict]) -> dict:
         "records": old_records,
         "submission_id": best.get("submission_id", ""),
         "match_type": best_match_type,
+        "credit_name": best.get("credit_name", ""),
+        "contributor_email": best.get("contributor_email", ""),
+        "contributor_institute": best.get("contributor_institute", ""),
+        "public_anonymous": bool(best.get("public_anonymous")),
     }
 
 

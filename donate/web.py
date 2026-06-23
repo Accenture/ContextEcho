@@ -181,13 +181,15 @@ def source_path_key(path: str | Path) -> str:
 def load_donated_source_records() -> dict[str, dict]:
     records: dict[str, dict] = {}
     for item in load_donation_registry().get("submissions", []):
-        pkey = str(item.get("source_path_key") or "")
-        if not pkey:
+        keys = [str(item.get("source_path_key") or ""), str(item.get("source_key") or "")]
+        keys = [key for key in keys if key]
+        if not keys:
             continue
         turns = int(item.get("turns") or 0)
-        previous = records.get(pkey)
-        if previous is None or turns > int(previous.get("turns") or 0):
-            records[pkey] = item
+        for key in keys:
+            previous = records.get(key)
+            if previous is None or turns > int(previous.get("turns") or 0):
+                records[key] = item
     return records
 
 
@@ -619,8 +621,11 @@ def annotate_donated(sessions: list[dict]) -> list[dict]:
     for session in sessions:
         row = dict(session)
         path = row.get("path")
-        exact_donated = bool(path and session_key(path) in donated)
-        source_record = source_records.get(source_path_key(path)) if path else None
+        skey = session_key(path) if path else ""
+        exact_donated = bool(skey and skey in donated)
+        source_record = None
+        if path:
+            source_record = source_records.get(source_path_key(path)) or source_records.get(skey)
         previous_turns = int((source_record or {}).get("turns") or 0)
         current_turns = int(row.get("turns") or 0)
         new_turns = max(0, current_turns - previous_turns)
@@ -662,6 +667,11 @@ def annotate_donated(sessions: list[dict]) -> list[dict]:
         row["donated"] = bool(exact_donated or (not row["update_ready"]))
         row["relay_received"] = True
         row["relay_submission_id"] = status.get("submission_id", "")
+        row["local_credit_name"] = row.get("local_credit_name") or status.get("credit_name", "")
+        row["local_contributor_email"] = row.get("local_contributor_email") or status.get("contributor_email", "")
+        row["local_institute"] = row.get("local_institute") or status.get("contributor_institute", "")
+        if not row.get("local_public_anonymous"):
+            row["local_public_anonymous"] = bool(status.get("public_anonymous"))
     if relay_checked:
         for row in out:
             row.setdefault("relay_checked", True)
