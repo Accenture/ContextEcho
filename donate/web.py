@@ -609,8 +609,19 @@ def annotate_donated(sessions: list[dict]) -> list[dict]:
         row["update_ready"] = update_ready
         row["local_submission_id"] = normalize_submission_id((source_record or {}).get("submission_id") or (source_record or {}).get("submission"))
         out.append(row)
-    for row, status in zip(out, relay_donation_status(out)):
+    relay_statuses = relay_donation_status(out)
+    relay_checked = bool(relay_statuses) and len(relay_statuses) == len(out)
+    for row, status in zip(out, relay_statuses):
+        if relay_checked:
+            row["relay_checked"] = True
         if not status.get("received"):
+            if relay_checked:
+                row["local_unconfirmed_submission_id"] = row.get("local_submission_id", "")
+                row["donated"] = False
+                row["donated_before"] = False
+                row["donated_turns"] = 0
+                row["new_turns"] = 0
+                row["update_ready"] = False
             continue
         previous_turns = int(status.get("turns") or row.get("donated_turns") or 0)
         new_turns = int(status.get("new_turns") or max(0, int(row.get("turns") or 0) - previous_turns))
@@ -624,6 +635,9 @@ def annotate_donated(sessions: list[dict]) -> list[dict]:
         row["donated"] = bool(exact_donated or (not row["update_ready"]))
         row["relay_received"] = True
         row["relay_submission_id"] = status.get("submission_id", "")
+    if relay_checked:
+        for row in out:
+            row.setdefault("relay_checked", True)
     return out
 
 
@@ -1385,13 +1399,15 @@ function normalizeSubmissionId(value){
 }
 function localDonationInfo(s){
   const pathKey = sessionPathKey(s);
-  const record = pathKey ? donatedRecords[pathKey] : null;
-  const supportId = normalizeSubmissionId(s?.relay_submission_id || s?.local_submission_id || record?.submission_id || record?.submission || '');
+  const relayChecked = !!s?.relay_checked;
+  const useLocalFallback = !relayChecked;
+  const record = useLocalFallback && pathKey ? donatedRecords[pathKey] : null;
+  const supportId = normalizeSubmissionId(s?.relay_submission_id || (useLocalFallback ? (s?.local_submission_id || record?.submission_id || record?.submission || '') : ''));
   const previousTurns = Number(s?.donated_turns || record?.turns || 0);
   const currentTurns = Number(s?.turns || 0);
   const newTurns = Math.max(0, Number(s?.new_turns || (previousTurns ? currentTurns - previousTurns : 0)));
   const updateReady = !!s?.update_ready || !!(record && newTurns && (newTurns >= 50 || (previousTurns && newTurns / previousTurns >= 0.20)));
-  const exactDonated = !!s?.donated || donatedPaths.has(sessionLocalKey(s));
+  const exactDonated = !!s?.donated || (useLocalFallback && donatedPaths.has(sessionLocalKey(s)));
   const donatedBefore = exactDonated || !!s?.donated_before || !!record;
   return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId};
 }
