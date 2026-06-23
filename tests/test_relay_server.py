@@ -321,6 +321,23 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(requests[0]["credit_name"], "New Name")
         self.assertEqual(events[0]["event"], "metadata_update_requested")
 
+    def test_metadata_update_request_allows_partial_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.METADATA_UPDATES", state_dir / "metadata_updates.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+            ):
+                record = relay_server._metadata_update_request({
+                    "submission_id": "submission-abc12345",
+                    "contributor_institute": "Updated Institute",
+                })
+
+        self.assertEqual(record["credit_name"], "")
+        self.assertEqual(record["contributor_email"], "")
+        self.assertEqual(record["contributor_institute"], "Updated Institute")
+
     def test_seen_record_summary_counts_records_and_totals(self) -> None:
         summary = relay_server._seen_record_summary([
             {

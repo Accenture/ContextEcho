@@ -1379,6 +1379,7 @@ INDEX_HTML = r"""<!doctype html>
     <div class="row actions">
       <button id="submitPrev" class="secondary">Previous</button>
       <button id="submitBtn" disabled>Submit Donation</button>
+      <button id="metadataUpdateBtn" class="secondary" disabled>Send Info Update</button>
     </div>
     <div id="submitProgress" class="progress"><div></div></div>
     <div id="submitResult" class="result"></div>
@@ -1389,6 +1390,8 @@ INDEX_HTML = r"""<!doctype html>
 let sessions = [];
 let selected = null;
 let redacted = null;
+let metadataUpdateSubmissionId = '';
+let metadataUpdateSession = null;
 let appliedScrubTerms = [];
 let redactionCache = new Map();
 let submitted = false;
@@ -1435,24 +1438,37 @@ function localDonationInfo(s){
   const donatedBefore = exactDonated || !!s?.donated_before || !!record;
   return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId};
 }
-async function requestMetadataUpdate(session, submissionId){
-  const name = prompt('New public/credit name for this donation:', $('contributorName')?.value || '');
-  if(name === null) return;
-  const email = prompt('New contact email for maintainer support:', $('contributorEmail')?.value || '');
-  if(email === null) return;
-  const institute = prompt('New institute/affiliation:', $('contributorInstitute')?.value || '');
-  if(institute === null) return;
-  const publicAnonymous = confirm('Show this donation anonymously on the public leaderboard? OK = anonymous, Cancel = public credit name.');
+function beginMetadataUpdate(session, submissionId){
+  metadataUpdateSubmissionId = submissionId;
+  metadataUpdateSession = session || null;
+  selected = session || selected;
+  goStep(3);
+  status('submitStatus', `Editing contributor info for ${submissionId}. Change the fields above, then click Send Info Update.`);
+  refreshButtons();
+  $('contributorName').focus();
+}
+async function sendMetadataUpdate(){
+  if(!metadataUpdateSubmissionId) return;
+  const name = ($('contributorName')?.value || '').trim();
+  const email = ($('contributorEmail')?.value || '').trim();
+  const institute = ($('contributorInstitute')?.value || '').trim();
+  if(!name && !email && !institute){
+    status('submitStatus', 'Edit at least one contributor field before sending an info update.');
+    return;
+  }
   const result = await post('/api/metadata_update', {
-    submission_id: submissionId,
+    submission_id: metadataUpdateSubmissionId,
     credit_name: name,
     contributor_email: email,
     contributor_institute: institute,
-    public_anonymous: publicAnonymous,
-    source_session_id: session?.source_session_id || '',
-    conversation_fingerprint: session?.conversation_fingerprint || ''
+    public_anonymous: !!$('publicAnonymous')?.checked,
+    source_session_id: metadataUpdateSession?.source_session_id || '',
+    conversation_fingerprint: metadataUpdateSession?.conversation_fingerprint || ''
   });
-  status('discoverStatus', result.request_id ? `Metadata update request sent for maintainer review: ${result.request_id}` : 'Metadata update request sent for maintainer review.');
+  status('submitStatus', result.request_id ? `Info update request sent for maintainer review: ${result.request_id}` : 'Info update request sent for maintainer review.');
+  metadataUpdateSubmissionId = '';
+  metadataUpdateSession = null;
+  refreshButtons();
 }
 function redactionCacheKey(){
   if(!selected) return '';
@@ -1521,6 +1537,7 @@ function refreshButtons(){
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
   $('submitBtn').disabled = !canSubmitArtifact || !contributorComplete;
+  $('metadataUpdateBtn').disabled = !metadataUpdateSubmissionId;
   $('submitBtn').title = '';
 }
 function setUiProcessing(on){
@@ -2326,7 +2343,7 @@ function renderSessions(){
     row.querySelectorAll('[data-update-info]').forEach(el => {
       el.onclick = event => {
         event.stopPropagation();
-        requestMetadataUpdate(s, el.dataset.updateInfo || '').catch(e => status('discoverStatus', 'ERROR: '+e.message));
+        beginMetadataUpdate(s, el.dataset.updateInfo || '');
       };
     });
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
@@ -2436,6 +2453,7 @@ $('pickNext').onclick = () => goStep(2);
 $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
 $('submitPrev').onclick = () => goStep(2);
+$('metadataUpdateBtn').onclick = () => sendMetadataUpdate().catch(e => status('submitStatus', 'ERROR: '+e.message));
 ['contributorName','contributorEmail','contributorInstitute'].forEach(id => {
   $(id).oninput = () => {
     if(id === 'contributorEmail') updateEmailSuggestions();
@@ -3152,14 +3170,10 @@ class Handler(BaseHTTPRequestHandler):
             "conversation_fingerprint": str(data.get("conversation_fingerprint") or "").strip(),
             "reason": "donor requested contributor metadata update",
         }
-        missing = [label for label, value in (
-            ("submission ID", payload["submission_id"]),
-            ("name", payload["credit_name"]),
-            ("email", payload["contributor_email"]),
-            ("institute", payload["contributor_institute"]),
-        ) if not value]
-        if missing:
-            raise ValueError(f"Missing required field(s): {', '.join(missing)}")
+        if not payload["submission_id"]:
+            raise ValueError("Missing submission ID")
+        if not any([payload["credit_name"], payload["contributor_email"], payload["contributor_institute"]]):
+            raise ValueError("Edit at least one contributor field before sending an info update")
         self._json(relay_metadata_update(payload))
 
     def _handle_open_path(self) -> None:

@@ -154,9 +154,8 @@ def _metadata_update_request(payload: dict) -> dict:
     credit_name = str(payload.get("credit_name") or payload.get("contributor") or "").strip()
     email = str(payload.get("contributor_email") or payload.get("email") or "").strip()
     institute = str(payload.get("contributor_institute") or payload.get("institute") or "").strip()
-    missing = [label for label, value in (("name", credit_name), ("email", email), ("institute", institute)) if not value]
-    if missing:
-        raise HTTPException(status_code=400, detail=f"missing required metadata: {', '.join(missing)}")
+    if not any([credit_name, email, institute, "public_anonymous" in payload]):
+        raise HTTPException(status_code=400, detail="provide at least one metadata field to update")
     record = {
         "request_id": f"metadata-{uuid.uuid4().hex[:8]}",
         "submitted_utc": _utc_now(),
