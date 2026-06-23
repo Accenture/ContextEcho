@@ -16,6 +16,7 @@ import os
 import re
 import tempfile
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
@@ -31,6 +32,7 @@ MAX_META_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_META_BYTES", str(256 
 LFS_JSONL_RULE = "*.jsonl filter=lfs diff=lfs merge=lfs -text"
 STATE_DIR = Path(os.environ.get("CONTEXTECHO_RELAY_STATE_DIR", ".relay_state"))
 SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
+SUBMISSION_EVENTS = STATE_DIR / "submission_events.jsonl"
 ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
 MIN_SESSION_GROWTH_RATIO = float(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO", "0.20"))
 MIN_SESSION_GROWTH_TURNS = int(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS", "50"))
@@ -98,6 +100,36 @@ def _read_seen_records() -> list[dict]:
         if isinstance(row, dict):
             out.append(row)
     return out
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _append_submission_event(event: str, **fields: object) -> None:
+    record = {"ts": _utc_now(), "event": event}
+    record.update({k: v for k, v in fields.items() if v not in (None, "")})
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        with SUBMISSION_EVENTS.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record, sort_keys=True) + "\n")
+    except OSError:
+        # Audit logging should never make donation submission fail.
+        pass
+
+
+def _read_submission_events(limit: int = 200) -> list[dict]:
+    if not SUBMISSION_EVENTS.exists():
+        return []
+    rows = []
+    for line in SUBMISSION_EVENTS.read_text(encoding="utf-8").splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows[-max(1, min(limit, 1000)) :]
 
 
 def _record_seen_hash(artifact_hash: str, submission_id: str, manifest: dict) -> None:
@@ -320,6 +352,7 @@ def _backfill_seen_hashes_from_hf() -> dict:
                 if record["artifact_hash"] in seen_hashes:
                     continue
                 _append_seen_record(record)
+                _append_submission_event("backfill_added", repo_id=repo_id, submission_id=submission_id, source="session_prefix")
                 seen_hashes.add(record["artifact_hash"])
                 added += 1
             except Exception as exc:
@@ -336,6 +369,7 @@ def _backfill_seen_hashes_from_hf() -> dict:
                 if record["artifact_hash"] in seen_hashes:
                     continue
                 _append_seen_record(record)
+                _append_submission_event("backfill_added", repo_id=repo_id, submission_id=submission_id, source="release_ledger")
                 seen_hashes.add(record["artifact_hash"])
                 added += 1
             except Exception as exc:
@@ -350,6 +384,7 @@ def _backfill_seen_hashes_from_hf() -> dict:
                 if record["artifact_hash"] in seen_hashes:
                     continue
                 _append_seen_record(record)
+                _append_submission_event("backfill_added", repo_id=repo_id, submission_id=submission_id, source="release_session")
                 seen_hashes.add(record["artifact_hash"])
                 added += 1
             except Exception as exc:
@@ -441,9 +476,16 @@ def _lineage_status(item: dict, seen_records: list[dict]) -> dict:
 
 def _reset_seen_hashes() -> int:
     if not SEEN_HASHES.exists():
+        _append_submission_event("reset_all", removed=0)
         return 0
-    count = sum(1 for line in SEEN_HASHES.read_text(encoding="utf-8").splitlines() if line.strip())
+    records = _read_seen_records()
+    count = len(records)
     SEEN_HASHES.unlink()
+    _append_submission_event(
+        "reset_all",
+        removed=count,
+        removed_submission_ids=sorted({str(row.get("submission_id") or "") for row in records if row.get("submission_id")}),
+    )
     return count
 
 
@@ -465,12 +507,14 @@ def _remove_seen_records(match: dict) -> dict:
             kept.append(row)
     if removed:
         _write_seen_records(kept)
-    return {
+    result = {
         "removed": len(removed),
         "remaining": len(kept),
         "matched_by": sorted(criteria),
         "removed_submission_ids": sorted({str(row.get("submission_id") or "") for row in removed if row.get("submission_id")}),
     }
+    _append_submission_event("reset_one", criteria=criteria, **result)
+    return result
 
 
 def _require_admin_token(token: str | None) -> None:
@@ -680,6 +724,18 @@ def admin_seen_records(
     }
 
 
+@app.get("/api/admin/submission-events")
+def admin_submission_events(
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+    limit: int = 200,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    return {
+        "ok": True,
+        "events": list(reversed(_read_submission_events(limit))),
+    }
+
+
 @app.get("/api/admin/submissions")
 def admin_submissions(
     x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
@@ -760,15 +816,56 @@ async def donate(
 
         artifact_hash = _sha256_file(session_path)
         seen_records = _read_seen_records()
-        if artifact_hash in {row.get("artifact_hash") for row in seen_records}:
+        duplicate_record = next((row for row in seen_records if row.get("artifact_hash") == artifact_hash), None)
+        if duplicate_record:
+            _append_submission_event(
+                "duplicate_rejected",
+                reason="duplicate redacted session artifact",
+                matched_submission_id=duplicate_record.get("submission_id", ""),
+                artifact_hash=artifact_hash,
+            )
             raise HTTPException(status_code=409, detail="duplicate redacted session artifact")
         near_duplicate = _near_duplicate_detail(manifest, seen_records)
         if near_duplicate:
+            status = _lineage_status(manifest, seen_records)
+            _append_submission_event(
+                "duplicate_rejected",
+                reason=near_duplicate,
+                matched_submission_id=status.get("submission_id", ""),
+                source_session_id=manifest.get("source_session_id", ""),
+                conversation_fingerprint=manifest.get("conversation_fingerprint", ""),
+                turns=manifest.get("turns", 0),
+                records=manifest.get("records", 0),
+            )
             raise HTTPException(status_code=409, detail=near_duplicate)
 
         submission_id = _submission_id()
-        pr_url = _upload_to_hf(submission_id, session_path, manifest_data, consent_data)
+        try:
+            pr_url = _upload_to_hf(submission_id, session_path, manifest_data, consent_data)
+        except HTTPException as exc:
+            _append_submission_event(
+                "upload_failed",
+                submission_id=submission_id,
+                donation_id=manifest.get("session_id", ""),
+                source_session_id=manifest.get("source_session_id", ""),
+                conversation_fingerprint=manifest.get("conversation_fingerprint", ""),
+                artifact_hash=artifact_hash,
+                status_code=exc.status_code,
+                reason=exc.detail,
+            )
+            raise
         _record_seen_hash(artifact_hash, submission_id, manifest)
+        _append_submission_event(
+            "submitted",
+            submission_id=submission_id,
+            donation_id=manifest.get("session_id", ""),
+            source_session_id=manifest.get("source_session_id", ""),
+            conversation_fingerprint=manifest.get("conversation_fingerprint", ""),
+            artifact_hash=artifact_hash,
+            turns=manifest.get("turns", 0),
+            records=manifest.get("records", 0),
+            review_url=pr_url,
+        )
     finally:
         session_path.unlink(missing_ok=True)
 

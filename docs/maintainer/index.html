@@ -182,6 +182,7 @@
       <button class="tab active" data-tab="overview">Overview</button>
       <button class="tab" data-tab="pending">Pending</button>
       <button class="tab" data-tab="records">Relay Records</button>
+      <button class="tab" data-tab="audit">Audit</button>
       <button class="tab" data-tab="lineage">Lineage Check</button>
       <button class="tab" data-tab="danger">Danger Zone</button>
     </nav>
@@ -214,6 +215,15 @@
       </div>
       <div id="recordStatus" class="status"></div>
       <div id="recordTable"></div>
+    </section>
+
+    <section id="audit" class="panel">
+      <div class="section-head">
+        <h2>Submission Audit</h2>
+        <div class="toolbar"><button id="loadEvents">Load audit</button><input id="eventFilter" placeholder="Filter by event, submission, fingerprint"></div>
+      </div>
+      <div id="eventStatus" class="status"></div>
+      <div id="eventTable"></div>
     </section>
 
     <section id="lineage" class="panel">
@@ -262,7 +272,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], records:[] };
+const state = { summary:null, pending:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -388,6 +398,7 @@ async function autoloadAll(){
   await Promise.all([
     loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error')),
     loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error')),
+    loadEvents().catch(e => status('eventStatus', `ERROR: ${e.message}`, 'error')),
   ]);
 }
 function recordRows(){
@@ -419,6 +430,40 @@ function renderRecords(){
       $('resetSubmission').focus();
     };
   });
+}
+
+async function loadEvents(){
+  saveSession();
+  status('eventStatus', 'Loading audit events...');
+  const data = await api('/api/admin/submission-events?limit=500');
+  state.events = data.events || [];
+  renderEvents();
+  status('eventStatus', `Loaded ${state.events.length} audit event${state.events.length === 1 ? '' : 's'}.`, 'ok');
+}
+function eventRows(){
+  const q = $('eventFilter').value.toLowerCase().trim();
+  return state.events.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
+}
+function renderEvents(){
+  const rows = eventRows();
+  $('eventTable').innerHTML = table(
+    ['Time', 'Event', 'Submission', 'Details'],
+    rows.map(row => {
+      const submission = row.submission_id || row.matched_submission_id || (row.removed_submission_ids || []).join(', ');
+      const details = {...row};
+      delete details.ts;
+      delete details.event;
+      delete details.submission_id;
+      delete details.matched_submission_id;
+      delete details.removed_submission_ids;
+      return [
+        `<code>${escapeHtml(row.ts || '')}</code>`,
+        `<span class="pill">${escapeHtml(row.event || '')}</span>`,
+        `<code>${escapeHtml(submission || '')}</code>`,
+        `<code>${escapeHtml(JSON.stringify(details))}</code>`,
+      ];
+    })
+  );
 }
 function table(heads, rows){
   if(!rows.length) return '<div class="card"><div class="hint">No rows found.</div></div>';
@@ -489,8 +534,10 @@ $('refreshOverview').onclick = () => loadSummary().catch(e => status('globalStat
 $('backfillTop').onclick = () => { showTab('danger'); backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error')); };
 $('loadPending').onclick = () => loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error'));
 $('loadRecords').onclick = () => loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error'));
+$('loadEvents').onclick = () => loadEvents().catch(e => status('eventStatus', `ERROR: ${e.message}`, 'error'));
 $('pendingFilter').oninput = renderPending;
 $('recordFilter').oninput = renderRecords;
+$('eventFilter').oninput = renderEvents;
 $('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));
 $('resetOne').onclick = () => resetOne().catch(e => status('resetStatus', `ERROR: ${e.message}`, 'error'));
 $('backfillBtn').onclick = () => backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error'));

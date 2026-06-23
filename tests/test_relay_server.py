@@ -247,6 +247,7 @@ class RelayServerTests(unittest.TestCase):
             with (
                 mock.patch("donate.relay_server.STATE_DIR", state_dir),
                 mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
             ):
                 relay_server._append_seen_record({
                     "artifact_hash": "hash-1",
@@ -272,12 +273,30 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(result["remaining"], 1)
         self.assertEqual(result["removed_submission_ids"], ["submission-one"])
         self.assertEqual(records[0]["submission_id"], "submission-two")
+        events = [json.loads(line) for line in (state_dir / "submission_events.jsonl").read_text().splitlines()]
+        self.assertEqual(events[0]["event"], "reset_one")
+        self.assertEqual(events[0]["removed"], 1)
+        self.assertEqual(events[0]["removed_submission_ids"], ["submission-one"])
 
     def test_remove_seen_records_requires_specific_match_key(self) -> None:
         with self.assertRaises(relay_server.HTTPException) as cm:
             relay_server._remove_seen_records({"unknown": "value"})
 
         self.assertEqual(cm.exception.status_code, 400)
+
+    def test_submission_events_are_read_newest_first_by_admin_endpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+                mock.patch("donate.relay_server.ADMIN_TOKEN", "secret"),
+            ):
+                relay_server._append_submission_event("submitted", submission_id="submission-one")
+                relay_server._append_submission_event("reset_one", removed_submission_ids=["submission-one"])
+                result = relay_server.admin_submission_events(x_admin_token="secret")
+
+        self.assertEqual([row["event"] for row in result["events"]], ["reset_one", "submitted"])
 
     def test_seen_record_summary_counts_records_and_totals(self) -> None:
         summary = relay_server._seen_record_summary([

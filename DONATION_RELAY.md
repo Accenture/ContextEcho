@@ -116,6 +116,17 @@ The backfill scans `CONTEXTECHO_RELAY_BACKFILL_REPOS`, computes exact artifact
 hashes and structural `conversation_fingerprint` values from existing
 `session.redacted.jsonl` files, and appends missing entries to the relay state.
 
+The relay also writes an append-only audit log at
+`${CONTEXTECHO_RELAY_STATE_DIR}/submission_events.jsonl`. It records successful
+submissions, duplicate rejections, upload failures, one-record resets,
+all-record resets, and backfill additions. Maintainers can inspect the newest
+events from the GitHub Pages maintainer console's Audit tab, or call:
+
+```bash
+curl "$CONTEXTECHO_RELAY_URL/api/admin/submission-events?limit=500" \
+  -H "X-Admin-Token: $CONTEXTECHO_RELAY_ADMIN_TOKEN"
+```
+
 ## Security Checks
 
 The relay currently enforces:
