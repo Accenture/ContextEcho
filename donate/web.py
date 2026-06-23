@@ -1119,6 +1119,8 @@ INDEX_HTML = r"""<!doctype html>
     .fit-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; }
     .fit-legend span { display:inline-flex; align-items:center; gap:5px; }
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
+    .inline-status.ok { color:#12683a; font-weight:850; }
+    .inline-status.error { color:#9b201c; font-weight:850; }
     .result { display:none; border:1px solid var(--line); border-radius:18px; padding:16px; background:#fbfff4; margin-top:12px; }
     .result.show { display:block; }
     .success-panel { border:1px solid rgba(127,138,119,.24); background:rgba(255,255,250,.96); box-shadow:0 18px 60px rgba(43,59,37,.12); padding:26px; }
@@ -1491,19 +1493,33 @@ async function sendMetadataUpdate(){
     status('submitStatus', 'Edit at least one contributor field before sending an info update.');
     return;
   }
-  const result = await post('/api/metadata_update', {
-    submission_id: metadataUpdateSubmissionId,
-    credit_name: name,
-    contributor_email: email,
-    contributor_institute: institute,
-    public_anonymous: !!$('publicAnonymous')?.checked,
-    source_session_id: metadataUpdateSession?.source_session_id || '',
-    conversation_fingerprint: metadataUpdateSession?.conversation_fingerprint || ''
-  });
-  status('submitStatus', result.request_id ? `Info update request sent for maintainer review: ${result.request_id}` : 'Info update request sent for maintainer review.');
-  metadataUpdateSubmissionId = '';
-  metadataUpdateSession = null;
-  refreshButtons();
+  const btn = $('metadataUpdateBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  status('submitStatus', 'Sending info update request to the maintainer relay...', '');
+  try {
+    const result = await post('/api/metadata_update', {
+      submission_id: metadataUpdateSubmissionId,
+      credit_name: name,
+      contributor_email: email,
+      contributor_institute: institute,
+      public_anonymous: !!$('publicAnonymous')?.checked,
+      source_session_id: metadataUpdateSession?.source_session_id || '',
+      conversation_fingerprint: metadataUpdateSession?.conversation_fingerprint || ''
+    });
+    const requestText = result.request_id ? ` Request ID: ${result.request_id}.` : '';
+    status('submitStatus', `Info update request sent for maintainer review.${requestText} You can close this page or continue reviewing sessions.`, 'ok');
+    metadataUpdateSubmissionId = '';
+    metadataUpdateSession = null;
+    btn.textContent = 'Update Sent';
+  } catch(e) {
+    btn.textContent = originalText;
+    status('submitStatus', 'ERROR: '+friendlyRequestError(e, 'info update request'), 'error');
+  } finally {
+    refreshButtons();
+    $('submitStatus').scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
 }
 function redactionCacheKey(){
   if(!selected) return '';
@@ -1609,7 +1625,12 @@ function compactionNote(s){
   if(agent.includes('claude')) return 'Claude Code context summary/compaction events detected in the local log.';
   return 'Context compaction events detected in the local agent log.';
 }
-function status(id, text){ $(id).textContent = text; }
+function status(id, text, kind=''){
+  const el = $(id);
+  el.textContent = text;
+  el.classList.toggle('ok', kind === 'ok');
+  el.classList.toggle('error', kind === 'error');
+}
 function contributorFieldsComplete(){
   return ['contributorName','contributorEmail','contributorInstitute'].every(id => ($(id).value || '').trim());
 }
@@ -2494,7 +2515,7 @@ $('pickNext').onclick = () => goStep(2);
 $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
 $('submitPrev').onclick = () => goStep(2);
-$('metadataUpdateBtn').onclick = () => sendMetadataUpdate().catch(e => status('submitStatus', 'ERROR: '+e.message));
+$('metadataUpdateBtn').onclick = () => sendMetadataUpdate();
 ['contributorName','contributorEmail','contributorInstitute'].forEach(id => {
   $(id).oninput = () => {
     if(id === 'contributorEmail') updateEmailSuggestions();
