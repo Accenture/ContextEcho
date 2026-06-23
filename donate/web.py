@@ -1398,6 +1398,7 @@ INDEX_HTML = r"""<!doctype html>
       <button id="submitPrev" class="secondary">Previous</button>
       <button id="submitBtn" disabled>Submit Donation</button>
       <button id="metadataUpdateBtn" class="secondary" disabled>Send Info Update</button>
+      <button id="metadataBackBtn" class="secondary" style="display:none">Back to Sessions</button>
     </div>
     <div id="submitProgress" class="progress"><div></div></div>
     <div id="submitResult" class="result"></div>
@@ -1410,6 +1411,7 @@ let selected = null;
 let redacted = null;
 let metadataUpdateSubmissionId = '';
 let metadataUpdateSession = null;
+let metadataUpdateComplete = false;
 let appliedScrubTerms = [];
 let redactionCache = new Map();
 let submitted = false;
@@ -1459,6 +1461,19 @@ function prefillContributorFields(session, overwrite=false){
   if(info.institute && (overwrite || !$('contributorInstitute').value)) $('contributorInstitute').value = info.institute;
   if($('publicAnonymous') && (overwrite || info.publicAnonymous)) $('publicAnonymous').checked = info.publicAnonymous;
 }
+function setContributorFieldsLocked(locked){
+  ['contributorName','contributorEmail','contributorInstitute'].forEach(id => { $(id).disabled = !!locked; });
+  if($('publicAnonymous')) $('publicAnonymous').disabled = !!locked;
+}
+function resetMetadataUpdateUi(){
+  metadataUpdateSubmissionId = '';
+  metadataUpdateSession = null;
+  metadataUpdateComplete = false;
+  setContributorFieldsLocked(false);
+  $('metadataUpdateBtn').textContent = 'Send Info Update';
+  $('metadataUpdateBtn').style.display = '';
+  $('metadataBackBtn').style.display = 'none';
+}
 function localDonationInfo(s){
   const pathKey = sessionPathKey(s);
   const relayChecked = !!s?.relay_checked;
@@ -1475,6 +1490,11 @@ function localDonationInfo(s){
   return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId};
 }
 function beginMetadataUpdate(session, submissionId){
+  metadataUpdateComplete = false;
+  setContributorFieldsLocked(false);
+  $('metadataUpdateBtn').textContent = 'Send Info Update';
+  $('metadataUpdateBtn').style.display = '';
+  $('metadataBackBtn').style.display = 'none';
   metadataUpdateSubmissionId = submissionId;
   metadataUpdateSession = session || null;
   selected = session || selected;
@@ -1510,10 +1530,13 @@ async function sendMetadataUpdate(){
       conversation_fingerprint: metadataUpdateSession?.conversation_fingerprint || ''
     });
     const requestText = result.request_id ? ` Request ID: ${result.request_id}.` : '';
-    status('submitStatus', `Info update request sent for maintainer review.${requestText} You can close this page or continue reviewing sessions.`, 'ok');
+    status('submitStatus', `Update sent successfully.${requestText} The maintainer will review it before changing the public record.`, 'ok');
     metadataUpdateSubmissionId = '';
     metadataUpdateSession = null;
+    metadataUpdateComplete = true;
+    setContributorFieldsLocked(true);
     btn.textContent = 'Update Sent';
+    $('metadataBackBtn').style.display = '';
   } catch(e) {
     btn.textContent = originalText;
     status('submitStatus', 'ERROR: '+friendlyRequestError(e, 'info update request'), 'error');
@@ -1565,6 +1588,7 @@ function hasDetectSecretsFailure(data){
   return Array.isArray(blocking.detect_secrets) && blocking.detect_secrets.length > 0;
 }
 function goStep(n){
+  if(n !== 3) resetMetadataUpdateUi();
   const pct = Math.round((n / 3) * 100);
   for(let i=1;i<=3;i++){
     $('step'+i).classList.toggle('active', i===n);
@@ -1585,7 +1609,7 @@ function refreshButtons(){
   const selectedInfo = selected ? localDonationInfo(selected) : null;
   const selectedDonated = !!(selectedInfo && (selectedInfo.exactDonated || (selectedInfo.donatedBefore && !selectedInfo.updateReady)));
   const selectedImprove = selected ? fit(selected) === 'improve' : false;
-  const canSubmitArtifact = !!(redacted && redacted.verify_passed) && !submitted && !selectedDonated;
+  const canSubmitArtifact = !!(redacted && redacted.verify_passed) && !submitted && !selectedDonated && !metadataUpdateSubmissionId && !metadataUpdateComplete;
   const contributorComplete = contributorFieldsComplete();
   $('pickNext').disabled = !selected || selectedDonated || selectedImprove;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
@@ -2517,6 +2541,7 @@ $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
 $('submitPrev').onclick = () => goStep(2);
 $('metadataUpdateBtn').onclick = () => sendMetadataUpdate();
+$('metadataBackBtn').onclick = () => goStep(1);
 ['contributorName','contributorEmail','contributorInstitute'].forEach(id => {
   $(id).oninput = () => {
     if(id === 'contributorEmail') updateEmailSuggestions();
