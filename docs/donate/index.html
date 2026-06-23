@@ -264,9 +264,10 @@
       transform:none;
     }
     .command-tab.active {
-      color:#13552f;
-      background:#fbfff8;
-      border-color:#cfe2cc;
+      color:white;
+      background:#111b18;
+      border-color:#111b18;
+      box-shadow:0 8px 18px rgba(17,27,24,.14);
     }
     .command-wrap {
       position:relative;
@@ -561,8 +562,8 @@
           </div>
         </div>
         <div class="command-tabs" role="tablist" aria-label="Choose operating system command">
-          <button class="command-tab active" type="button" data-command-target="unix"><span class="mini-icon" data-icon="apple"></span>macOS / Linux</button>
-          <button class="command-tab" type="button" data-command-target="windows"><span class="mini-icon" data-icon="windows"></span>Windows PowerShell</button>
+          <button class="command-tab active" type="button" data-command-target="unix" role="tab" aria-selected="true"><span class="mini-icon" data-icon="apple"></span>macOS / Linux</button>
+          <button class="command-tab" type="button" data-command-target="windows" role="tab" aria-selected="false"><span class="mini-icon" data-icon="windows"></span>Windows PowerShell</button>
         </div>
         <div class="command-wrap">
           <pre id="command">curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash</pre>
@@ -733,7 +734,11 @@ document.querySelectorAll('.command-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     const target = tab.dataset.commandTarget || 'unix';
     const selected = commands[target] || commands.unix;
-    document.querySelectorAll('.command-tab').forEach(item => item.classList.toggle('active', item === tab));
+    document.querySelectorAll('.command-tab').forEach(item => {
+      const isActive = item === tab;
+      item.classList.toggle('active', isActive);
+      item.setAttribute('aria-selected', String(isActive));
+    });
     document.getElementById('command').textContent = selected.text;
     document.getElementById('commandHelp').textContent = selected.help;
     button.innerHTML = `${iconSvg('copy')}Copy Command`;
