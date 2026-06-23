@@ -131,6 +131,63 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(records[0]["contributor_institute"], "Existing Lab")
         self.assertTrue(records[0]["public_anonymous"])
 
+    def test_backfill_seen_hashes_refreshes_existing_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            state_dir = root / "state"
+            session = root / "session.redacted.jsonl"
+            manifest = root / "manifest.json"
+            session.write_text(
+                '{"timestamp":"2026-01-01T00:00:00Z","type":"event_msg","payload":{"type":"user_message","message":"<REDACTED>"}}\n',
+                encoding="utf-8",
+            )
+            manifest.write_text(
+                json.dumps({
+                    "session_id": "donation-old",
+                    "credit_name": "Existing Donor",
+                    "contributor_email": "donor@example.com",
+                    "contributor_institute": "Existing Lab",
+                    "records": 1,
+                    "turns": 1,
+                }),
+                encoding="utf-8",
+            )
+            old_record = relay_server._seen_record(
+                relay_server._sha256_file(session),
+                "submission-old",
+                {"records": 1, "turns": 1},
+            )
+            old_record.pop("credit_name", None)
+            old_record.pop("contributor_email", None)
+            old_record.pop("contributor_institute", None)
+
+            api = mock.Mock()
+            api.list_repo_files.return_value = [
+                "pending/submission-old/session.redacted.jsonl",
+                "pending/submission-old/manifest.json",
+            ]
+
+            def fake_download(*, filename: str, **_kwargs: object) -> str:
+                return str(manifest if filename.endswith("manifest.json") else session)
+
+            with (
+                mock.patch("donate.relay_server.HfApi", return_value=api),
+                mock.patch("donate.relay_server.hf_hub_download", side_effect=fake_download),
+                mock.patch("donate.relay_server.BACKFILL_REPOS", ["owner/repo"]),
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+            ):
+                relay_server._write_seen_records([old_record])
+                result = relay_server._backfill_seen_hashes_from_hf()
+                records = relay_server._read_seen_records()
+
+        self.assertEqual(result["added"], 0)
+        self.assertEqual(result["refreshed"], 1)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["credit_name"], "Existing Donor")
+        self.assertEqual(records[0]["contributor_email"], "donor@example.com")
+        self.assertEqual(records[0]["contributor_institute"], "Existing Lab")
+
     def test_backfill_seen_hashes_reads_public_release_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

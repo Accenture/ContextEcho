@@ -392,10 +392,33 @@ def _backfill_seen_hashes_from_hf() -> dict:
     token = os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
     api = HfApi(token=token)
     seen = _read_seen_records()
-    seen_hashes = {row.get("artifact_hash") for row in seen}
+    seen_by_hash = {row.get("artifact_hash"): row for row in seen if row.get("artifact_hash")}
     added = 0
+    refreshed = 0
     scanned = 0
     errors: list[str] = []
+
+    def add_or_refresh(record: dict, *, repo_id: str, submission_id: str, source: str) -> None:
+        nonlocal added, refreshed
+        artifact_hash = record.get("artifact_hash")
+        existing = seen_by_hash.get(artifact_hash)
+        if existing is not None:
+            changed = False
+            for key, value in record.items():
+                if value in ("", None, False):
+                    continue
+                if not existing.get(key):
+                    existing[key] = value
+                    changed = True
+            if changed:
+                refreshed += 1
+                _append_submission_event("backfill_refreshed", repo_id=repo_id, submission_id=submission_id, source=source)
+            return
+        seen.append(record)
+        seen_by_hash[artifact_hash] = record
+        _append_submission_event("backfill_added", repo_id=repo_id, submission_id=submission_id, source=source)
+        added += 1
+
     for repo_id in BACKFILL_REPOS:
         try:
             files = api.list_repo_files(repo_id=repo_id, repo_type="dataset")
@@ -410,12 +433,7 @@ def _backfill_seen_hashes_from_hf() -> dict:
                 manifest = _read_hf_json(repo_id, manifest_path, token, files)
                 submission_id = _backfill_submission_id(prefix, manifest)
                 record = _backfill_record_from_hf(repo_id, session_path, manifest_path, submission_id, files, token)
-                if record["artifact_hash"] in seen_hashes:
-                    continue
-                _append_seen_record(record)
-                _append_submission_event("backfill_added", repo_id=repo_id, submission_id=submission_id, source="session_prefix")
-                seen_hashes.add(record["artifact_hash"])
-                added += 1
+                add_or_refresh(record, repo_id=repo_id, submission_id=submission_id, source="session_prefix")
             except Exception as exc:
                 errors.append(f"{repo_id}/{prefix}: {exc}")
         ledger_rows = _release_ledger_rows(repo_id, files, token)
@@ -427,12 +445,7 @@ def _backfill_seen_hashes_from_hf() -> dict:
             submission_id = str(row.get("submission_id") or _submission_id_from_prefix(session_path))
             try:
                 record = _backfill_record_from_hf(repo_id, session_path, manifest_path, submission_id, files, token)
-                if record["artifact_hash"] in seen_hashes:
-                    continue
-                _append_seen_record(record)
-                _append_submission_event("backfill_added", repo_id=repo_id, submission_id=submission_id, source="release_ledger")
-                seen_hashes.add(record["artifact_hash"])
-                added += 1
+                add_or_refresh(record, repo_id=repo_id, submission_id=submission_id, source="release_ledger")
             except Exception as exc:
                 errors.append(f"{repo_id}/{session_path}: {exc}")
         for session_path in _release_session_paths(files):
@@ -442,15 +455,12 @@ def _backfill_seen_hashes_from_hf() -> dict:
             submission_id = Path(session_path).stem.replace("session_", "public-session-", 1)
             try:
                 record = _backfill_record_from_hf(repo_id, session_path, "", submission_id, files, token)
-                if record["artifact_hash"] in seen_hashes:
-                    continue
-                _append_seen_record(record)
-                _append_submission_event("backfill_added", repo_id=repo_id, submission_id=submission_id, source="release_session")
-                seen_hashes.add(record["artifact_hash"])
-                added += 1
+                add_or_refresh(record, repo_id=repo_id, submission_id=submission_id, source="release_session")
             except Exception as exc:
                 errors.append(f"{repo_id}/{session_path}: {exc}")
-    return {"scanned": scanned, "added": added, "errors": errors[:20]}
+    if refreshed:
+        _write_seen_records(seen)
+    return {"scanned": scanned, "added": added, "refreshed": refreshed, "errors": errors[:20]}
 
 
 def _count_value(value: object) -> int:
