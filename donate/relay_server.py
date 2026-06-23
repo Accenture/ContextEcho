@@ -458,7 +458,7 @@ def _backfill_seen_hashes_from_hf() -> dict:
                 add_or_refresh(record, repo_id=repo_id, submission_id=submission_id, source="release_session")
             except Exception as exc:
                 errors.append(f"{repo_id}/{session_path}: {exc}")
-    if refreshed:
+    if added or refreshed:
         _write_seen_records(seen)
     return {"scanned": scanned, "added": added, "refreshed": refreshed, "errors": errors[:20]}
 
