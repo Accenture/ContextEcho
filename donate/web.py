@@ -39,6 +39,7 @@ from donate.adapters.base import is_redacted_artifact
 
 DONATION_ROOT = Path.home() / "Downloads" / "ContextEcho_donations"
 DONATION_REGISTRY = DONATION_ROOT / ".donated_sessions.json"
+DEFAULT_RELAY_URL = "https://contextecho2026-context-echo-donation-relay.hf.space"
 MAX_AUTO_REPAIR_PASSES = 3
 MIN_SESSION_GROWTH_RATIO = 0.20
 MIN_SESSION_GROWTH_TURNS = 50
@@ -204,7 +205,7 @@ def session_update_ready(current_turns: int, previous_turns: int) -> bool:
 
 
 def relay_url() -> str:
-    return os.environ.get("CONTEXTECHO_RELAY_URL", "").strip().rstrip("/")
+    return os.environ.get("CONTEXTECHO_RELAY_URL", DEFAULT_RELAY_URL).strip().rstrip("/")
 
 
 def relay_donation_status(sessions: list[dict]) -> list[dict]:

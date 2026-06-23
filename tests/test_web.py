@@ -7,6 +7,7 @@ from unittest import mock
 
 from donate.verify import verify_session
 from donate.web import (
+    DEFAULT_RELAY_URL,
     INDEX_HTML,
     _auto_repair_until_verified,
     _load_contributors_markdown,
@@ -27,6 +28,7 @@ from donate.web import (
     load_donated_artifact_keys,
     local_pending_summary,
     parse_submit_output,
+    relay_url,
     required_contributor_fields,
     save_donation_record,
     session_update_ready,
@@ -37,6 +39,10 @@ from donate.web import (
 
 
 class WebTests(unittest.TestCase):
+    def test_relay_url_defaults_to_official_relay(self):
+        with mock.patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(relay_url(), DEFAULT_RELAY_URL)
+
     def test_submit_step_previews_public_leaderboard_identity(self):
         self.assertIn("submitLeaderboardPreview", INDEX_HTML)
         self.assertIn("Leaderboard preview", INDEX_HTML)
