@@ -5,199 +5,611 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Donate to ContextEcho</title>
   <style>
-    :root { --ink:#0f1f19; --muted:#5d6963; --green:#167843; --line:#dfe7dc; --soft:#f5f8ef; --cream:#fffaf0; }
+    :root {
+      --ink:#10211a;
+      --muted:#5f6b65;
+      --green:#167843;
+      --green-dark:#105c35;
+      --line:#dfe7dc;
+      --soft:#f6f9f1;
+      --cream:#fffaf0;
+      --gold:#d28b00;
+      --red:#dc4b30;
+      --shadow:0 20px 60px rgba(37,54,42,.12);
+    }
     * { box-sizing:border-box; }
-    body { margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:linear-gradient(120deg,#fff7d9 0%,#f7fbf2 48%,#dcefe1 100%); }
-    main { max-width:1120px; margin:0 auto; padding:42px 20px 56px; }
-    .shell { background:#fffef8; border:1px solid var(--line); border-radius:24px; padding:34px; box-shadow:0 24px 60px rgba(37,54,42,.12); }
-    .hero { width:100%; }
-    h1 { margin:0; font-size:40px; line-height:1.08; letter-spacing:0; }
-    .lede { margin:16px 0 0; font-size:20px; line-height:1.45; color:var(--muted); max-width:100%; }
-    .intro-links { display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; }
-    .intro-links a { color:#13552f; font-weight:900; text-decoration:none; }
-    .intro-links a:hover, .intro-links a:focus { text-decoration:underline; }
-    .privacy { margin-top:18px; color:#13552f; font-weight:800; }
-    .command-card { border:1px solid #d8e6d5; background:var(--soft); border-radius:16px; padding:18px; margin-top:28px; }
-    .command-label { font-size:13px; font-weight:900; color:#13552f; text-transform:uppercase; letter-spacing:.04em; }
-    .command-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
-    .command-tab { border-radius:10px; padding:8px 11px; background:#e8eddc; color:var(--ink); box-shadow:none; font-size:13px; min-height:auto; }
-    .command-tab.active { background:var(--green); color:white; }
-    .command-help { margin-top:8px; color:var(--muted); font-size:13px; line-height:1.4; }
-    pre { margin:10px 0 0; overflow:visible; white-space:pre-wrap; overflow-wrap:anywhere; border-radius:12px; padding:14px; background:#111b18; color:#fffef8; font-size:14px; line-height:1.5; }
-    .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; }
-    button, a.button { border:0; border-radius:12px; padding:12px 16px; font-weight:900; font-size:15px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
-    button.primary, a.button.primary { background:var(--green); color:white; box-shadow:0 12px 28px rgba(22,120,67,.22); }
-    a.button.secondary { background:#e8eddc; color:var(--ink); }
-    a.button.local { background:#dfeadd; color:#13552f; opacity:.56; cursor:not-allowed; }
-    a.button.local.ready { background:var(--green); color:white; pointer-events:auto; opacity:1; box-shadow:0 12px 28px rgba(22,120,67,.22); }
-    .bridge-status { margin-top:12px; color:var(--muted); font-size:14px; line-height:1.4; }
-    .bridge-status.ready { color:#13552f; font-weight:850; }
-    .public-overview { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr); gap:16px; margin-top:24px; }
-    .support-card, .composition-panel { border:1px solid #dce7d2; border-radius:16px; background:white; padding:18px; }
-    .support-card { display:flex; gap:16px; align-items:center; background:linear-gradient(135deg,#fff8df,#eef8e8); }
-    .bow-mascot { position:relative; flex:0 0 46px; width:46px; height:48px; }
-    .bow-head { position:absolute; left:12px; top:2px; width:23px; height:23px; border-radius:50%; background:#f1bf86; box-shadow:inset 0 -3px 0 rgba(0,0,0,.08); }
-    .bow-head:before, .bow-head:after { content:""; position:absolute; top:9px; width:3px; height:3px; border-radius:50%; background:#17201c; }
-    .bow-head:before { left:7px; }
-    .bow-head:after { right:7px; }
-    .bow-body { position:absolute; left:10px; top:24px; width:27px; height:20px; border-radius:10px 10px 6px 6px; background:#17713f; }
-    .bow-hands { position:absolute; left:4px; top:34px; width:39px; height:9px; border-radius:999px; background:#f1bf86; }
-    .bow-star { position:absolute; right:0; top:0; color:#d28b00; font-size:14px; line-height:1; }
-    .support-main { min-width:0; flex:1; }
-    .support-title, .composition-title { font-weight:950; color:#13552f; font-size:18px; }
-    .support-copy, .composition-subtitle { color:var(--muted); font-size:14px; margin-top:3px; line-height:1.35; }
-    .stats { display:grid; grid-template-columns:repeat(3,minmax(96px,1fr)); gap:10px; align-items:stretch; margin-top:14px; }
-    .stat-card { min-height:86px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:12px; padding:10px; box-shadow:0 6px 16px rgba(43,59,37,.07); color:inherit; text-decoration:none; transition:.15s ease; }
-    .stat-card:hover, .stat-card:focus { transform:translateY(-1px); border-color:#c9dcc5; box-shadow:0 10px 20px rgba(43,59,37,.11); outline:none; }
-    .stat-card:focus-visible { outline:3px solid rgba(31,111,67,.18); }
-    .stat-icon, .composition-icon { display:grid; place-items:center; border-radius:50%; background:#e9f2e5; color:var(--green); }
-    .stat-icon { width:30px; height:30px; margin:0 auto 6px; }
-    .stat-icon svg, .composition-icon svg { display:block; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
-    .stat-icon svg { width:16px; height:16px; }
-    .stat-icon .icon-fill, .composition-icon .icon-fill { fill:currentColor; stroke:none; }
-    .stat-icon[data-icon="star"] { background:#f6edd6; color:#d28b00; }
-    .stat-icon[data-icon="heart"] { background:#f6eadb; color:#dc4b30; }
-    .stat-value { font-size:22px; line-height:1; font-weight:950; letter-spacing:0; }
-    .stat-label { margin-top:5px; color:#3d4440; font-size:11px; font-weight:850; line-height:1.1; }
-    .composition-list { display:grid; gap:0; margin-top:12px; }
-    .composition-row { display:grid; grid-template-columns:34px minmax(86px,1fr) minmax(70px,.8fr) 64px; gap:9px; align-items:center; padding:8px 0; border-bottom:1px dashed #e5ebe1; }
-    .composition-row:last-child { border-bottom:0; }
-    .composition-icon { width:28px; height:28px; }
-    .composition-icon svg { width:15px; height:15px; }
-    .composition-label { color:#14241d; font-weight:900; font-size:13px; line-height:1.05; }
-    .composition-track { height:8px; border-radius:999px; background:#f0f1ef; overflow:hidden; }
-    .composition-fill { height:100%; min-width:0; border-radius:999px; background:linear-gradient(90deg,#1b8a4b,#17713f); }
-    .composition-value { color:#14241d; text-align:right; font-weight:950; font-size:16px; }
-    .panel { border:1px solid var(--line); border-radius:16px; padding:22px; background:white; }
-    .panel h2 { margin:0 0 14px; font-size:22px; }
-    .guide { margin-top:38px; border-top:1px solid var(--line); padding-top:32px; }
-    .guide h2 { margin:0; font-size:30px; line-height:1.15; }
-    .guide-intro { margin:10px 0 0; color:var(--muted); font-size:16px; line-height:1.5; max-width:820px; }
-    .guide-grid { display:grid; gap:18px; margin-top:22px; }
-    .guide-step { display:grid; grid-template-columns:360px minmax(0,1fr); gap:20px; align-items:stretch; border:1px solid var(--line); border-radius:18px; background:white; padding:18px; }
-    .shot { border:1px solid #dbe4d6; border-radius:14px; background:#fffef8; overflow:hidden; min-height:220px; box-shadow:0 12px 28px rgba(37,54,42,.08); cursor:zoom-in; position:relative; }
-    .shot:after { content:"Click to enlarge"; position:absolute; right:10px; bottom:10px; border-radius:999px; padding:6px 9px; background:rgba(17,27,24,.82); color:white; font-size:11px; font-weight:900; opacity:0; transform:translateY(4px); transition:opacity .15s ease, transform .15s ease; }
+    body {
+      margin:0;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--ink);
+      background:linear-gradient(120deg,#fff7d9 0%,#f8fbf3 50%,#dcefe1 100%);
+    }
+    main { max-width:1220px; margin:0 auto; padding:10px 16px 46px; }
+    .shell {
+      background:#fffef9;
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:32px;
+      box-shadow:var(--shadow);
+    }
+    .hero-grid {
+      display:grid;
+      grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr);
+      gap:34px;
+      align-items:start;
+    }
+    h1 {
+      margin:0;
+      max-width:720px;
+      font-size:40px;
+      line-height:1.08;
+      letter-spacing:0;
+    }
+    h1 span { color:var(--green); }
+    .lede {
+      margin:12px 0 0;
+      max-width:760px;
+      color:#32413a;
+      font-size:16px;
+      line-height:1.45;
+    }
+    .privacy-row {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:22px;
+      margin-top:22px;
+      max-width:660px;
+    }
+    .privacy-item { display:grid; grid-template-columns:46px minmax(0,1fr); gap:12px; align-items:center; }
+    .round-icon {
+      width:46px;
+      height:46px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:#e8f2df;
+      color:var(--green);
+      border:1px solid #d8e8cf;
+    }
+    .round-icon svg, .stat-icon svg, .composition-icon svg, .flow-icon svg, .mini-icon svg {
+      display:block;
+      width:22px;
+      height:22px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2.4;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    .round-icon .icon-fill, .stat-icon .icon-fill, .composition-icon .icon-fill { fill:currentColor; stroke:none; }
+    .privacy-title { color:#13552f; font-weight:950; font-size:15px; }
+    .privacy-copy { color:var(--muted); font-size:13px; line-height:1.35; margin-top:2px; }
+    .composition-panel {
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:white;
+      padding:18px;
+      box-shadow:0 10px 32px rgba(43,59,37,.06);
+    }
+    .composition-title, .support-title, .command-title, .next-title {
+      color:#13552f;
+      font-weight:950;
+      font-size:20px;
+      line-height:1.15;
+    }
+    .composition-subtitle, .support-copy, .command-copy {
+      margin-top:4px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.35;
+    }
+    .composition-list { display:grid; gap:0; margin-top:14px; }
+    .composition-row {
+      display:grid;
+      grid-template-columns:34px minmax(90px,1fr) minmax(90px,1fr) 70px;
+      gap:10px;
+      align-items:center;
+      padding:8px 0;
+    }
+    .composition-icon {
+      width:30px;
+      height:30px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:#e8f2df;
+      color:var(--green);
+    }
+    .composition-icon svg { width:16px; height:16px; }
+    .composition-label { font-weight:900; font-size:13px; }
+    .composition-track { height:8px; background:#f0f1ef; border-radius:999px; overflow:hidden; }
+    .composition-fill { height:100%; background:linear-gradient(90deg,#1b8a4b,#17713f); border-radius:999px; }
+    .composition-value { text-align:right; font-weight:950; font-size:15px; }
+    .main-grid {
+      display:grid;
+      grid-template-columns:minmax(0,.98fr) minmax(0,1.02fr);
+      gap:24px;
+      margin-top:24px;
+    }
+    .support-card, .command-card, .flow-card, .guide {
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:white;
+      box-shadow:0 12px 36px rgba(43,59,37,.07);
+    }
+    .support-card {
+      display:grid;
+      grid-template-columns:126px minmax(0,1fr);
+      gap:16px;
+      min-height:318px;
+      padding:22px;
+      background:linear-gradient(135deg,#fff9e6,#f3faee);
+    }
+    .mascot {
+      position:relative;
+      align-self:center;
+      width:112px;
+      height:124px;
+    }
+    .mascot-head { position:absolute; left:27px; top:10px; width:48px; height:48px; border-radius:50%; background:#f2bd82; box-shadow:inset 0 -5px 0 rgba(0,0,0,.08); }
+    .mascot-head:before, .mascot-head:after { content:""; position:absolute; top:21px; width:5px; height:5px; border-radius:50%; background:#16221d; }
+    .mascot-head:before { left:15px; }
+    .mascot-head:after { right:15px; }
+    .mascot-body { position:absolute; left:22px; top:58px; width:58px; height:48px; border-radius:22px 22px 9px 9px; background:#167843; }
+    .mascot-hands { position:absolute; left:4px; top:91px; width:88px; height:17px; border-radius:999px; background:#f2bd82; }
+    .mascot-laptop { position:absolute; left:43px; top:74px; width:70px; height:48px; border-radius:8px 8px 4px 4px; background:#d7d8d3; transform:skew(-8deg); box-shadow:0 7px 0 #b9bbb5; }
+    .mascot-laptop:after { content:""; position:absolute; left:29px; top:20px; width:7px; height:7px; border-radius:50%; background:white; opacity:.9; }
+    .mascot-star { position:absolute; right:10px; top:10px; color:var(--gold); font-size:38px; line-height:1; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:20px; }
+    .stat-card {
+      min-height:132px;
+      padding:16px 12px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      border:1px solid #e2e8df;
+      border-radius:12px;
+      background:white;
+      color:inherit;
+      text-decoration:none;
+      box-shadow:0 10px 24px rgba(43,59,37,.08);
+      transition:.15s ease;
+    }
+    .stat-card:hover, .stat-card:focus { transform:translateY(-1px); border-color:#c7dcc4; text-decoration:none; outline:none; }
+    .stat-icon {
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      color:var(--green);
+      background:#e9f2e5;
+      margin-bottom:12px;
+    }
+    .stat-icon[data-icon="star"] { background:#f6edd6; color:var(--gold); }
+    .stat-icon[data-icon="heart"] { background:#f6eadb; color:var(--red); }
+    .stat-value { font-size:26px; line-height:1; font-weight:950; }
+    .stat-label { margin-top:7px; color:#2f3833; font-size:12px; line-height:1.15; font-weight:900; }
+    .support-actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+    button, a.button {
+      border:0;
+      border-radius:10px;
+      padding:13px 16px;
+      min-height:44px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      font-size:14px;
+      font-weight:950;
+      color:var(--ink);
+      background:#e9eedf;
+      text-decoration:none;
+      cursor:pointer;
+      transition:.15s ease;
+    }
+    button svg, a.button svg {
+      width:18px;
+      height:18px;
+      display:block;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2.4;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    button svg .icon-fill, a.button svg .icon-fill { fill:currentColor; stroke:none; }
+    button:hover, a.button:hover { transform:translateY(-1px); text-decoration:none; }
+    .button.outline { background:white; border:1px solid var(--green); color:#143d2a; }
+    .button.outline.heart { border-color:#e24f3a; }
+    .button.primary, button.primary { background:var(--green); color:white; box-shadow:0 12px 28px rgba(22,120,67,.22); }
+    .button.local { background:#dfeadd; color:#13552f; opacity:.58; cursor:not-allowed; pointer-events:auto; }
+    .button.local.ready { background:var(--green); color:white; opacity:1; cursor:pointer; box-shadow:0 12px 28px rgba(22,120,67,.22); }
+    .mini-icon svg { width:18px; height:18px; }
+    .command-card { padding:22px; }
+    .command-head {
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
+      gap:12px;
+      align-items:start;
+    }
+    .step-badge {
+      width:34px;
+      height:34px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:var(--green);
+      color:white;
+      font-weight:950;
+      box-shadow:0 8px 22px rgba(22,120,67,.22);
+    }
+    .command-tabs {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      margin-top:22px;
+      border-bottom:1px solid var(--line);
+    }
+    .command-tab {
+      min-height:44px;
+      border-radius:10px 10px 0 0;
+      background:#f7faf4;
+      border:1px solid var(--line);
+      border-bottom:0;
+      color:#17241d;
+      box-shadow:none;
+      transform:none;
+    }
+    .command-tab.active {
+      color:#13552f;
+      background:#fbfff8;
+      border-color:#cfe2cc;
+    }
+    .command-wrap {
+      position:relative;
+      margin-top:12px;
+    }
+    pre {
+      margin:0;
+      min-height:76px;
+      overflow:auto;
+      white-space:pre-wrap;
+      overflow-wrap:anywhere;
+      border-radius:10px;
+      padding:15px 88px 15px 16px;
+      background:#111b18;
+      color:#fffef8;
+      font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size:13px;
+      line-height:1.45;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .copy-inline {
+      position:absolute;
+      right:10px;
+      top:10px;
+      min-height:34px;
+      padding:8px 10px;
+      border-radius:8px;
+      background:#2a332f;
+      color:white;
+      font-size:12px;
+      box-shadow:none;
+    }
+    .command-help { margin-top:12px; color:var(--muted); font-size:13px; line-height:1.45; }
+    .actions { display:grid; grid-template-columns:1fr 1.2fr; gap:12px; margin-top:16px; }
+    .bridge-status { margin-top:12px; color:var(--muted); font-size:13px; line-height:1.4; }
+    .bridge-status.ready { color:#13552f; font-weight:900; }
+    .flow-card {
+      margin-top:16px;
+      padding:14px 18px;
+    }
+    .flow-title { color:#13552f; font-weight:950; margin-bottom:10px; }
+    .flow {
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:10px;
+      align-items:start;
+    }
+    .flow-step {
+      display:grid;
+      grid-template-columns:42px minmax(0,1fr);
+      gap:10px;
+      align-items:start;
+      position:relative;
+    }
+    .flow-step:not(:last-child):after {
+      content:"->";
+      position:absolute;
+      right:-8px;
+      top:14px;
+      color:#31413a;
+      font-weight:900;
+    }
+    .flow-icon {
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:#e8f2df;
+      color:var(--green);
+    }
+    .flow-name { font-weight:950; font-size:12px; line-height:1.25; }
+    .flow-copy { margin-top:3px; color:var(--muted); font-size:11px; line-height:1.32; }
+    .guide {
+      margin-top:14px;
+      padding:20px;
+      background:#fffefb;
+    }
+    .guide h2 { margin:0; color:#13552f; font-size:27px; line-height:1.15; }
+    .guide-intro { margin:9px 0 18px; color:#45524b; font-size:14px; line-height:1.5; }
+    .guide-grid { display:grid; gap:12px; }
+    .guide-step {
+      display:grid;
+      grid-template-columns:470px minmax(0,1fr);
+      gap:18px;
+      align-items:stretch;
+      padding:10px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:white;
+    }
+    .guide-step + .guide-step { margin-top:0; }
+    .shot {
+      position:relative;
+      min-height:200px;
+      border:1px solid #dbe4d6;
+      border-radius:10px;
+      background:#fffef8;
+      overflow:hidden;
+      cursor:zoom-in;
+      box-shadow:0 10px 24px rgba(37,54,42,.08);
+    }
+    .shot:after {
+      content:"Click to enlarge";
+      position:absolute;
+      right:10px;
+      bottom:10px;
+      padding:6px 9px;
+      border-radius:999px;
+      background:rgba(17,27,24,.82);
+      color:white;
+      font-size:11px;
+      font-weight:900;
+      opacity:0;
+      transform:translateY(4px);
+      transition:.15s ease;
+    }
     .shot:hover:after, .shot:focus-within:after { opacity:1; transform:translateY(0); }
-    .shot:hover img { transform:scale(1.025); }
-    .shot img { display:block; width:100%; height:100%; object-fit:cover; object-position:top left; transition:transform .18s ease; }
-    .shot-bar { display:flex; gap:6px; align-items:center; height:30px; padding:0 12px; background:#ecf1e6; }
-    .dot { width:8px; height:8px; border-radius:999px; background:#8ea297; }
-    .shot-body { padding:16px; }
-    .shot-title { font-size:20px; font-weight:950; margin-bottom:12px; color:#10241d; }
-    .mock-command { border-radius:10px; background:#111b18; color:#fffef8; padding:12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; overflow-wrap:anywhere; }
-    .mock-button { display:inline-block; border-radius:10px; padding:10px 13px; margin:10px 8px 0 0; background:#167843; color:white; font-weight:900; font-size:12px; }
-    .mock-button.light { background:#e7eddd; color:#13241d; }
-    .mock-row { display:grid; grid-template-columns:1fr 70px 54px; gap:8px; align-items:center; padding:10px; border:1px solid #e3e9de; border-radius:10px; margin-top:8px; }
-    .mock-row strong { font-size:12px; }
-    .mock-row span { font-size:11px; color:var(--muted); }
-    .mock-pill { border-radius:999px; padding:5px 8px; background:#dff2da; color:#13552f; font-size:11px; font-weight:900; text-align:center; }
-    .mock-card { border:1px solid #dce6d7; border-radius:12px; padding:12px; margin-top:10px; background:#fbfff8; }
-    .mock-card.selected { border-color:#167843; background:#eef8e8; }
-    .mock-check { display:flex; gap:8px; align-items:center; margin-top:12px; font-size:12px; font-weight:850; }
-    .box { width:14px; height:14px; border:2px solid #8aa595; border-radius:3px; display:inline-block; }
-    .box.checked { background:#167843; border-color:#167843; position:relative; }
-    .box.checked:after { content:""; position:absolute; left:3px; top:1px; width:5px; height:8px; border:solid white; border-width:0 2px 2px 0; transform:rotate(45deg); }
-    .mock-success { display:flex; gap:12px; align-items:flex-start; }
-    .checkmark { width:44px; height:44px; border-radius:999px; border:2px solid #9ddd9e; display:grid; place-items:center; color:#167843; font-size:26px; font-weight:950; background:#edfae9; }
-    .guide-copy { min-width:0; }
-    .guide-copy h3 { margin:0 0 8px; font-size:20px; }
-    .guide-copy p { margin:0 0 12px; color:var(--muted); line-height:1.5; }
-    .guide-copy ul { margin:0; padding-left:20px; color:var(--muted); line-height:1.55; }
+    .shot:hover img { transform:scale(1.018); }
+    .shot img {
+      display:block;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      object-position:top left;
+      transition:transform .18s ease;
+    }
+    .guide-copy { padding:6px 8px; }
+    .guide-head {
+      display:grid;
+      grid-template-columns:32px minmax(0,1fr);
+      gap:12px;
+      align-items:center;
+      margin-bottom:8px;
+    }
+    .guide-num {
+      width:32px;
+      height:32px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:var(--green);
+      color:white;
+      font-weight:950;
+    }
+    .guide-copy h3 { margin:0; font-size:19px; line-height:1.2; }
+    .guide-copy p { margin:0 0 10px; color:#4d5b54; line-height:1.45; font-size:14px; }
+    .guide-copy ul { margin:0; padding-left:18px; color:#4d5b54; line-height:1.5; font-size:13px; }
     .guide-copy li { margin:4px 0; }
+    .bottom-note {
+      margin-top:14px;
+      padding:14px 18px;
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:center;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fbfff8;
+      color:#45524b;
+      font-size:13px;
+      line-height:1.35;
+    }
+    .bottom-note strong { color:#13552f; }
     .zoom-overlay { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(12,24,18,.76); }
     .zoom-overlay.show { display:flex; }
     .zoom-frame { position:relative; max-width:min(1200px,96vw); max-height:92vh; border-radius:16px; background:#fffef8; box-shadow:0 28px 90px rgba(0,0,0,.38); overflow:auto; }
     .zoom-frame img { display:block; width:auto; max-width:100%; height:auto; max-height:88vh; }
-    .zoom-close { position:absolute; top:10px; right:10px; border-radius:999px; width:38px; height:38px; padding:0; background:#111b18; color:white; box-shadow:0 10px 24px rgba(0,0,0,.2); }
-    .note { margin-top:22px; color:var(--muted); font-size:14px; line-height:1.45; }
-    @media (max-width:900px) { .guide-step { grid-template-columns:1fr; } h1 { font-size:36px; } .shell { padding:24px; } .public-overview { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } }
-    @media (max-width:620px) { .stats { grid-template-columns:1fr; } .composition-row { grid-template-columns:34px minmax(88px,1fr) 64px; } .composition-track { grid-column:2 / 4; } }
+    .zoom-close { position:absolute; top:10px; right:10px; border-radius:999px; width:38px; height:38px; padding:0; min-height:38px; background:#111b18; color:white; box-shadow:0 10px 24px rgba(0,0,0,.2); }
+    .footer {
+      margin-top:16px;
+      text-align:center;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .footer a { color:#13552f; font-weight:900; text-decoration:none; }
+    .footer a:hover { text-decoration:underline; }
+    @media (max-width:1040px) {
+      .hero-grid, .main-grid { grid-template-columns:1fr; }
+      .guide-step { grid-template-columns:1fr; }
+      .flow { grid-template-columns:1fr 1fr; }
+      .flow-step:not(:last-child):after { display:none; }
+    }
+    @media (max-width:720px) {
+      main { padding:8px 8px 34px; }
+      .shell { padding:20px; }
+      h1 { font-size:34px; }
+      .privacy-row, .support-card, .stats, .support-actions, .actions, .command-tabs { grid-template-columns:1fr; }
+      .composition-row { grid-template-columns:34px minmax(98px,1fr) 70px; }
+      .composition-track { grid-column:2 / 4; }
+      .flow { grid-template-columns:1fr; }
+      pre { padding-right:16px; }
+      .copy-inline { position:static; width:100%; margin-top:8px; background:#111b18; }
+      .bottom-note { align-items:flex-start; flex-direction:column; }
+    }
   </style>
 </head>
 <body>
 <main>
   <section class="shell">
-    <div class="hero">
+    <div class="hero-grid">
       <div>
-        <h1>Donate a coding-agent session to ContextEcho</h1>
-        <p class="lede">Start a local scanner, pick a Claude Code or Codex session, redact locally, and submit only the verified artifact.</p>
-        <div class="intro-links">
-          <a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md">Privacy details</a>
-          <a href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md">Current ranking</a>
-        </div>
-        <div class="privacy">Raw session history stays local. The server receives only redacted files after you approve them.</div>
-        <div class="public-overview">
-          <div class="support-card">
-            <div class="bow-mascot" aria-hidden="true"><div class="bow-star">★</div><div class="bow-head"></div><div class="bow-body"></div><div class="bow-hands"></div></div>
-            <div class="support-main">
-              <div class="support-title">Help more donors find ContextEcho</div>
-              <div class="support-copy">Star the GitHub repo or like the dataset, even if you are not ready to donate today.</div>
-              <div class="stats" aria-live="polite">
-                <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
-                  <div class="stat-icon" data-icon="download"></div>
-                  <div class="stat-value" data-stat-value="downloads">8,350</div>
-                  <div class="stat-label">Downloads Last Month</div>
-                </a>
-                <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">
-                  <div class="stat-icon" data-icon="star"></div>
-                  <div class="stat-value" data-stat-value="stars">11</div>
-                  <div class="stat-label">GitHub Stars</div>
-                </a>
-                <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
-                  <div class="stat-icon" data-icon="heart"></div>
-                  <div class="stat-value" data-stat-value="likes">5</div>
-                  <div class="stat-label">Dataset Likes</div>
-                </a>
-              </div>
+        <h1>Donate a coding-agent session to <span>ContextEcho</span></h1>
+        <p class="lede">Run a local scanner, pick a Claude Code or Codex session, redact locally, and submit only the verified artifact.</p>
+        <div class="privacy-row">
+          <div class="privacy-item">
+            <div class="round-icon" data-icon="lock"></div>
+            <div>
+              <div class="privacy-title">Your privacy matters</div>
+              <div class="privacy-copy">Raw session history stays local.</div>
             </div>
           </div>
-          <div class="composition-panel">
-            <div class="composition-title">Dataset Composition</div>
-            <div class="composition-subtitle">Current public coverage metrics.</div>
-            <div class="composition-list">
-              <div class="composition-row">
-                <div class="composition-icon" data-icon="users"></div>
-                <div class="composition-label">Sessions</div>
-                <div class="composition-track"><div class="composition-fill" style="width:78%"></div></div>
-                <div class="composition-value">9</div>
-              </div>
-              <div class="composition-row">
-                <div class="composition-icon" data-icon="hand-heart"></div>
-                <div class="composition-label">Donors</div>
-                <div class="composition-track"><div class="composition-fill" style="width:78%"></div></div>
-                <div class="composition-value">9</div>
-              </div>
-              <div class="composition-row">
-                <div class="composition-icon" data-icon="building"></div>
-                <div class="composition-label">Institutes</div>
-                <div class="composition-track"><div class="composition-fill" style="width:68%"></div></div>
-                <div class="composition-value">6</div>
-              </div>
-              <div class="composition-row">
-                <div class="composition-icon" data-icon="grid"></div>
-                <div class="composition-label">Total turns</div>
-                <div class="composition-track"><div class="composition-fill" style="width:56%"></div></div>
-                <div class="composition-value">24,649</div>
-              </div>
+          <div class="privacy-item">
+            <div class="round-icon" data-icon="shield"></div>
+            <div>
+              <div class="privacy-title">You're in control</div>
+              <div class="privacy-copy">Server receives only redacted files after you approve them.</div>
             </div>
           </div>
-        </div>
-        <div class="command-card">
-          <div class="command-label">One command starts the local wizard</div>
-          <div class="command-tabs" role="tablist" aria-label="Choose operating system command">
-            <button class="command-tab active" type="button" data-command-target="unix">macOS / Linux</button>
-            <button class="command-tab" type="button" data-command-target="windows">Windows PowerShell</button>
-          </div>
-          <pre id="command">curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash</pre>
-          <div id="commandHelp" class="command-help">Use this in Terminal on macOS/Linux, or in WSL/Git Bash on Windows.</div>
-          <div class="actions">
-            <button class="primary" id="copyCommand" type="button">Copy Command</button>
-            <a class="button local" id="openLocalWizard" role="button" aria-disabled="true" tabindex="-1">Continue in Local Wizard</a>
-          </div>
-          <div id="bridgeStatus" class="bridge-status">Run the command once. When the local wizard starts, this page will detect it and enable Continue.</div>
         </div>
       </div>
+      <aside class="composition-panel">
+        <div class="composition-title">Dataset Composition</div>
+        <div class="composition-subtitle">Current public coverage metrics.</div>
+        <div class="composition-list">
+          <div class="composition-row">
+            <div class="composition-icon" data-icon="users"></div>
+            <div class="composition-label">Sessions</div>
+            <div class="composition-track"><div class="composition-fill" style="width:78%"></div></div>
+            <div class="composition-value">9</div>
+          </div>
+          <div class="composition-row">
+            <div class="composition-icon" data-icon="hand-heart"></div>
+            <div class="composition-label">Donors</div>
+            <div class="composition-track"><div class="composition-fill" style="width:78%"></div></div>
+            <div class="composition-value">9</div>
+          </div>
+          <div class="composition-row">
+            <div class="composition-icon" data-icon="building"></div>
+            <div class="composition-label">Institutes</div>
+            <div class="composition-track"><div class="composition-fill" style="width:68%"></div></div>
+            <div class="composition-value">6</div>
+          </div>
+          <div class="composition-row">
+            <div class="composition-icon" data-icon="grid"></div>
+            <div class="composition-label">Total turns</div>
+            <div class="composition-track"><div class="composition-fill" style="width:56%"></div></div>
+            <div class="composition-value">24,649</div>
+          </div>
+        </div>
+      </aside>
     </div>
+
+    <div class="main-grid">
+      <section class="support-card">
+        <div class="mascot" aria-hidden="true">
+          <div class="mascot-star">★</div>
+          <div class="mascot-head"></div>
+          <div class="mascot-body"></div>
+          <div class="mascot-hands"></div>
+          <div class="mascot-laptop"></div>
+        </div>
+        <div>
+          <div class="support-title">Help more donors find ContextEcho</div>
+          <div class="support-copy">Star the GitHub repo or like the dataset, even if you're not ready to donate today.</div>
+          <div class="stats" aria-live="polite">
+            <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
+              <div class="stat-icon" data-icon="download"></div>
+              <div class="stat-value" data-stat-value="downloads">8,350</div>
+              <div class="stat-label">Downloads<br>Last Month</div>
+            </a>
+            <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">
+              <div class="stat-icon" data-icon="star"></div>
+              <div class="stat-value" data-stat-value="stars">11</div>
+              <div class="stat-label">GitHub Stars<br>Click to star</div>
+            </a>
+            <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
+              <div class="stat-icon" data-icon="heart"></div>
+              <div class="stat-value" data-stat-value="likes">5</div>
+              <div class="stat-label">Dataset Likes<br>Click to like</div>
+            </a>
+          </div>
+          <div class="support-actions">
+            <a class="button outline" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">
+              <span class="mini-icon" data-icon="github"></span>Star on GitHub <span aria-hidden="true">-></span>
+            </a>
+            <a class="button outline heart" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
+              <span class="mini-icon" data-icon="heart"></span>Like the Dataset <span aria-hidden="true">-></span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="command-card">
+        <div class="command-head">
+          <div class="step-badge">1</div>
+          <div>
+            <div class="command-title">Start the Local Wizard</div>
+            <div class="command-copy">One command starts everything.</div>
+          </div>
+        </div>
+        <div class="command-tabs" role="tablist" aria-label="Choose operating system command">
+          <button class="command-tab active" type="button" data-command-target="unix"><span class="mini-icon" data-icon="apple"></span>macOS / Linux</button>
+          <button class="command-tab" type="button" data-command-target="windows"><span class="mini-icon" data-icon="windows"></span>Windows PowerShell</button>
+        </div>
+        <div class="command-wrap">
+          <pre id="command">curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash</pre>
+          <button id="copyCommandInline" class="copy-inline" type="button"><span class="mini-icon" data-icon="copy"></span>Copy</button>
+        </div>
+        <div id="commandHelp" class="command-help">Use this in Terminal on macOS/Linux, or in WSL/Git Bash on Windows.</div>
+        <div class="actions">
+          <button class="button outline" id="copyCommand" type="button"><span class="mini-icon" data-icon="copy"></span>Copy Command</button>
+          <a class="button local" id="openLocalWizard" role="button" aria-disabled="true" tabindex="-1">Continue in Local Wizard <span aria-hidden="true">-></span></a>
+        </div>
+        <div id="bridgeStatus" class="bridge-status">Run the command once. When the local wizard starts, this page will detect it and enable Continue.</div>
+      </section>
+    </div>
+
+    <section class="flow-card" aria-label="What happens next">
+      <div class="flow-title">What happens next?</div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-icon" data-icon="monitor"></div>
+          <div><div class="flow-name">Run Local Scanner</div><div class="flow-copy">Installs and scans your sessions.</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-icon" data-icon="code"></div>
+          <div><div class="flow-name">Pick a Session</div><div class="flow-copy">Choose Claude Code or Codex session.</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-icon" data-icon="pencil"></div>
+          <div><div class="flow-name">Redact Locally</div><div class="flow-copy">Remove sensitive data on your machine.</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-icon" data-icon="file-check"></div>
+          <div><div class="flow-name">Review & Approve</div><div class="flow-copy">Verify the redacted artifact.</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-icon" data-icon="upload"></div>
+          <div><div class="flow-name">Submit</div><div class="flow-copy">Only approved files are sent to the server.</div></div>
+        </div>
+      </div>
+    </section>
+
     <section class="guide" aria-labelledby="guideTitle">
       <h2 id="guideTitle">Step-by-step donation guide</h2>
       <p class="guide-intro">Follow these screens in order. The public page only starts the local wizard; the actual scan and redaction happen on <strong>127.0.0.1</strong>, which means your own computer.</p>
@@ -207,7 +619,7 @@
             <img src="assets/donation-step-1-terminal.png" alt="Terminal running the ContextEcho donation command and starting the local wizard">
           </div>
           <div class="guide-copy">
-            <h3>1. Run the command in Terminal</h3>
+            <div class="guide-head"><div class="guide-num">1</div><h3>Run the command in Terminal</h3></div>
             <p>After copying the command from this page, paste it into Terminal and press Enter. The script prepares a private local environment and starts the donation wizard.</p>
             <ul>
               <li>Leave this Terminal window open while donating.</li>
@@ -221,7 +633,7 @@
             <img src="assets/donation-guide-pick-annotated.png" alt="Annotated local wizard pick-session page showing Discover Sessions, session selection, and Next Redact">
           </div>
           <div class="guide-copy">
-            <h3>2. Discover and pick a session</h3>
+            <div class="guide-head"><div class="guide-num">2</div><h3>Discover and pick a session</h3></div>
             <p>In the local wizard, click <strong>Discover Sessions</strong>, choose one useful session row, then click <strong>Next: Redact</strong>.</p>
             <ul>
               <li>Choose a real session with 100+ turns or context compactions.</li>
@@ -235,11 +647,11 @@
             <img src="assets/donation-guide-redact-annotated.png" alt="Annotated local wizard redaction page showing safety confirmation, Redact and Verify, review checkbox, and Next Submit">
           </div>
           <div class="guide-copy">
-            <h3>3. Redact locally and verify</h3>
+            <div class="guide-head"><div class="guide-num">3</div><h3>Redact locally and verify</h3></div>
             <p>Confirm the session is safe to donate, then click <strong>Redact and Verify</strong>. When it shows <strong>Verified clean</strong>, review the result and continue.</p>
             <ul>
               <li>Keep <strong>Full redacted</strong> for best research fidelity, or use <strong>User-minimized</strong> for stronger privacy.</li>
-              <li>Add optional private words only if something specific remains.</li>
+              <li>Use private-word check if a specific word remains.</li>
               <li>Check the review box, then continue to Submit.</li>
             </ul>
           </div>
@@ -249,8 +661,8 @@
             <img src="assets/donation-guide-submit-annotated.png" alt="Annotated local wizard submit page showing contributor fields, Submit Donation, and success state">
           </div>
           <div class="guide-copy">
-            <h3>4. Submit and save the receipt</h3>
-            <p>Contributor fields are optional. Review the leaderboard preview, click <strong>Submit Donation</strong>, and wait for the success result.</p>
+            <div class="guide-head"><div class="guide-num">4</div><h3>Submit and save the receipt</h3></div>
+            <p>Fill contributor name, email, and institute for maintainer review. Review the leaderboard preview, click <strong>Submit Donation</strong>, and wait for success.</p>
             <ul>
               <li>Keep the tab open and the computer awake while upload runs.</li>
               <li>Your status is <strong>Pending maintainer review</strong> until accepted.</li>
@@ -260,17 +672,25 @@
         </article>
       </div>
     </section>
-    <p class="note">If automatic discovery finds nothing, keep using your coding agent and come back later. The donor flow is designed so contributors do not need to know where session history files live.</p>
+
+    <div class="bottom-note">
+      <div><strong>Your privacy is protected.</strong> Raw session history never leaves your machine. Only redacted, approved files are uploaded.</div>
+      <a href="https://github.com/Accenture/ContextEcho/blob/main/DONOR_PRIVACY.md" target="_blank" rel="noopener noreferrer">Learn more <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="footer">Questions or issues? <a href="https://github.com/Accenture/ContextEcho/issues" target="_blank" rel="noopener noreferrer">Open an issue on GitHub</a></div>
   </section>
 </main>
+
 <div id="zoomOverlay" class="zoom-overlay" aria-hidden="true">
   <div class="zoom-frame" role="dialog" aria-modal="true" aria-label="Enlarged donation guide screenshot">
     <button id="zoomClose" class="zoom-close" type="button" aria-label="Close enlarged screenshot">×</button>
     <img id="zoomImage" alt="">
   </div>
 </div>
+
 <script>
 const button = document.getElementById('copyCommand');
+const inlineCopy = document.getElementById('copyCommandInline');
 const openLocalWizard = document.getElementById('openLocalWizard');
 const bridgeStatus = document.getElementById('bridgeStatus');
 const zoomOverlay = document.getElementById('zoomOverlay');
@@ -288,6 +708,34 @@ const commands = {
   }
 };
 
+function iconSvg(name) {
+  const icons = {
+    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>',
+    shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
+    download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path><path d="M5 17v4"></path><path d="M19 17v4"></path></svg>',
+    star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="m12 2.8 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.9-5.4 2.9 1-6-4.4-4.3 6.1-.9z"></path></svg>',
+    heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 21s-7.5-4.8-9.4-9.1C1 8.3 3.1 5 6.5 5c2 0 3.4 1.1 4.1 2.2C11.3 6.1 12.8 5 14.8 5c3.4 0 5.5 3.3 3.9 6.9C16.7 16.2 12 21 12 21z"></path></svg>',
+    users: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+    'hand-heart': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 14h2a2 2 0 0 0 0-4h-3c-.6 0-1.1.2-1.5.6L4 15"></path><path d="m7 18 2 2c.4.4.9.6 1.5.6H15c.8 0 1.5-.4 2-1l4-5"></path><path d="M3 14l5 5"></path><path d="M12 6.5C12 4.6 13.6 3 15.5 3S19 4.6 19 6.5c0 2.8-3.5 5-3.5 5S12 9.3 12 6.5z"></path></svg>',
+    building: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"></path><path d="M4 10h16"></path><path d="M6 10v11"></path><path d="M18 10v11"></path><path d="M8 14v3"></path><path d="M12 14v3"></path><path d="M16 14v3"></path><path d="m12 3 8 5H4z"></path></svg>',
+    grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>',
+    github: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3.5-.4 7-1.7 7-7A5.4 5.4 0 0 0 19.5 4 5 5 0 0 0 19.4.5S18.1.1 15 2a13.4 13.4 0 0 0-6 0C5.9.1 4.6.5 4.6.5A5 5 0 0 0 4.5 4 5.4 5.4 0 0 0 3 7.5c0 5.3 3.5 6.6 7 7a4.8 4.8 0 0 0-1 3.5v4"></path><path d="M9 18c-4.5 2-5-2-7-2"></path></svg>',
+    apple: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M16.4 13.1c0-2.2 1.8-3.3 1.9-3.4-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.6.8-3.3.8-.7 0-1.8-.8-2.9-.8-1.5 0-2.9.9-3.7 2.2-1.6 2.8-.4 6.9 1.1 9.2.8 1.1 1.7 2.3 2.9 2.3 1.1 0 1.6-.7 2.9-.7 1.4 0 1.8.7 3 .7 1.2 0 2-1.1 2.8-2.2.9-1.3 1.2-2.5 1.2-2.6 0-.1-2.7-1.1-2.7-3.8zM14.3 6.6c.6-.8 1.1-1.9 1-3-.9 0-2 .6-2.6 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2-.5 2.6-1.3z"></path></svg>',
+    windows: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M3 5.1 10.8 4v7.4H3V5.1zm8.8-1.2L21 2.6v8.8h-9.2V3.9zM3 12.6h7.8V20L3 18.9v-6.3zm8.8 0H21v8.8l-9.2-1.3v-7.5z"></path></svg>',
+    copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
+    monitor: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg>',
+    code: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18-6-6 6-6"></path><path d="m15 6 6 6-6 6"></path></svg>',
+    pencil: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>',
+    'file-check': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="m9 15 2 2 4-4"></path></svg>',
+    upload: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M20 16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"></path></svg>'
+  };
+  return icons[name] || '';
+}
+
+document.querySelectorAll('[data-icon]').forEach(icon => {
+  icon.innerHTML = iconSvg(icon.dataset.icon || '');
+});
+
 document.querySelectorAll('.command-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     const target = tab.dataset.commandTarget || 'unix';
@@ -295,29 +743,15 @@ document.querySelectorAll('.command-tab').forEach(tab => {
     document.querySelectorAll('.command-tab').forEach(item => item.classList.toggle('active', item === tab));
     document.getElementById('command').textContent = selected.text;
     document.getElementById('commandHelp').textContent = selected.help;
-    button.textContent = 'Copy Command';
+    button.innerHTML = `${iconSvg('copy')}Copy Command`;
+    inlineCopy.innerHTML = `${iconSvg('copy')}Copy`;
   });
 });
-
-function iconSvg(name) {
-  if (name === 'download') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path><path d="M5 17v4"></path><path d="M19 17v4"></path></svg>';
-  if (name === 'star') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="m12 2.8 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.9-5.4 2.9 1-6-4.4-4.3 6.1-.9z"></path></svg>';
-  if (name === 'heart') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 21s-7.5-4.8-9.4-9.1C1 8.3 3.1 5 6.5 5c2 0 3.4 1.1 4.1 2.2C11.3 6.1 12.8 5 14.8 5c3.4 0 5.5 3.3 3.9 6.9C16.7 16.2 12 21 12 21z"></path></svg>';
-  if (name === 'users') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
-  if (name === 'hand-heart') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 14h2a2 2 0 0 0 0-4h-3c-.6 0-1.1.2-1.5.6L4 15"></path><path d="m7 18 2 2c.4.4.9.6 1.5.6H15c.8 0 1.5-.4 2-1l4-5"></path><path d="M3 14l5 5"></path><path d="M12 6.5C12 4.6 13.6 3 15.5 3S19 4.6 19 6.5c0 2.8-3.5 5-3.5 5S12 9.3 12 6.5z"></path></svg>';
-  if (name === 'building') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"></path><path d="M4 10h16"></path><path d="M6 10v11"></path><path d="M18 10v11"></path><path d="M8 14v3"></path><path d="M12 14v3"></path><path d="M16 14v3"></path><path d="m12 3 8 5H4z"></path></svg>';
-  if (name === 'grid') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>';
-  return '';
-}
 
 function formatStat(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.trunc(number).toLocaleString() : '...';
 }
-
-document.querySelectorAll('.stat-icon, .composition-icon').forEach(icon => {
-  icon.innerHTML = iconSvg(icon.dataset.icon || '');
-});
 
 async function refreshProjectStats() {
   const setValue = (name, value) => {
@@ -394,17 +828,23 @@ openLocalWizard.addEventListener('click', event => {
   }
 });
 
-button.addEventListener('click', async () => {
+async function copyCurrentCommand(trigger) {
   const text = document.getElementById('command').textContent.trim();
   try {
     await navigator.clipboard.writeText(text);
-    button.textContent = 'Copied';
+    trigger.textContent = 'Copied';
     bridgeStatus.textContent = 'Command copied. Run it in Terminal; this page will enable Continue when the local wizard starts.';
-    setTimeout(() => { button.textContent = 'Copy Command'; }, 1800);
+    setTimeout(() => {
+      if (trigger === button) trigger.innerHTML = `${iconSvg('copy')}Copy Command`;
+      if (trigger === inlineCopy) trigger.innerHTML = `${iconSvg('copy')}Copy`;
+    }, 1800);
   } catch (e) {
-    button.textContent = 'Select Command Above';
+    trigger.textContent = 'Select Command';
   }
-});
+}
+
+button.addEventListener('click', () => copyCurrentCommand(button));
+inlineCopy.addEventListener('click', () => copyCurrentCommand(inlineCopy));
 
 document.querySelectorAll('.shot img').forEach(img => {
   img.addEventListener('click', () => {
