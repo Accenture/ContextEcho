@@ -237,21 +237,7 @@
     .mini-icon svg { width:18px; height:18px; }
     .command-card { padding:22px; }
     .command-head {
-      display:grid;
-      grid-template-columns:auto minmax(0,1fr);
-      gap:12px;
-      align-items:start;
-    }
-    .step-badge {
-      width:34px;
-      height:34px;
-      border-radius:50%;
-      display:grid;
-      place-items:center;
-      background:var(--green);
-      color:white;
-      font-weight:950;
-      box-shadow:0 8px 22px rgba(22,120,67,.22);
+      display:block;
     }
     .command-tabs {
       display:grid;
@@ -564,7 +550,6 @@
 
       <section class="command-card">
         <div class="command-head">
-          <div class="step-badge">1</div>
           <div>
             <div class="command-title">Start the Local Wizard</div>
             <div class="command-copy">One command starts everything.</div>
