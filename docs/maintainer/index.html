@@ -5,22 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ContextEcho Maintainer Console</title>
   <style>
-    :root { --ink:#10211a; --muted:#5f6b65; --green:#167843; --line:#dfe7dc; --soft:#f6f9f1; --warn:#9d5a00; --danger:#9b201c; }
+    :root { --ink:#10211a; --muted:#5f6b65; --green:#167843; --line:#dfe7dc; --soft:#f6f9f1; --warn:#9d5a00; --danger:#9b201c; --blue:#0c4a83; }
     * { box-sizing:border-box; }
     body { margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:linear-gradient(120deg,#fff7d9 0%,#f8fbf3 50%,#dcefe1 100%); }
     main { max-width:1320px; margin:0 auto; padding:32px 20px 54px; }
-    .shell { background:#fffef8; border:1px solid var(--line); border-radius:22px; padding:28px; box-shadow:0 24px 60px rgba(37,54,42,.12); }
-    header { display:flex; justify-content:space-between; align-items:flex-start; gap:22px; }
-    h1 { margin:0; font-size:38px; line-height:1.08; letter-spacing:0; }
-    .lede { margin:9px 0 0; color:var(--muted); font-size:18px; line-height:1.4; }
-    .top-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
-    button, a.button { border:0; border-radius:10px; padding:11px 14px; font-weight:900; font-size:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; color:var(--ink); background:#e9eedf; }
+    .shell { background:#fffef8; border:1px solid var(--line); border-radius:22px; padding:34px; box-shadow:0 24px 60px rgba(37,54,42,.12); }
+    header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; }
+    .title-wrap { display:flex; gap:18px; align-items:flex-start; max-width:760px; }
+    .title-icon, .connection-icon, .callout-icon { width:46px; height:46px; flex:0 0 auto; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:var(--green); background:#e5f4e1; }
+    h1 { margin:0; font-size:42px; line-height:1.08; letter-spacing:0; }
+    .lede { margin:20px 0 0; color:#5e6b7a; font-size:19px; line-height:1.55; }
+    .top-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; min-width:380px; justify-content:flex-end; }
+    .top-actions .button:nth-child(3) { grid-column:2; }
+    button, a.button { border:1px solid transparent; border-radius:10px; padding:11px 14px; font-weight:900; font-size:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; color:var(--ink); background:#e9eedf; }
+    .icon-button { min-height:62px; gap:12px; background:white; border-color:#dce4df; border-radius:12px; font-size:17px; box-shadow:0 8px 24px rgba(30,48,36,.04); }
+    .icon-button svg { color:var(--green); }
     button.primary { background:var(--green); color:white; box-shadow:0 10px 24px rgba(22,120,67,.18); }
     button.danger { background:#f7dedb; color:var(--danger); }
     button:disabled { opacity:.55; cursor:not-allowed; box-shadow:none; }
     a { color:#13552f; font-weight:850; text-decoration:none; }
     a:hover, a:focus { text-decoration:underline; }
-    .token-card { margin-top:24px; border:1px solid #d8e6d5; border-radius:16px; background:var(--soft); padding:18px; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end; }
+    .token-card { margin-top:30px; border:1px solid #d8e0dc; border-radius:14px; background:white; padding:34px; box-shadow:0 10px 34px rgba(21,34,27,.06); }
+    .connection-head { display:flex; gap:18px; align-items:center; margin-bottom:28px; }
+    .connection-head h2 { font-size:26px; margin:0 0 4px; }
+    .connection-head p { margin:0; color:#5e6b7a; font-size:16px; line-height:1.45; }
+    .connection-grid { display:grid; grid-template-columns:1fr 1fr; gap:34px; }
+    .field-shell { display:flex; align-items:center; border:1px solid #d6ded9; border-radius:9px; background:white; overflow:hidden; box-shadow:inset 0 1px 2px rgba(16,33,26,.02); }
+    .field-icon { width:48px; align-self:stretch; display:inline-flex; align-items:center; justify-content:center; color:#64716a; background:#f7f9f5; border-right:1px solid #e8ede7; }
+    .field-shell input { border:0; border-radius:0; padding:13px 12px; min-height:50px; font-size:16px; box-shadow:none; }
+    .field-action { width:48px; align-self:stretch; border-radius:0; border-left:1px solid #e8ede7; background:white; color:#64716a; padding:0; box-shadow:none; }
+    .connection-footer { margin-top:24px; padding-top:24px; border-top:1px solid #dce4df; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .connection-footer .toolbar { margin:0; }
     label { display:block; font-weight:900; margin-bottom:6px; }
     input, textarea { width:100%; border:1px solid #d9e0d7; border-radius:10px; padding:11px 12px; font:inherit; background:white; color:var(--ink); }
     textarea { min-height:110px; resize:vertical; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; }
@@ -28,6 +43,18 @@
     .status { margin-top:14px; color:var(--muted); font-size:14px; min-height:20px; }
     .status.ok { color:#13552f; font-weight:850; }
     .status.error { color:var(--danger); font-weight:850; }
+    .connection-status { margin:0; min-height:0; display:inline-flex; align-items:center; gap:12px; border:1px solid #dce4df; border-radius:10px; background:#f8faf6; padding:10px 16px; min-width:240px; color:#5e6b65; }
+    .connection-status .status-mark { width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:white; background:#9aa69f; flex:0 0 auto; }
+    .connection-status strong { display:block; font-size:16px; line-height:1.15; }
+    .connection-status small { display:block; margin-top:3px; color:#637168; font-size:12px; font-weight:800; }
+    .connection-status.ok { color:#13552f; background:#f0fbef; border-color:#b9e1b8; }
+    .connection-status.ok .status-mark { background:#39ad4b; }
+    .connection-status.error { color:var(--danger); background:#fff7f6; border-color:#efc2be; }
+    .connection-status.error .status-mark { background:var(--danger); }
+    .privacy-callout { margin-top:24px; border:1px solid #cfe2f7; border-radius:12px; background:linear-gradient(90deg,#f0f7ff,#f8fbff); padding:20px 24px; display:flex; align-items:center; gap:16px; color:#143b63; }
+    .privacy-callout strong { display:block; color:#073a73; font-size:16px; }
+    .privacy-callout p { margin:5px 0 0; color:#244d75; line-height:1.45; }
+    .callout-icon { background:#e1efff; color:#1260b0; }
     .tabs { margin-top:24px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:10px; }
     .tab { background:transparent; border-radius:10px; }
     .tab.active { background:var(--green); color:white; }
@@ -53,7 +80,7 @@
     .two-col { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:16px; }
     .danger-zone { border-color:#efc2be; background:#fff8f7; }
     .mono-block { white-space:pre-wrap; overflow:auto; max-height:360px; border:1px solid var(--line); background:#111b18; color:#fffef8; border-radius:12px; padding:14px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; line-height:1.45; }
-    @media (max-width:920px) { header, .token-card, .two-col { grid-template-columns:1fr; display:grid; } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:920px) { header, .two-col, .connection-grid, .connection-footer { grid-template-columns:1fr; display:grid; } .title-wrap { max-width:none; } .top-actions { min-width:0; width:100%; } .connection-status { width:100%; } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width:620px) { main { padding:18px 10px 36px; } .shell { padding:18px; } .grid { grid-template-columns:1fr; } h1 { font-size:30px; } .toolbar input { min-width:0; } }
   </style>
 </head>
@@ -61,33 +88,95 @@
 <main>
   <section class="shell">
     <header>
-      <div>
-        <h1>ContextEcho Maintainer Console</h1>
-        <p class="lede">Check collection status, inspect relay records, backfill duplicate memory, and reset one submission when a donor needs to resubmit.</p>
+      <div class="title-wrap">
+        <span class="title-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.6 2.9 8.5 7 10 4.1-1.5 7-5.4 7-10V6l-7-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m8.7 12 2.1 2.1 4.7-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div>
+          <h1>ContextEcho Maintainer Console</h1>
+          <p class="lede">Check collection status, inspect relay records, backfill duplicate memory, and reset one submission when a donor needs to resubmit.</p>
+        </div>
       </div>
       <div class="top-actions">
-        <a class="button" href="../donate/">Donor page</a>
-        <a class="button" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md">Leaderboard</a>
-        <a class="button" href="https://huggingface.co/datasets/contextecho2026/persona-drift-staging/community">HF staging</a>
+        <a class="button icon-button" href="../donate/">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9.5" cy="7" r="4" stroke="currentColor" stroke-width="2"/><path d="M19 8v6m3-3h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Donor page
+        </a>
+        <a class="button icon-button" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8 21h8m-4-4v4M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7 7H4v2a3 3 0 0 0 3 3m10-5h3v2a3 3 0 0 1-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Leaderboard
+        </a>
+        <a class="button icon-button" href="https://huggingface.co/datasets/contextecho2026/persona-drift-staging/community">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M10 2v6l-5.5 9A3 3 0 0 0 7 22h10a3 3 0 0 0 2.5-5L14 8V2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          HF staging
+        </a>
       </div>
     </header>
 
     <section class="token-card">
-      <div>
-        <label for="relayUrl">Relay URL</label>
-        <input id="relayUrl" value="https://contextecho2026-context-echo-donation-relay.hf.space">
-        <div class="hint">The token is kept in this browser tab's session storage only. It is never committed to GitHub Pages.</div>
+      <div class="connection-head">
+        <span class="connection-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 0 0 12 20.1l1.1-1.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+        <div>
+          <h2>Relay Connection</h2>
+          <p>Provide the relay URL and your admin token to connect to the ContextEcho donation relay.</p>
+        </div>
       </div>
-      <div>
-        <label for="adminToken">Admin token</label>
-        <input id="adminToken" type="password" autocomplete="off" placeholder="paste maintainer token">
+      <div class="connection-grid">
+        <div>
+          <label for="relayUrl">Relay URL</label>
+          <div class="field-shell">
+            <span class="field-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9S14.2 18.5 12 21c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            <input id="relayUrl" value="https://contextecho2026-context-echo-donation-relay.hf.space">
+            <button class="field-action" id="copyRelayBtn" type="button" aria-label="Copy relay URL">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="hint">This is the public endpoint of your donation relay instance.</div>
+        </div>
+        <div>
+          <label for="adminToken">Admin token</label>
+          <div class="field-shell">
+            <span class="field-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 15v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            <input id="adminToken" type="password" autocomplete="off" placeholder="paste maintainer token">
+            <button class="field-action" id="toggleTokenBtn" type="button" aria-label="Show or hide admin token">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="m4 20 16-16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="hint">Stored securely in this browser session only.</div>
+        </div>
       </div>
-      <div class="toolbar">
-        <button class="primary" id="connectBtn">Connect</button>
-        <button id="clearTokenBtn">Clear token</button>
+      <div class="connection-footer">
+        <div class="toolbar">
+          <button class="primary" id="connectBtn">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 0 0 12 20.1l1.1-1.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Connect to relay
+          </button>
+          <button id="clearTokenBtn">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2m-1 5v6M9 11v6m-4-11 1 15h12l1-15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Clear token
+          </button>
+        </div>
+        <div id="globalStatus" class="status connection-status">
+          <span class="status-mark" aria-hidden="true">i</span>
+          <span><strong>Not connected</strong><small>Paste token and connect</small></span>
+        </div>
       </div>
     </section>
-    <div id="globalStatus" class="status"></div>
+    <section class="privacy-callout">
+      <span class="callout-icon" aria-hidden="true">
+        <svg width="27" height="27" viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.6 2.9 8.5 7 10 4.1-1.5 7-5.4 7-10V6l-7-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m8.7 12 2.1 2.1 4.7-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <div>
+        <strong>Your token is never committed to GitHub Pages.</strong>
+        <p>It is kept in your browser tab's session storage only and never leaves your device except when calling the relay.</p>
+      </div>
+    </section>
 
     <nav class="tabs" aria-label="Maintainer console sections">
       <button class="tab active" data-tab="overview">Overview</button>
@@ -187,8 +276,16 @@ function compact(value){
 }
 function status(id, text, kind=''){
   const el = $(id);
-  el.textContent = text;
   el.className = `status ${kind}`.trim();
+  if(id === 'globalStatus'){
+    el.className = `status connection-status ${kind}`.trim();
+    const mark = kind === 'ok' ? '✓' : kind === 'error' ? '!' : '...';
+    const title = kind === 'ok' ? 'Connected to relay' : kind === 'error' ? 'Connection issue' : text;
+    const detail = kind === 'ok' ? 'Last connected: Just now' : kind === 'error' ? text : (text.startsWith('Loading') ? 'Please wait' : 'Paste token and connect');
+    el.innerHTML = `<span class="status-mark" aria-hidden="true">${escapeHtml(mark)}</span><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span>`;
+    return;
+  }
+  el.textContent = text;
 }
 function relayUrl(){
   return $('relayUrl').value.replace(/\/+$/, '');
@@ -370,6 +467,19 @@ function showTab(name){
 }
 document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => showTab(btn.dataset.tab));
 $('connectBtn').onclick = () => autoloadAll().catch(e => status('globalStatus', `ERROR: ${e.message}`, 'error'));
+$('copyRelayBtn').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(relayUrl());
+    status('globalStatus', 'Relay URL copied.');
+  } catch {
+    status('globalStatus', 'Copy failed; select and copy the Relay URL field manually.', 'error');
+  }
+};
+$('toggleTokenBtn').onclick = () => {
+  const field = $('adminToken');
+  field.type = field.type === 'password' ? 'text' : 'password';
+  field.focus();
+};
 $('clearTokenBtn').onclick = () => {
   sessionStorage.removeItem(tokenKey);
   $('adminToken').value = '';
