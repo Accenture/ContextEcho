@@ -1114,27 +1114,30 @@ INDEX_HTML = r"""<!doctype html>
     .header-icon { font-size:13px; color:#5d6660; line-height:1; }
     .header-footnote { color:#1f6f43; font-size:10px; font-weight:950; vertical-align:super; letter-spacing:0; margin-left:2px; }
     .table-note { color:var(--muted); font-size:12px; text-align:right; }
-    .session-row { min-height:88px; padding:18px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
+    .session-row { min-height:68px; padding:12px 18px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
-    .session-row.donated-row { cursor:not-allowed; background:#f7f9f4; }
-    .session-row.donated-row:hover { background:#f7f9f4; }
+    .session-row.donated-history-row { background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
+    .session-row.donated-history-row:hover { background:#e1eadb; }
+    .session-row.donated-row { cursor:not-allowed; background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
+    .session-row.donated-row:hover { background:#e1eadb; }
     .session-row.improve-row { cursor:not-allowed; background:#fff9f0; opacity:.82; }
     .session-row.improve-row:hover { background:#fff9f0; }
     .session-main { min-width:0; }
-    .session-title-line { font-weight:950; font-size:15px; color:#0e1714; line-height:1.25; overflow-wrap:anywhere; }
-    .session-chip-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .session-title-line { font-weight:950; font-size:14px; color:#0e1714; line-height:1.2; overflow-wrap:anywhere; }
+    .session-chip-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:6px; }
     .session-chip-row:empty { display:none; }
     .session-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .all-donated-note { margin:12px; border:1px solid #b9d6b0; background:#f2fbef; border-radius:14px; padding:14px 16px; color:#145832; font-weight:900; }
     .all-donated-note span { display:block; margin-top:4px; color:#52605a; font-weight:650; }
     .empty-sessions.thanks { color:#145832; font-weight:900; background:#f8fcf4; }
     .empty-sessions.thanks span { display:block; margin-top:6px; color:#52605a; font-weight:650; }
-    .session-icon { width:44px; height:44px; display:grid; place-items:center; border-radius:10px; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:20px; }
+    .session-icon { width:36px; height:36px; display:grid; place-items:center; border-radius:9px; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:18px; }
+    .donated-history-row .session-icon, .donated-row .session-icon { background:#cfe0c8; color:#0f6a3a; }
     .session-title { font-weight:900; font-size:14px; }
     .session-date { color:#5f6662; font-size:15px; }
-    .session-num { font-weight:950; font-size:19px; color:#07110d; }
+    .session-num { font-weight:950; font-size:17px; color:#07110d; }
     .session-fit { display:flex; justify-content:flex-start; }
     .session-fit .pill { text-transform:capitalize; }
     .session-chevron { color:#5f6662; font-size:25px; line-height:1; justify-self:end; border:0; background:transparent; box-shadow:none; padding:4px 6px; min-width:0; border-radius:8px; }
@@ -1153,7 +1156,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill.best { background:#dff1d9; color:#13552f; }
     .pill.good { background:#e8ecd7; color:#5c5d16; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
-    .pill.donated { background:#dceafa; color:#1e4f87; }
+    .pill.donated { background:#cfe1f5; color:#163f70; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
     .pill.local-record { background:#fff0d8; color:#7a420a; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
@@ -2575,6 +2578,7 @@ function renderSessions(){
       ? `<span class="pill local-record" data-copy-submission="${escapeHtml(donationInfo.localRecordId)}" title="Local receipt only; relay does not currently have this submission">local record ${escapeHtml(donationInfo.localRecordId)}</span>`
       : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
+    if(donationInfo.donatedBefore) row.classList.add('donated-history-row');
     const currentFit = fit(s);
     const hasMenuActions = donationInfo.supportId && donationInfo.donatedBefore;
     const chipLine = [statusPill, supportPill, localRecordPill].filter(Boolean).join(' ');
