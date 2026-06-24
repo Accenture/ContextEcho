@@ -295,6 +295,13 @@ function compact(value){
   if(!Number.isFinite(n)) return '0';
   return n.toLocaleString();
 }
+function formatMinute(value){
+  const text = String(value || '').trim();
+  if(!text) return '';
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  if(match) return `${match[1]} ${match[2]} UTC`;
+  return text.length > 16 ? text.slice(0, 16) : text;
+}
 function status(id, text, kind=''){
   const el = $(id);
   el.className = `status ${kind}`.trim();
@@ -387,7 +394,7 @@ function renderPending(){
       `${escapeHtml(row.contributor || '')}<div class="hint">${escapeHtml(row.email || '')}</div>`,
       escapeHtml(row.institute || ''),
       `${escapeHtml(row.agent || '')}<div class="hint">${escapeHtml(row.model || '')}</div>`,
-      `${compact(row.turns)} turns<div class="hint">${compact(row.records)} records · ${compact(row.compactions)} ctx</div>`,
+      `${compact(row.turns)} turns<div class="hint">${compact(row.records)} records · ${compact(row.compactions)} ctx${row.submitted_utc ? ` · ${escapeHtml(formatMinute(row.submitted_utc))}` : ''}</div>`,
       `${filePill(row.has_session, 'session')} ${filePill(row.has_manifest, 'manifest')} ${filePill(row.has_consent, 'consent')}`,
     ])
   );
@@ -413,8 +420,8 @@ function renderMetadata(){
   $('metadataTable').innerHTML = table(
     ['Submitted', 'Request', 'Submission', 'Name', 'Email', 'Institute', 'Public', 'Action'],
     rows.map(row => [
-      `<code>${escapeHtml(row.submitted_utc || '')}</code>`,
-      `<code>${escapeHtml(row.request_id || '')}</code><div class="hint">${escapeHtml(row.status || 'pending')}${row.approved_utc ? ` · ${escapeHtml(row.approved_utc)}` : ''}</div>`,
+      `<code>${escapeHtml(formatMinute(row.submitted_utc))}</code>`,
+      `<code>${escapeHtml(row.request_id || '')}</code><div class="hint">${escapeHtml(row.status || 'pending')}${row.approved_utc ? ` · ${escapeHtml(formatMinute(row.approved_utc))}` : ''}</div>`,
       `<code>${escapeHtml(row.submission_id || '')}</code>`,
       escapeHtml(row.credit_name || ''),
       escapeHtml(row.contributor_email || ''),
@@ -525,7 +532,7 @@ function renderEvents(){
       delete details.matched_submission_id;
       delete details.removed_submission_ids;
       return [
-        `<code>${escapeHtml(row.ts || '')}</code>`,
+        `<code>${escapeHtml(formatMinute(row.ts))}</code>`,
         `<span class="pill">${escapeHtml(row.event || '')}</span>`,
         `<code>${escapeHtml(submission || '')}</code>`,
         `<code>${escapeHtml(JSON.stringify(details))}</code>`,

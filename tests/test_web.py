@@ -85,6 +85,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("function approveMetadata", html)
         self.assertIn("Relay records updated", html)
         self.assertIn("Staging manifest updated", html)
+        self.assertIn("function formatMinute", html)
+        self.assertIn("formatMinute(row.submitted_utc)", html)
+        self.assertIn("formatMinute(row.approved_utc)", html)
+        self.assertIn("formatMinute(row.ts)", html)
 
     def test_submit_requires_contributor_identity_fields(self):
         self.assertIn("Contributor info is required", INDEX_HTML)
