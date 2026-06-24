@@ -1095,43 +1095,55 @@ INDEX_HTML = r"""<!doctype html>
     .reset-donated { margin-top:12px; justify-content:center; }
     .reset-donated button { padding:8px 12px; font-size:12px; }
     .sessions-card { min-height:342px; }
-    .session-head { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
-    .session-head h2 { font-size:21px; }
-    .session-summary { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; align-items:center; }
-    .count-badge { border-radius:10px; padding:6px 12px; color:var(--accent); background:#eaf4e5; font-weight:900; }
-    .fit-summary { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
-    .fit-chip { border-radius:999px; padding:5px 8px; font-size:11px; font-weight:900; background:#edf1e4; color:#44504a; }
+    .session-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; margin-bottom:24px; }
+    .session-head h2 { font-size:24px; line-height:1.05; }
+    .session-subtitle { margin-top:6px; color:#59615d; font-size:14px; }
+    .session-summary { display:flex; flex-wrap:wrap; gap:12px; justify-content:flex-end; align-items:stretch; }
+    .count-badge { min-width:72px; border:1px solid #d9ded6; border-radius:12px; padding:8px 14px; color:#13231c; background:#fff; font-weight:900; text-align:center; box-shadow:0 8px 24px rgba(38,54,44,.05); }
+    .count-badge strong { display:block; color:var(--accent); font-size:24px; line-height:1; }
+    .count-badge span { display:block; margin-top:2px; font-size:12px; color:#38423d; }
+    .fit-summary { display:flex; flex-wrap:wrap; gap:12px; justify-content:flex-end; }
+    .fit-chip { border-radius:10px; padding:12px 18px; font-size:14px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:82px; }
     .fit-chip.best { background:#dff1d9; color:#13552f; }
     .fit-chip.good { background:#e8ecd7; color:#5c5d16; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
-    .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(250px,1fr) 110px 80px 66px 82px; gap:18px; align-items:center; }
-    .session-table-head { padding:10px 14px; background:#f2f5ef; color:#5a625d; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
+    .session-table-head, .session-row { display:grid; grid-template-columns:48px minmax(280px,1fr) 116px 94px 74px 96px 18px; gap:14px; align-items:center; }
+    .session-table-head { padding:14px 18px; background:#f2f5ef; color:#5a625d; font-size:12px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
+    .session-table-head > div { display:flex; align-items:center; gap:5px; }
+    .header-icon { font-size:13px; color:#5d6660; line-height:1; }
     .header-footnote { color:#1f6f43; font-size:10px; font-weight:950; vertical-align:super; letter-spacing:0; margin-left:2px; }
-    .table-note { margin-top:8px; color:var(--muted); font-size:12px; text-align:right; }
-    .session-row { padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
+    .table-note { color:var(--muted); font-size:12px; text-align:right; }
+    .session-row { min-height:88px; padding:18px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
-    .session-row.donated-row { cursor:not-allowed; opacity:.72; background:#f7f9f4; }
+    .session-row.donated-row { cursor:not-allowed; background:#f7f9f4; }
     .session-row.donated-row:hover { background:#f7f9f4; }
     .session-row.improve-row { cursor:not-allowed; background:#fff9f0; opacity:.82; }
     .session-row.improve-row:hover { background:#fff9f0; }
+    .session-main { min-width:0; }
+    .session-title-line { font-weight:950; font-size:15px; color:#0e1714; line-height:1.25; overflow-wrap:anywhere; }
+    .session-chip-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .session-chip-row:empty { display:none; }
     .session-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .all-donated-note { margin:12px; border:1px solid #b9d6b0; background:#f2fbef; border-radius:14px; padding:14px 16px; color:#145832; font-weight:900; }
     .all-donated-note span { display:block; margin-top:4px; color:#52605a; font-weight:650; }
     .empty-sessions.thanks { color:#145832; font-weight:900; background:#f8fcf4; }
     .empty-sessions.thanks span { display:block; margin-top:6px; color:#52605a; font-weight:650; }
-    .session-icon { width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:14px; }
+    .session-icon { width:44px; height:44px; display:grid; place-items:center; border-radius:10px; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:20px; }
     .session-title { font-weight:900; font-size:14px; }
-    .session-date { color:#5f6662; font-size:13px; }
-    .session-num { font-weight:900; font-size:15px; }
+    .session-date { color:#5f6662; font-size:15px; }
+    .session-num { font-weight:950; font-size:19px; color:#07110d; }
+    .session-fit { display:flex; justify-content:flex-start; }
+    .session-fit .pill { text-transform:capitalize; }
+    .session-chevron { color:#5f6662; font-size:25px; line-height:1; justify-self:end; }
     .empty-sessions { padding:26px; text-align:center; color:var(--muted); }
     .bottom-nav { margin-top:16px; padding:12px 34px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
     .tip { display:flex; gap:12px; align-items:center; color:#3f4843; }
     .tip:before { content:"?"; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; border:2px solid var(--accent); color:var(--accent); font-weight:950; }
     .next-button { min-width:170px; font-size:16px; }
-    .pill { display:inline-block; border-radius:999px; padding:3px 8px; font-size:12px; font-weight:800; background:#edf1e4; }
+    .pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:850; background:#edf1e4; line-height:1; box-shadow:inset 0 0 0 1px rgba(24,38,30,.05); }
     .pill.best { background:#dff1d9; color:#13552f; }
     .pill.good { background:#e8ecd7; color:#5c5d16; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
@@ -1139,8 +1151,15 @@ INDEX_HTML = r"""<!doctype html>
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
     .pill.local-record { background:#fff0d8; color:#7a420a; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
-    .fit-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; }
-    .fit-legend span { display:inline-flex; align-items:center; gap:5px; }
+    .fit-legend { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:14px; padding:10px 14px; border:1px solid var(--line); border-radius:12px; background:#fbfcf8; color:var(--muted); font-size:12px; line-height:1.35; }
+    .legend-items { display:flex; flex-wrap:wrap; gap:16px; align-items:center; }
+    .legend-item { display:inline-flex; align-items:center; gap:7px; }
+    .fit-star { color:#1f7a47; font-size:12px; line-height:1; }
+    .fit-arrow { color:#a75009; font-size:13px; line-height:1; }
+    .session-pager { display:none; margin-top:22px; align-items:center; justify-content:center; gap:24px; }
+    .session-pager button { min-width:118px; }
+    .session-pager #nextPage { background:var(--accent); color:white; box-shadow:0 10px 20px rgba(23,113,63,.22); }
+    .session-pager #pageInfo { font-size:14px; color:#555f59; }
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
     .inline-status.ok { color:#12683a; font-weight:850; }
     .inline-status.error { color:#9b201c; font-weight:850; }
@@ -1273,8 +1292,8 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .privacy-links { justify-content:flex-start; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:40px minmax(180px,1fr) 100px 74px 66px; } .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-table-head,.session-row { grid-template-columns:36px 1fr 74px; } .session-date,.session-cmp,.session-fit { display:none; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .privacy-links { justify-content:flex-start; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-table-head,.session-row { grid-template-columns:46px minmax(180px,1fr) 110px 84px 78px 22px; } .session-table-head > div:nth-child(6), .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-head { flex-direction:column; } .session-summary { justify-content:flex-start; } .session-table-head,.session-row { grid-template-columns:44px minmax(0,1fr) 22px; } .session-table-head > div:nth-child(n+3):nth-child(-n+6), .session-date,.session-turns,.session-cmp,.session-fit { display:none; } .session-icon { width:36px; height:36px; font-size:16px; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -1336,26 +1355,31 @@ INDEX_HTML = r"""<!doctype html>
       </div>
       <div class="card sessions-card">
         <div class="session-head">
-          <h2>Recently discovered sessions</h2>
+          <div>
+            <h2>Recently discovered sessions</h2>
+            <div class="session-subtitle">Sessions automatically detected from your conversations.</div>
+          </div>
           <div class="session-summary">
-            <span id="sessionCount" class="count-badge">0 found</span>
+            <span id="sessionCount" class="count-badge"><strong>0</strong><span>found</span></span>
             <div id="fitSummary" class="fit-summary" aria-live="polite"></div>
           </div>
         </div>
         <div id="sessionList" class="session-list">
-          <div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div>
+          <div class="session-table-head"><div>#</div><div>Session</div><div><span class="header-icon">&#9719;</span> Last active</div><div><span class="header-icon">&#9817;</span> User turns</div><div><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div><div></div></div>
           <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
         </div>
         <div class="fit-legend">
-          <span><span class="pill best">best</span> 100+ turns and 2+ ctx cmp</span>
-          <span><span class="pill good">good</span> 50+ turns and 1+ ctx cmp</span>
-          <span><span class="pill improve">improve</span> keep chatting before donating</span>
+          <div class="legend-items">
+            <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
+            <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Good</span> 50+ turns and 1+ ctx cmp</span>
+            <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
+          </div>
+          <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
         </div>
-        <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
-        <div id="pager" class="row" style="display:none; margin-top:18px; justify-content:center">
-          <button id="prevPage" class="secondary">Previous</button>
+        <div id="pager" class="session-pager">
+          <button id="prevPage" class="secondary">&lsaquo; Previous</button>
           <span id="pageInfo" class="muted"></span>
-          <button id="nextPage" class="secondary">Next</button>
+          <button id="nextPage" class="secondary">Next &rsaquo;</button>
         </div>
       </div>
     </div>
@@ -2467,26 +2491,32 @@ function friendlyRequestError(e, action='operation'){
   }
   return msg;
 }
+function sessionTableHead(){
+  return '<div class="session-table-head"><div>#</div><div>Session</div><div><span class="header-icon">&#9719;</span> Last active</div><div><span class="header-icon">&#9817;</span> User turns</div><div><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div><div></div></div>';
+}
+function fitLabel(value){
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+}
 function renderSessions(){
   const list = $('sessionList');
   list.innerHTML = '';
   const start = page * pageSize;
   const rows = sessions.slice(start, start + pageSize);
   const allDonated = allSessionsDonated();
-  $('sessionCount').textContent = `${sessions.length} found`;
+  $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   const counts = fitCounts();
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip best">best ${counts.best || 0}</span><span class="fit-chip good">good ${counts.good || 0}</span><span class="fit-chip improve">improve ${counts.improve || 0}</span>`
+    ? `<span class="fit-chip best">Best ${counts.best || 0}</span><span class="fit-chip good">Good ${counts.good || 0}</span><span class="fit-chip improve">Improve ${counts.improve || 0}</span>`
     : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
     const emptyText = searched
       ? `<div class="empty-sessions thanks">Thanks for considering a ContextEcho donation.<span>We did not find any Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.</span></div>`
       : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
-    list.innerHTML = `<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div>${emptyText}`;
+    list.innerHTML = `${sessionTableHead()}${emptyText}`;
   }
   if(rows.length){
-    list.innerHTML = '<div class="session-table-head"><div>#</div><div>Name</div><div>Last active</div><div>User turns</div><div>Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div></div>';
+    list.innerHTML = sessionTableHead();
   }
   rows.forEach((s,i) => {
     const idx = start + i;
@@ -2513,15 +2543,19 @@ function renderSessions(){
       ? `<span class="pill update-info" data-report-problem="${escapeHtml(donationInfo.supportId)}" title="Ask a maintainer to remove, reset, or review this submission">Report problem</span>`
       : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
+    const currentFit = fit(s);
+    const chipLine = [statusPill, supportPill, localRecordPill, updateInfoPill, reportProblemPill].filter(Boolean).join(' ');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
-      <div>
-        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill} ${supportPill} ${localRecordPill} ${updateInfoPill} ${reportProblemPill}</div>
+      <div class="session-main">
+        <div class="session-title-line">${escapeHtml(s.agent || 'Session')} &middot; ${escapeHtml(s.session_label || s.project || 'unknown project')}</div>
+        <div class="session-chip-row">${chipLine}</div>
       </div>
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
-      <div class="session-fit"><span class="pill ${fit(s)}">${fit(s)}</span></div>
+      <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
+      <div class="session-chevron">&rsaquo;</div>
     `;
     row.querySelectorAll('[data-copy-submission]').forEach(el => {
       el.onclick = event => {
