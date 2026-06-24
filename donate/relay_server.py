@@ -34,6 +34,7 @@ STATE_DIR = Path(os.environ.get("CONTEXTECHO_RELAY_STATE_DIR", ".relay_state"))
 SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
 SUBMISSION_EVENTS = STATE_DIR / "submission_events.jsonl"
 METADATA_UPDATES = STATE_DIR / "metadata_updates.jsonl"
+SUPPORT_REQUESTS = STATE_DIR / "support_requests.jsonl"
 ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
 MIN_SESSION_GROWTH_RATIO = float(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO", "0.20"))
 MIN_SESSION_GROWTH_TURNS = int(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS", "50"))
@@ -182,6 +183,93 @@ def _metadata_update_request(payload: dict) -> dict:
     return record
 
 
+SUPPORT_REASONS = {
+    "remove_submission",
+    "reset_for_resubmit",
+    "wrong_session",
+    "duplicate",
+    "other",
+}
+
+
+def _request_log_rows(path: Path, id_key: str, limit: int = 200) -> list[dict]:
+    merged: dict[str, dict] = {}
+    order: list[str] = []
+    for row in _read_jsonl(path, limit=1000):
+        request_id = str(row.get(id_key) or "").strip()
+        if not request_id:
+            continue
+        if request_id not in merged:
+            merged[request_id] = {}
+            order.append(request_id)
+        merged[request_id].update(row)
+    rows = [merged[request_id] for request_id in order]
+    rows.sort(key=lambda row: str(row.get("resolved_utc") or row.get("submitted_utc") or ""), reverse=True)
+    return rows[: max(1, min(limit, 1000))]
+
+
+def _support_request(payload: dict) -> dict:
+    submission_id = str(payload.get("submission_id") or "").strip()
+    if not re.fullmatch(r"submission-[A-Za-z0-9_-]+", submission_id):
+        raise HTTPException(status_code=400, detail="submission_id must look like submission-xxxxxxxx")
+    reason = str(payload.get("reason") or "other").strip()
+    if reason not in SUPPORT_REASONS:
+        raise HTTPException(status_code=400, detail="support reason is invalid")
+    message = str(payload.get("message") or "").strip()[:2000]
+    record = {
+        "support_id": f"support-{uuid.uuid4().hex[:8]}",
+        "submitted_utc": _utc_now(),
+        "status": "pending",
+        "submission_id": submission_id,
+        "reason": reason,
+        "message": message,
+        "source_session_id": str(payload.get("source_session_id") or "").strip(),
+        "conversation_fingerprint": str(payload.get("conversation_fingerprint") or "").strip(),
+    }
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with SUPPORT_REQUESTS.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, sort_keys=True) + "\n")
+    _append_submission_event(
+        "support_requested",
+        support_id=record["support_id"],
+        submission_id=submission_id,
+        reason=reason,
+    )
+    return record
+
+
+def _support_request_rows(limit: int = 200) -> list[dict]:
+    return _request_log_rows(SUPPORT_REQUESTS, "support_id", limit)
+
+
+def _resolve_support_request(support_id: str, note: str = "") -> dict:
+    support_id = str(support_id or "").strip()
+    rows = _support_request_rows(limit=1000)
+    found = next((row for row in rows if row.get("support_id") == support_id), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="support request not found")
+    if found.get("status") == "resolved":
+        return {"request": found, "already_resolved": True}
+    record = {
+        "support_id": support_id,
+        "status": "resolved",
+        "resolved_utc": _utc_now(),
+        "resolution_note": str(note or "").strip()[:1000],
+        "submission_id": found.get("submission_id", ""),
+    }
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with SUPPORT_REQUESTS.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, sort_keys=True) + "\n")
+    _append_submission_event(
+        "support_resolved",
+        support_id=support_id,
+        submission_id=found.get("submission_id", ""),
+    )
+    merged = dict(found)
+    merged.update(record)
+    return {"request": merged, "already_resolved": False}
+
+
 def _metadata_update_patch(record: dict) -> dict:
     patch: dict[str, object] = {}
     if str(record.get("credit_name") or "").strip():
@@ -196,19 +284,9 @@ def _metadata_update_patch(record: dict) -> dict:
 
 
 def _metadata_update_requests(limit: int = 200) -> list[dict]:
-    merged: dict[str, dict] = {}
-    order: list[str] = []
-    for row in _read_jsonl(METADATA_UPDATES, limit=1000):
-        request_id = str(row.get("request_id") or "").strip()
-        if not request_id:
-            continue
-        if request_id not in merged:
-            merged[request_id] = {}
-            order.append(request_id)
-        merged[request_id].update(row)
-    rows = [merged[request_id] for request_id in order]
+    rows = _request_log_rows(METADATA_UPDATES, "request_id", limit)
     rows.sort(key=lambda row: str(row.get("approved_utc") or row.get("submitted_utc") or ""), reverse=True)
-    return rows[: max(1, min(limit, 1000))]
+    return rows
 
 
 def _find_metadata_update_request(request_id: str) -> dict:
@@ -985,6 +1063,28 @@ def admin_approve_metadata_update(
     return {"ok": True, **_approve_metadata_update(request_id)}
 
 
+@app.get("/api/admin/support-requests")
+def admin_support_requests(
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+    limit: int = 200,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    return {"ok": True, "requests": _support_request_rows(limit)}
+
+
+@app.post("/api/admin/support-requests/resolve")
+def admin_resolve_support_request(
+    payload: Annotated[dict, Body()],
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    data = payload if isinstance(payload, dict) else {}
+    support_id = str(data.get("support_id") or "").strip()
+    if not support_id:
+        raise HTTPException(status_code=400, detail="support_id is required")
+    return {"ok": True, **_resolve_support_request(support_id, str(data.get("note") or ""))}
+
+
 @app.get("/api/admin/submissions")
 def admin_submissions(
     x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
@@ -1057,6 +1157,17 @@ def metadata_update(payload: Annotated[dict, Body()]) -> dict:
         "submission_id": record["submission_id"],
         "status": record["status"],
         "message": "Contributor metadata update request received for maintainer review.",
+    }
+
+
+@app.post("/api/support-request")
+def support_request(payload: Annotated[dict, Body()]) -> dict:
+    record = _support_request(payload if isinstance(payload, dict) else {})
+    return {
+        "ok": True,
+        "support_id": record["support_id"],
+        "status": record["status"],
+        "message": "Support request received for maintainer review.",
     }
 
 

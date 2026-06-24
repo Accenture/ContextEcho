@@ -261,6 +261,28 @@ def relay_metadata_update(payload: dict) -> dict:
     return result if isinstance(result, dict) else {"ok": False}
 
 
+def relay_support_request(payload: dict) -> dict:
+    url = relay_url()
+    if not url:
+        raise ValueError("Relay URL is not configured; cannot send support request.")
+    data = json.dumps(payload).encode("utf-8")
+    req = Request(
+        f"{url}/api/support-request",
+        data=data,
+        headers={"content-type": "application/json", "user-agent": "contextecho-donate"},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise ValueError(f"support request failed: HTTP {exc.code} {detail}") from exc
+    except Exception as exc:
+        raise ValueError(f"support request failed: {exc}") from exc
+    return result if isinstance(result, dict) else {"ok": False}
+
+
 def donation_points_range(turns: str | int = 0, compactions: str | int = 0) -> tuple[int, int]:
     turns_n = int(turns or 0)
     compactions_n = int(compactions or 0)
@@ -1393,11 +1415,24 @@ INDEX_HTML = r"""<!doctype html>
       <div><label>Email <span class="muted">(required)</span></label><input id="contributorEmail" type="email" list="emailSuggestions" placeholder="you@example.com" required /><datalist id="emailSuggestions"></datalist></div>
       <div><label>Institute <span class="muted">(required)</span></label><input id="contributorInstitute" placeholder="University / company / independent" required /></div>
     </div>
+    <div id="supportRequestBox" class="result" style="display:none">
+      <label>Problem type</label>
+      <select id="supportReason">
+        <option value="reset_for_resubmit">Reset so I can resubmit</option>
+        <option value="remove_submission">Remove my submission</option>
+        <option value="wrong_session">Wrong session</option>
+        <option value="duplicate">Duplicate submission</option>
+        <option value="other">Other</option>
+      </select>
+      <label>Message to maintainer</label>
+      <textarea id="supportMessage" rows="4" placeholder="Describe what should happen and why."></textarea>
+    </div>
     <div id="submitLeaderboardPreview" class="submit-leaderboard"></div>
     <div class="row actions">
       <button id="submitPrev" class="secondary">Previous</button>
       <button id="submitBtn" disabled>Submit Donation</button>
       <button id="metadataUpdateBtn" class="secondary" disabled>Send Info Update</button>
+      <button id="supportRequestBtn" class="secondary" disabled style="display:none">Send Report</button>
       <button id="metadataBackBtn" class="secondary" style="display:none">Back to Sessions</button>
     </div>
     <div id="submitProgress" class="progress"><div></div></div>
@@ -1412,6 +1447,9 @@ let redacted = null;
 let metadataUpdateSubmissionId = '';
 let metadataUpdateSession = null;
 let metadataUpdateComplete = false;
+let supportRequestSubmissionId = '';
+let supportRequestSession = null;
+let supportRequestComplete = false;
 let appliedScrubTerms = [];
 let redactionCache = new Map();
 let submitted = false;
@@ -1469,9 +1507,18 @@ function resetMetadataUpdateUi(){
   metadataUpdateSubmissionId = '';
   metadataUpdateSession = null;
   metadataUpdateComplete = false;
+  supportRequestSubmissionId = '';
+  supportRequestSession = null;
+  supportRequestComplete = false;
   setContributorFieldsLocked(false);
   $('metadataUpdateBtn').textContent = 'Send Info Update';
   $('metadataUpdateBtn').style.display = '';
+  $('supportRequestBtn').textContent = 'Send Report';
+  $('supportRequestBtn').style.display = 'none';
+  $('supportRequestBox').style.display = 'none';
+  $('supportReason').disabled = false;
+  $('supportMessage').disabled = false;
+  $('supportMessage').value = '';
   $('metadataBackBtn').style.display = 'none';
 }
 function localDonationInfo(s){
@@ -1491,9 +1538,14 @@ function localDonationInfo(s){
 }
 function beginMetadataUpdate(session, submissionId){
   metadataUpdateComplete = false;
+  supportRequestSubmissionId = '';
+  supportRequestSession = null;
+  supportRequestComplete = false;
   setContributorFieldsLocked(false);
   $('metadataUpdateBtn').textContent = 'Send Info Update';
   $('metadataUpdateBtn').style.display = '';
+  $('supportRequestBtn').style.display = 'none';
+  $('supportRequestBox').style.display = 'none';
   $('metadataBackBtn').style.display = 'none';
   metadataUpdateSubmissionId = submissionId;
   metadataUpdateSession = session || null;
@@ -1504,6 +1556,22 @@ function beginMetadataUpdate(session, submissionId){
   status('submitStatus', `Editing contributor info for ${submissionId}. Change the fields above, then click Send Info Update.`);
   refreshButtons();
   $('contributorName').focus();
+}
+function beginSupportRequest(session, submissionId){
+  resetMetadataUpdateUi();
+  supportRequestSubmissionId = submissionId;
+  supportRequestSession = session || null;
+  selected = session || selected;
+  goStep(3);
+  prefillContributorFields(session, true);
+  $('supportRequestBox').style.display = 'block';
+  $('metadataUpdateBtn').style.display = 'none';
+  $('supportRequestBtn').style.display = '';
+  $('metadataBackBtn').style.display = '';
+  renderSubmitLeaderboardPreview();
+  status('submitStatus', `Reporting a problem for ${submissionId}. Choose a reason, add a note, then click Send Report.`);
+  refreshButtons();
+  $('supportMessage').focus();
 }
 async function sendMetadataUpdate(){
   if(!metadataUpdateSubmissionId) return;
@@ -1540,6 +1608,38 @@ async function sendMetadataUpdate(){
   } catch(e) {
     btn.textContent = originalText;
     status('submitStatus', 'ERROR: '+friendlyRequestError(e, 'info update request'), 'error');
+  } finally {
+    refreshButtons();
+    $('submitStatus').scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+}
+async function sendSupportRequest(){
+  if(!supportRequestSubmissionId) return;
+  const btn = $('supportRequestBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  status('submitStatus', 'Sending support request to the maintainer relay...', '');
+  try {
+    const result = await post('/api/support_request', {
+      submission_id: supportRequestSubmissionId,
+      reason: $('supportReason').value,
+      message: $('supportMessage').value,
+      source_session_id: supportRequestSession?.source_session_id || '',
+      conversation_fingerprint: supportRequestSession?.conversation_fingerprint || ''
+    });
+    const requestText = result.support_id ? ` Request ID: ${result.support_id}.` : '';
+    status('submitStatus', `Report sent successfully.${requestText} A maintainer will review it before making changes.`, 'ok');
+    supportRequestSubmissionId = '';
+    supportRequestSession = null;
+    supportRequestComplete = true;
+    setContributorFieldsLocked(true);
+    $('supportReason').disabled = true;
+    $('supportMessage').disabled = true;
+    btn.textContent = 'Report Sent';
+  } catch(e) {
+    btn.textContent = originalText;
+    status('submitStatus', 'ERROR: '+friendlyRequestError(e, 'support request'), 'error');
   } finally {
     refreshButtons();
     $('submitStatus').scrollIntoView({behavior:'smooth', block:'nearest'});
@@ -1609,7 +1709,7 @@ function refreshButtons(){
   const selectedInfo = selected ? localDonationInfo(selected) : null;
   const selectedDonated = !!(selectedInfo && (selectedInfo.exactDonated || (selectedInfo.donatedBefore && !selectedInfo.updateReady)));
   const selectedImprove = selected ? fit(selected) === 'improve' : false;
-  const canSubmitArtifact = !!(redacted && redacted.verify_passed) && !submitted && !selectedDonated && !metadataUpdateSubmissionId && !metadataUpdateComplete;
+  const canSubmitArtifact = !!(redacted && redacted.verify_passed) && !submitted && !selectedDonated && !metadataUpdateSubmissionId && !metadataUpdateComplete && !supportRequestSubmissionId && !supportRequestComplete;
   const contributorComplete = contributorFieldsComplete();
   $('pickNext').disabled = !selected || selectedDonated || selectedImprove;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
@@ -1617,6 +1717,7 @@ function refreshButtons(){
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
   $('submitBtn').disabled = !canSubmitArtifact || !contributorComplete;
   $('metadataUpdateBtn').disabled = !metadataUpdateSubmissionId;
+  $('supportRequestBtn').disabled = !supportRequestSubmissionId;
   $('submitBtn').title = '';
 }
 function setUiProcessing(on){
@@ -2408,11 +2509,14 @@ function renderSessions(){
     const updateInfoPill = donationInfo.supportId && donationInfo.donatedBefore
       ? `<span class="pill update-info" data-update-info="${escapeHtml(donationInfo.supportId)}" title="Request a name, email, or institute update">Update info</span>`
       : '';
+    const reportProblemPill = donationInfo.supportId && donationInfo.donatedBefore
+      ? `<span class="pill update-info" data-report-problem="${escapeHtml(donationInfo.supportId)}" title="Ask a maintainer to remove, reset, or review this submission">Report problem</span>`
+      : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div>
-        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill} ${supportPill} ${localRecordPill} ${updateInfoPill}</div>
+        <div class="session-title session-title-row">${escapeHtml(s.agent || 'Session')} - ${escapeHtml(s.session_label || s.project || 'unknown project')} ${statusPill} ${supportPill} ${localRecordPill} ${updateInfoPill} ${reportProblemPill}</div>
       </div>
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
@@ -2431,6 +2535,12 @@ function renderSessions(){
       el.onclick = event => {
         event.stopPropagation();
         beginMetadataUpdate(s, el.dataset.updateInfo || '');
+      };
+    });
+    row.querySelectorAll('[data-report-problem]').forEach(el => {
+      el.onclick = event => {
+        event.stopPropagation();
+        beginSupportRequest(s, el.dataset.reportProblem || '');
       };
     });
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
@@ -2541,6 +2651,7 @@ $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
 $('submitPrev').onclick = () => goStep(2);
 $('metadataUpdateBtn').onclick = () => sendMetadataUpdate();
+$('supportRequestBtn').onclick = () => sendSupportRequest();
 $('metadataBackBtn').onclick = () => goStep(1);
 ['contributorName','contributorEmail','contributorInstitute'].forEach(id => {
   $(id).oninput = () => {
@@ -2926,6 +3037,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._handle_search_redacted()
             elif self.path == "/api/metadata_update":
                 self._handle_metadata_update()
+            elif self.path == "/api/support_request":
+                self._handle_support_request()
             else:
                 self._json({"error": "not found"}, 404)
         except ClientDisconnected:
@@ -3267,6 +3380,19 @@ class Handler(BaseHTTPRequestHandler):
         if not any([payload["credit_name"], payload["contributor_email"], payload["contributor_institute"]]):
             raise ValueError("Edit at least one contributor field before sending an info update")
         self._json(relay_metadata_update(payload))
+
+    def _handle_support_request(self) -> None:
+        data = self._read_json()
+        payload = {
+            "submission_id": str(data.get("submission_id") or "").strip(),
+            "reason": str(data.get("reason") or "other").strip(),
+            "message": str(data.get("message") or "").strip(),
+            "source_session_id": str(data.get("source_session_id") or "").strip(),
+            "conversation_fingerprint": str(data.get("conversation_fingerprint") or "").strip(),
+        }
+        if not payload["submission_id"]:
+            raise ValueError("Missing submission ID")
+        self._json(relay_support_request(payload))
 
     def _handle_open_path(self) -> None:
         data = self._read_json()

@@ -72,6 +72,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("Update sent successfully", INDEX_HTML)
         self.assertIn("Back to Sessions", INDEX_HTML)
         self.assertIn("setContributorFieldsLocked", INDEX_HTML)
+        self.assertIn("Report problem", INDEX_HTML)
+        self.assertIn("/api/support_request", INDEX_HTML)
+        self.assertIn("Send Report", INDEX_HTML)
+        self.assertIn("Report sent successfully", INDEX_HTML)
         self.assertNotIn("New public/credit name for this donation", INDEX_HTML)
         self.assertIn("Copied maintainer reset ID", INDEX_HTML)
         self.assertIn("normalizeSubmissionId", INDEX_HTML)
@@ -89,6 +93,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("formatMinute(row.submitted_utc)", html)
         self.assertIn("formatMinute(row.approved_utc)", html)
         self.assertIn("formatMinute(row.ts)", html)
+        self.assertIn("Support Requests", html)
+        self.assertIn("/api/admin/support-requests", html)
+        self.assertIn("function resolveSupport", html)
+        self.assertIn("Mark resolved", html)
 
     def test_submit_requires_contributor_identity_fields(self):
         self.assertIn("Contributor info is required", INDEX_HTML)

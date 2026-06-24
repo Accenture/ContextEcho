@@ -183,6 +183,7 @@
       <button class="tab active" data-tab="overview">Overview</button>
       <button class="tab" data-tab="pending">Pending</button>
       <button class="tab" data-tab="metadata">Metadata Updates</button>
+      <button class="tab" data-tab="support">Support Requests</button>
       <button class="tab" data-tab="records">Relay Records</button>
       <button class="tab" data-tab="audit">Audit</button>
       <button class="tab" data-tab="lineage">Lineage Check</button>
@@ -217,6 +218,15 @@
       </div>
       <div id="metadataStatus" class="status"></div>
       <div id="metadataTable"></div>
+    </section>
+
+    <section id="support" class="panel">
+      <div class="section-head">
+        <h2>Support Requests</h2>
+        <div class="toolbar"><button id="loadSupport">Load support</button><input id="supportFilter" placeholder="Filter submission, reason, message"></div>
+      </div>
+      <div id="supportStatus" class="status"></div>
+      <div id="supportTable"></div>
     </section>
 
     <section id="records" class="panel">
@@ -283,7 +293,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], metadataUpdates:[], records:[], events:[] };
+const state = { summary:null, pending:[], metadataUpdates:[], supportRequests:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -459,6 +469,60 @@ async function approveMetadata(requestId){
   status('metadataStatus', parts.join(' '), 'ok');
 }
 
+async function loadSupport(){
+  saveSession();
+  status('supportStatus', 'Loading support requests...');
+  const data = await api('/api/admin/support-requests?limit=500');
+  state.supportRequests = data.requests || [];
+  renderSupport();
+  status('supportStatus', `Loaded ${state.supportRequests.length} support request${state.supportRequests.length === 1 ? '' : 's'}.`, 'ok');
+}
+function supportRows(){
+  const q = $('supportFilter').value.toLowerCase().trim();
+  return state.supportRequests.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
+}
+function reasonLabel(reason){
+  return ({
+    remove_submission: 'remove submission',
+    reset_for_resubmit: 'reset for resubmit',
+    wrong_session: 'wrong session',
+    duplicate: 'duplicate',
+    other: 'other',
+  })[reason] || reason || '';
+}
+function renderSupport(){
+  const rows = supportRows();
+  $('supportTable').innerHTML = table(
+    ['Submitted', 'Request', 'Submission', 'Reason', 'Message', 'Action'],
+    rows.map(row => [
+      `<code>${escapeHtml(formatMinute(row.submitted_utc))}</code>`,
+      `<code>${escapeHtml(row.support_id || '')}</code><div class="hint">${escapeHtml(row.status || 'pending')}${row.resolved_utc ? ` · ${escapeHtml(formatMinute(row.resolved_utc))}` : ''}</div>`,
+      `<code>${escapeHtml(row.submission_id || '')}</code>`,
+      `<span class="pill">${escapeHtml(reasonLabel(row.reason))}</span>`,
+      escapeHtml(row.message || ''),
+      row.status === 'resolved'
+        ? '<span class="pill">resolved</span>'
+        : `<button data-resolve-support="${escapeHtml(row.support_id || '')}">Mark resolved</button>`,
+    ])
+  );
+  document.querySelectorAll('[data-resolve-support]').forEach(btn => {
+    btn.onclick = () => resolveSupport(btn.dataset.resolveSupport || '');
+  });
+}
+async function resolveSupport(supportId){
+  if(!supportId) return;
+  const note = prompt(`Resolution note for ${supportId} (optional):`, '') || '';
+  status('supportStatus', `Resolving ${supportId}...`);
+  const data = await api('/api/admin/support-requests/resolve', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({support_id:supportId, note}),
+  });
+  await loadSupport();
+  if(state.events.length) await loadEvents();
+  status('supportStatus', `Resolved ${supportId}.`, data.ok ? 'ok' : '');
+}
+
 async function loadRecords(){
   saveSession();
   status('recordStatus', 'Loading relay records...');
@@ -472,6 +536,7 @@ async function autoloadAll(){
   await Promise.all([
     loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error')),
     loadMetadata().catch(e => status('metadataStatus', `ERROR: ${e.message}`, 'error')),
+    loadSupport().catch(e => status('supportStatus', `ERROR: ${e.message}`, 'error')),
     loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error')),
     loadEvents().catch(e => status('eventStatus', `ERROR: ${e.message}`, 'error')),
   ]);
@@ -617,10 +682,12 @@ $('refreshOverview').onclick = () => loadSummary().catch(e => status('globalStat
 $('backfillTop').onclick = () => { showTab('danger'); backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error')); };
 $('loadPending').onclick = () => loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error'));
 $('loadMetadata').onclick = () => loadMetadata().catch(e => status('metadataStatus', `ERROR: ${e.message}`, 'error'));
+$('loadSupport').onclick = () => loadSupport().catch(e => status('supportStatus', `ERROR: ${e.message}`, 'error'));
 $('loadRecords').onclick = () => loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error'));
 $('loadEvents').onclick = () => loadEvents().catch(e => status('eventStatus', `ERROR: ${e.message}`, 'error'));
 $('pendingFilter').oninput = renderPending;
 $('metadataFilter').oninput = renderMetadata;
+$('supportFilter').oninput = renderSupport;
 $('recordFilter').oninput = renderRecords;
 $('eventFilter').oninput = renderEvents;
 $('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));

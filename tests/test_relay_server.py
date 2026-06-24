@@ -437,6 +437,31 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(record["contributor_email"], "")
         self.assertEqual(record["contributor_institute"], "Updated Institute")
 
+    def test_support_request_can_be_resolved(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SUPPORT_REQUESTS", state_dir / "support_requests.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+            ):
+                request = relay_server._support_request({
+                    "submission_id": "submission-one",
+                    "reason": "reset_for_resubmit",
+                    "message": "Please reset this one.",
+                })
+                result = relay_server._resolve_support_request(request["support_id"], "done")
+                rows = relay_server._support_request_rows()
+                events = relay_server._read_jsonl(state_dir / "submission_events.jsonl")
+
+        self.assertEqual(request["status"], "pending")
+        self.assertEqual(result["request"]["status"], "resolved")
+        self.assertEqual(rows[0]["support_id"], request["support_id"])
+        self.assertEqual(rows[0]["status"], "resolved")
+        self.assertEqual(rows[0]["reason"], "reset_for_resubmit")
+        self.assertEqual(events[0]["event"], "support_requested")
+        self.assertEqual(events[-1]["event"], "support_resolved")
+
     def test_approve_metadata_update_applies_seen_record_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             state_dir = Path(td)
