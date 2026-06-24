@@ -1111,6 +1111,9 @@ INDEX_HTML = r"""<!doctype html>
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 110px 84px 66px 88px 16px; gap:12px; align-items:center; }
     .session-table-head { padding:10px 16px; background:#f2f5ef; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
     .session-table-head > div { display:flex; align-items:center; gap:5px; }
+    .sort-header { border:0; background:transparent; box-shadow:none; color:inherit; padding:0; min-width:0; border-radius:6px; display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:950; letter-spacing:inherit; text-transform:inherit; cursor:pointer; }
+    .sort-header:hover:not(:disabled), .sort-header:focus-visible { background:#e5ecdf; color:#123d29; transform:none; outline:none; }
+    .sort-arrow { min-width:9px; color:#17713f; font-size:10px; line-height:1; }
     .header-icon { font-size:13px; color:#5d6660; line-height:1; }
     .header-footnote { color:#1f6f43; font-size:10px; font-weight:950; vertical-align:super; letter-spacing:0; margin-left:2px; }
     .table-note { color:var(--muted); font-size:12px; text-align:right; }
@@ -1376,7 +1379,7 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
         <div id="sessionList" class="session-list">
-          <div class="session-table-head"><div>#</div><div>Session</div><div><span class="header-icon">&#9719;</span> Last active</div><div><span class="header-icon">&#9817;</span> User turns</div><div><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div><div></div></div>
+          <div class="session-table-head"><div>#</div><div>Session</div><div><button type="button" class="sort-header" data-sort-key="last_active"><span class="header-icon">&#9719;</span> Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns"><span class="header-icon">&#9817;</span> User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions"><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
           <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
         </div>
         <div class="fit-legend">
@@ -1491,6 +1494,7 @@ let redactionCache = new Map();
 let submitted = false;
 let activeOperation = false;
 let page = 0;
+let sessionSort = {key:'', dir:'desc'};
 const pageSize = 5;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
@@ -2504,10 +2508,60 @@ function friendlyRequestError(e, action='operation'){
   return msg;
 }
 function sessionTableHead(){
-  return '<div class="session-table-head"><div>#</div><div>Session</div><div><span class="header-icon">&#9719;</span> Last active</div><div><span class="header-icon">&#9817;</span> User turns</div><div><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span></div><div>Fit</div><div></div></div>';
+  const arrow = key => sessionSort.key === key ? `<span class="sort-arrow">${sessionSort.dir === 'asc' ? '&uarr;' : '&darr;'}</span>` : '<span class="sort-arrow"></span>';
+  const aria = key => sessionSort.key === key ? (sessionSort.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+  return `<div class="session-table-head">
+    <div>#</div>
+    <div>Session</div>
+    <div><button type="button" class="sort-header" data-sort-key="last_active" aria-sort="${aria('last_active')}"><span class="header-icon">&#9719;</span> Last active${arrow('last_active')}</button></div>
+    <div><button type="button" class="sort-header" data-sort-key="turns" aria-sort="${aria('turns')}"><span class="header-icon">&#9817;</span> User turns${arrow('turns')}</button></div>
+    <div><button type="button" class="sort-header" data-sort-key="compactions" aria-sort="${aria('compactions')}"><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span>${arrow('compactions')}</button></div>
+    <div><button type="button" class="sort-header" data-sort-key="fit" aria-sort="${aria('fit')}">Fit${arrow('fit')}</button></div>
+    <div></div>
+  </div>`;
 }
 function fitLabel(value){
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+}
+function sortableDateValue(s){
+  const raw = String(s?.last_active || s?.modified || '');
+  const time = Date.parse(raw);
+  return Number.isFinite(time) ? time : 0;
+}
+function fitSortValue(s){
+  return {best:3, good:2, improve:1}[fit(s)] || 0;
+}
+function sessionSortValue(s, key){
+  if(key === 'last_active') return sortableDateValue(s);
+  if(key === 'turns') return Number(s?.turns || 0);
+  if(key === 'compactions') return Number(s?.compactions || 0);
+  if(key === 'fit') return fitSortValue(s);
+  return 0;
+}
+function sortedSessions(){
+  if(!sessionSort.key) return sessions.map((s, idx) => ({s, idx}));
+  const dir = sessionSort.dir === 'asc' ? 1 : -1;
+  return sessions.map((s, idx) => ({s, idx})).sort((a, b) => {
+    const av = sessionSortValue(a.s, sessionSort.key);
+    const bv = sessionSortValue(b.s, sessionSort.key);
+    if(av < bv) return -1 * dir;
+    if(av > bv) return 1 * dir;
+    return a.idx - b.idx;
+  });
+}
+function bindSessionSortHeaders(){
+  document.querySelectorAll('[data-sort-key]').forEach(btn => {
+    btn.onclick = event => {
+      event.stopPropagation();
+      const key = btn.dataset.sortKey || '';
+      const defaultDir = key === 'last_active' || key === 'turns' || key === 'compactions' || key === 'fit' ? 'desc' : 'asc';
+      sessionSort = sessionSort.key === key
+        ? {key, dir: sessionSort.dir === 'desc' ? 'asc' : 'desc'}
+        : {key, dir: defaultDir};
+      page = 0;
+      renderSessions();
+    };
+  });
 }
 function hideSessionMenu(){
   const menu = $('sessionMenu');
@@ -2544,7 +2598,8 @@ function renderSessions(){
   const list = $('sessionList');
   list.innerHTML = '';
   const start = page * pageSize;
-  const rows = sessions.slice(start, start + pageSize);
+  const sorted = sortedSessions();
+  const rows = sorted.slice(start, start + pageSize);
   const allDonated = allSessionsDonated();
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   const counts = fitCounts();
@@ -2557,11 +2612,13 @@ function renderSessions(){
       ? `<div class="empty-sessions thanks">Thanks for considering a ContextEcho donation.<span>We did not find any Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.</span></div>`
       : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
     list.innerHTML = `${sessionTableHead()}${emptyText}`;
+    bindSessionSortHeaders();
   }
   if(rows.length){
     list.innerHTML = sessionTableHead();
+    bindSessionSortHeaders();
   }
-  rows.forEach((s,i) => {
+  rows.forEach(({s}, i) => {
     const idx = start + i;
     const row = document.createElement('div');
     const donationInfo = localDonationInfo(s);
