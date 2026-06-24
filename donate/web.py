@@ -1107,6 +1107,7 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip.best { background:#dff1d9; color:#13552f; }
     .fit-chip.good { background:#e8ecd7; color:#5c5d16; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
+    .fit-chip.donated { background:#dceafa; color:#1e4f87; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 110px 84px 66px 88px 16px; gap:12px; align-items:center; }
     .session-table-head { padding:10px 16px; background:#f2f5ef; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
@@ -1783,6 +1784,12 @@ function fitCounts(){
     acc[fit(s)] = (acc[fit(s)] || 0) + 1;
     return acc;
   }, {best:0, good:0, improve:0});
+}
+function donatedCount(){
+  return sessions.reduce((count, s) => {
+    const info = localDonationInfo(s);
+    return count + (info.donatedBefore || info.exactDonated ? 1 : 0);
+  }, 0);
 }
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 function compactionNote(s){
@@ -2603,8 +2610,9 @@ function renderSessions(){
   const allDonated = allSessionsDonated();
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   const counts = fitCounts();
+  const donatedTotal = donatedCount();
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip best">Best ${counts.best || 0}</span><span class="fit-chip good">Good ${counts.good || 0}</span><span class="fit-chip improve">Improve ${counts.improve || 0}</span>`
+    ? `<span class="fit-chip donated">Donated ${donatedTotal}</span><span class="fit-chip best">Best ${counts.best || 0}</span><span class="fit-chip good">Good ${counts.good || 0}</span><span class="fit-chip improve">Improve ${counts.improve || 0}</span>`
     : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
