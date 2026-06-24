@@ -1137,7 +1137,13 @@ INDEX_HTML = r"""<!doctype html>
     .session-num { font-weight:950; font-size:19px; color:#07110d; }
     .session-fit { display:flex; justify-content:flex-start; }
     .session-fit .pill { text-transform:capitalize; }
-    .session-chevron { color:#5f6662; font-size:25px; line-height:1; justify-self:end; }
+    .session-chevron { color:#5f6662; font-size:25px; line-height:1; justify-self:end; border:0; background:transparent; box-shadow:none; padding:4px 6px; min-width:0; border-radius:8px; }
+    .session-chevron:hover:not(:disabled), .session-row:hover .session-chevron { color:#13552f; background:#eaf4e5; transform:none; }
+    .session-menu { position:fixed; z-index:1000; min-width:168px; padding:6px; border:1px solid var(--line); border-radius:12px; background:#fffef8; box-shadow:0 16px 42px rgba(25,38,31,.18); display:none; }
+    .session-menu.show { display:block; }
+    .session-menu button { display:block; width:100%; border:0; border-radius:8px; background:transparent; box-shadow:none; color:#14241d; text-align:left; padding:9px 10px; font-size:13px; font-weight:900; }
+    .session-menu button:hover { background:#eaf4e5; transform:none; }
+    .session-menu button.danger { color:#7a2c1f; }
     .empty-sessions { padding:26px; text-align:center; color:var(--muted); }
     .bottom-nav { margin-top:16px; padding:12px 34px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
     .tip { display:flex; gap:12px; align-items:center; color:#3f4843; }
@@ -1383,6 +1389,7 @@ INDEX_HTML = r"""<!doctype html>
         </div>
       </div>
     </div>
+    <div id="sessionMenu" class="session-menu" role="menu" aria-label="Session actions"></div>
     <div class="bottom-nav">
       <div class="tip"><strong>Tip:</strong> Context compactions are detected from agent logs; Codex may record them internally without a visible progress bar.</div>
       <button id="pickNext" class="next-button" disabled>Next: Redact  -&gt;</button>
@@ -2497,6 +2504,37 @@ function sessionTableHead(){
 function fitLabel(value){
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 }
+function hideSessionMenu(){
+  const menu = $('sessionMenu');
+  if(menu) menu.classList.remove('show');
+}
+function showSessionMenu(event, session, donationInfo){
+  const menu = $('sessionMenu');
+  if(!menu || !donationInfo?.supportId || !donationInfo?.donatedBefore) return;
+  event.preventDefault();
+  event.stopPropagation();
+  menu.innerHTML = `
+    <button type="button" role="menuitem" data-session-action="update">Update info</button>
+    <button type="button" role="menuitem" data-session-action="problem" class="danger">Report problem</button>
+  `;
+  menu.querySelector('[data-session-action="update"]').onclick = e => {
+    e.stopPropagation();
+    hideSessionMenu();
+    beginMetadataUpdate(session, donationInfo.supportId);
+  };
+  menu.querySelector('[data-session-action="problem"]').onclick = e => {
+    e.stopPropagation();
+    hideSessionMenu();
+    beginSupportRequest(session, donationInfo.supportId);
+  };
+  menu.classList.add('show');
+  const rect = menu.getBoundingClientRect();
+  const margin = 10;
+  const left = Math.min(event.clientX, window.innerWidth - rect.width - margin);
+  const top = Math.min(event.clientY, window.innerHeight - rect.height - margin);
+  menu.style.left = `${Math.max(margin, left)}px`;
+  menu.style.top = `${Math.max(margin, top)}px`;
+}
 function renderSessions(){
   const list = $('sessionList');
   list.innerHTML = '';
@@ -2536,15 +2574,10 @@ function renderSessions(){
     const localRecordPill = !donationInfo.supportId && donationInfo.localRecordId
       ? `<span class="pill local-record" data-copy-submission="${escapeHtml(donationInfo.localRecordId)}" title="Local receipt only; relay does not currently have this submission">local record ${escapeHtml(donationInfo.localRecordId)}</span>`
       : '';
-    const updateInfoPill = donationInfo.supportId && donationInfo.donatedBefore
-      ? `<span class="pill update-info" data-update-info="${escapeHtml(donationInfo.supportId)}" title="Request a name, email, or institute update">Update info</span>`
-      : '';
-    const reportProblemPill = donationInfo.supportId && donationInfo.donatedBefore
-      ? `<span class="pill update-info" data-report-problem="${escapeHtml(donationInfo.supportId)}" title="Ask a maintainer to remove, reset, or review this submission">Report problem</span>`
-      : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     const currentFit = fit(s);
-    const chipLine = [statusPill, supportPill, localRecordPill, updateInfoPill, reportProblemPill].filter(Boolean).join(' ');
+    const hasMenuActions = donationInfo.supportId && donationInfo.donatedBefore;
+    const chipLine = [statusPill, supportPill, localRecordPill].filter(Boolean).join(' ');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div class="session-main">
@@ -2555,7 +2588,7 @@ function renderSessions(){
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
       <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
-      <div class="session-chevron">&rsaquo;</div>
+      <button type="button" class="session-chevron" aria-label="${hasMenuActions ? 'Open session actions' : 'Session details'}" ${hasMenuActions ? 'title="Actions: update info or report problem"' : 'disabled'}>&rsaquo;</button>
     `;
     row.querySelectorAll('[data-copy-submission]').forEach(el => {
       el.onclick = event => {
@@ -2565,18 +2598,9 @@ function renderSessions(){
         status('discoverStatus', `Copied maintainer reset ID: ${id}`);
       };
     });
-    row.querySelectorAll('[data-update-info]').forEach(el => {
-      el.onclick = event => {
-        event.stopPropagation();
-        beginMetadataUpdate(s, el.dataset.updateInfo || '');
-      };
-    });
-    row.querySelectorAll('[data-report-problem]').forEach(el => {
-      el.onclick = event => {
-        event.stopPropagation();
-        beginSupportRequest(s, el.dataset.reportProblem || '');
-      };
-    });
+    row.oncontextmenu = event => showSessionMenu(event, s, donationInfo);
+    const chevron = row.querySelector('.session-chevron');
+    if(chevron && hasMenuActions) chevron.onclick = event => showSessionMenu(event, s, donationInfo);
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     row.onclick = () => {
       if(!ready){
@@ -2666,6 +2690,10 @@ $('discoverBtn').onclick = async () => {
 };
 $('prevPage').onclick = () => { if(page > 0){ page--; renderSessions(); } };
 $('nextPage').onclick = () => { if((page + 1) * pageSize < sessions.length){ page++; renderSessions(); } };
+document.addEventListener('click', hideSessionMenu);
+document.addEventListener('keydown', event => { if(event.key === 'Escape') hideSessionMenu(); });
+window.addEventListener('resize', hideSessionMenu);
+window.addEventListener('scroll', hideSessionMenu, true);
 $('safeConfirm').onchange = refreshButtons;
 $('reviewConfirm').onchange = refreshButtons;
 document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
