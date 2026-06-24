@@ -197,6 +197,10 @@
       </div>
       <div class="grid" id="metricGrid"></div>
       <div class="card" style="margin-top:14px">
+        <div class="metric-label">Live pending composition</div>
+        <div id="pendingComposition" class="metric-detail"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
         <div class="metric-label">Relay configuration</div>
         <div id="relayConfig" class="metric-detail"></div>
       </div>
@@ -354,10 +358,18 @@ function restoreSession(){
 
 async function loadSummary(){
   saveSession();
-  status('globalStatus', 'Loading relay summary...');
-  const data = await api('/api/admin/summary');
+  status('globalStatus', 'Loading relay summary and pending staging data...');
+  const [data, pendingData] = await Promise.all([
+    api('/api/admin/summary'),
+    api('/api/admin/submissions'),
+  ]);
   state.summary = data;
+  state.pending = pendingData.submissions || [];
   renderSummary(data);
+  renderPendingComposition();
+  renderPending();
+  const extra = pendingData.errors?.length ? ` (${pendingData.errors.length} pending warning${pendingData.errors.length === 1 ? '' : 's'})` : '';
+  status('pendingStatus', `Loaded ${state.pending.length} pending submission${state.pending.length === 1 ? '' : 's'}${extra}.`, 'ok');
   status('globalStatus', 'Connected to relay.', 'ok');
 }
 function renderSummary(data){
@@ -381,6 +393,33 @@ function renderSummary(data){
     <div><strong>HF token configured:</strong> ${data.has_token ? '<span class="pill">yes</span>' : '<span class="pill bad">no</span>'}</div>
   `;
 }
+function pendingComposition(){
+  const donors = new Set();
+  const institutes = new Set();
+  const agents = new Set();
+  let turns = 0;
+  let records = 0;
+  let compactions = 0;
+  state.pending.forEach(row => {
+    const donorKey = String(row.email || row.contributor || '').trim().toLowerCase();
+    if(donorKey) donors.add(donorKey);
+    const institute = String(row.institute || '').trim().toLowerCase();
+    if(institute) institutes.add(institute);
+    const agent = String(row.agent || '').trim();
+    if(agent) agents.add(agent);
+    turns += Number(row.turns || 0);
+    records += Number(row.records || 0);
+    compactions += Number(row.compactions || 0);
+  });
+  return {sessions:state.pending.length, donors:donors.size, institutes:institutes.size, agents:agents.size, turns, records, compactions};
+}
+function renderPendingComposition(){
+  const c = pendingComposition();
+  $('pendingComposition').innerHTML = `
+    <div><strong>Pending staging:</strong> ${compact(c.sessions)} sessions · ${compact(c.donors)} donors · ${compact(c.institutes)} institutes · ${compact(c.agents)} agent types</div>
+    <div><strong>Pending totals:</strong> ${compact(c.turns)} turns · ${compact(c.records)} JSONL records · ${compact(c.compactions)} ctx cmp</div>
+  `;
+}
 
 async function loadPending(){
   saveSession();
@@ -388,6 +427,7 @@ async function loadPending(){
   const data = await api('/api/admin/submissions');
   state.pending = data.submissions || [];
   renderPending();
+  renderPendingComposition();
   const extra = data.errors?.length ? ` (${data.errors.length} warning${data.errors.length === 1 ? '' : 's'})` : '';
   status('pendingStatus', `Loaded ${state.pending.length} pending submission${state.pending.length === 1 ? '' : 's'}${extra}.`, 'ok');
 }
@@ -534,7 +574,6 @@ async function loadRecords(){
 async function autoloadAll(){
   await loadSummary();
   await Promise.all([
-    loadPending().catch(e => status('pendingStatus', `ERROR: ${e.message}`, 'error')),
     loadMetadata().catch(e => status('metadataStatus', `ERROR: ${e.message}`, 'error')),
     loadSupport().catch(e => status('supportStatus', `ERROR: ${e.message}`, 'error')),
     loadRecords().catch(e => status('recordStatus', `ERROR: ${e.message}`, 'error')),
