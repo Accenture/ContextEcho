@@ -642,65 +642,42 @@ def write_receipt(session: Path, source_path: str | Path, output: str) -> tuple[
 
 
 def annotate_donated(sessions: list[dict]) -> list[dict]:
-    donated = load_donated_keys()
-    source_records = load_donated_source_records()
-    out = []
-    for session in sessions:
-        row = dict(session)
-        path = row.get("path")
-        skey = session_key(path) if path else ""
-        exact_donated = bool(skey and skey in donated)
-        source_record = None
-        if path:
-            source_record = source_records.get(source_path_key(path)) or source_records.get(skey)
-        previous_turns = int((source_record or {}).get("turns") or 0)
-        current_turns = int(row.get("turns") or 0)
-        new_turns = max(0, current_turns - previous_turns)
-        update_ready = bool(source_record and not exact_donated and session_update_ready(current_turns, previous_turns))
-        row["donated"] = exact_donated or bool(source_record and not update_ready)
-        row["donated_before"] = bool(exact_donated or source_record)
-        row["donated_turns"] = previous_turns if source_record else 0
-        row["new_turns"] = new_turns if source_record else 0
-        row["update_ready"] = update_ready
-        row["local_submission_id"] = normalize_submission_id((source_record or {}).get("submission_id") or (source_record or {}).get("submission"))
-        row["local_credit_name"] = (source_record or {}).get("credit_name", "")
-        row["local_contributor_email"] = (source_record or {}).get("contributor_email", "")
-        row["local_institute"] = (source_record or {}).get("institute", "")
-        row["local_public_anonymous"] = bool((source_record or {}).get("public_anonymous"))
-        out.append(row)
+    out = [dict(session) for session in sessions]
+    for row in out:
+        row["donated"] = False
+        row["donated_before"] = False
+        row["donated_turns"] = 0
+        row["new_turns"] = 0
+        row["update_ready"] = False
+        row["relay_submission_id"] = ""
+        row["relay_public_session_id"] = ""
+        row["local_credit_name"] = ""
+        row["local_contributor_email"] = ""
+        row["local_institute"] = ""
+        row["local_public_anonymous"] = False
     relay_statuses = relay_donation_status(out)
     relay_checked = bool(relay_statuses) and len(relay_statuses) == len(out)
     for row, status in zip(out, relay_statuses):
         if relay_checked:
             row["relay_checked"] = True
         if not status.get("received"):
-            if relay_checked:
-                row["local_unconfirmed_submission_id"] = row.get("local_submission_id", "")
-                row["donated"] = False
-                row["donated_before"] = False
-                row["donated_turns"] = 0
-                row["new_turns"] = 0
-                row["update_ready"] = False
             continue
-        previous_turns = int(status.get("turns") or row.get("donated_turns") or 0)
-        new_turns = int(status.get("new_turns") or max(0, int(row.get("turns") or 0) - previous_turns))
+        previous_turns = int(status.get("turns") or 0)
+        new_turns = int(status.get("new_turns") or 0)
         update_ready = bool(status.get("update_ready"))
-        path = row.get("path")
-        exact_donated = bool(path and session_key(path) in donated)
         row["donated_before"] = True
-        row["donated_turns"] = max(int(row.get("donated_turns") or 0), previous_turns)
-        row["new_turns"] = max(int(row.get("new_turns") or 0), new_turns)
-        row["update_ready"] = bool(row.get("update_ready") or update_ready)
-        row["donated"] = bool(exact_donated or (not row["update_ready"]))
+        row["donated_turns"] = previous_turns
+        row["new_turns"] = new_turns
+        row["update_ready"] = update_ready
+        row["donated"] = not update_ready
         row["relay_received"] = True
         relay_submission_id = normalize_submission_id(status.get("submission_id", ""))
         row["relay_submission_id"] = relay_submission_id if is_support_submission_id(relay_submission_id) else ""
         row["relay_public_session_id"] = "" if is_support_submission_id(relay_submission_id) else relay_submission_id
-        row["local_credit_name"] = row.get("local_credit_name") or status.get("credit_name", "")
-        row["local_contributor_email"] = row.get("local_contributor_email") or status.get("contributor_email", "")
-        row["local_institute"] = row.get("local_institute") or status.get("contributor_institute", "")
-        if not row.get("local_public_anonymous"):
-            row["local_public_anonymous"] = bool(status.get("public_anonymous"))
+        row["local_credit_name"] = status.get("credit_name", "")
+        row["local_contributor_email"] = status.get("contributor_email", "")
+        row["local_institute"] = status.get("contributor_institute", "")
+        row["local_public_anonymous"] = bool(status.get("public_anonymous"))
     if relay_checked:
         for row in out:
             row.setdefault("relay_checked", True)
@@ -1169,7 +1146,6 @@ INDEX_HTML = r"""<!doctype html>
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#cfe1f5; color:#163f70; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
-    .pill.local-record { background:#fff0d8; color:#7a420a; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
     .session-list .pill { padding:3px 7px; font-size:11px; }
     .session-list .fit-star, .session-list .fit-arrow { font-size:11px; }
@@ -1570,20 +1546,14 @@ function resetMetadataUpdateUi(){
   $('metadataBackBtn').style.display = 'none';
 }
 function localDonationInfo(s){
-  const pathKey = sessionPathKey(s);
-  const relayChecked = !!s?.relay_checked;
-  const record = pathKey ? donatedRecords[pathKey] : null;
-  const localPathDonated = donatedPaths.has(sessionLocalKey(s));
-  const localRecordId = normalizeSubmissionId(s?.local_unconfirmed_submission_id || s?.local_submission_id || record?.submission_id || record?.submission || '');
   const relayRecordId = normalizeSubmissionId(s?.relay_submission_id || '');
-  const supportId = normalizeSubmissionId((relayRecordId.startsWith('submission-') ? relayRecordId : '') || (localRecordId.startsWith('submission-') ? localRecordId : ''));
-  const previousTurns = Number(s?.donated_turns || record?.turns || 0);
-  const currentTurns = Number(s?.turns || 0);
-  const newTurns = Math.max(0, Number(s?.new_turns || (previousTurns ? currentTurns - previousTurns : 0)));
-  const updateReady = !!s?.update_ready || !!(record && newTurns && (newTurns >= 50 || (previousTurns && newTurns / previousTurns >= 0.20)));
-  const exactDonated = !!s?.donated || localPathDonated || (!!record && !relayChecked);
-  const donatedBefore = exactDonated || !!s?.donated_before || !!record;
-  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId};
+  const supportId = relayRecordId.startsWith('submission-') ? relayRecordId : '';
+  const previousTurns = Number(s?.donated_turns || 0);
+  const newTurns = Math.max(0, Number(s?.new_turns || 0));
+  const updateReady = !!s?.update_ready;
+  const exactDonated = !!s?.donated;
+  const donatedBefore = exactDonated || !!s?.donated_before;
+  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId:''};
 }
 function beginMetadataUpdate(session, submissionId){
   metadataUpdateComplete = false;
@@ -2649,14 +2619,11 @@ function renderSessions(){
     const supportPill = donationInfo.supportId
       ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
       : '';
-    const localRecordPill = !donationInfo.supportId && donationInfo.localRecordId
-      ? `<span class="pill local-record" data-copy-submission="${escapeHtml(donationInfo.localRecordId)}" title="Local receipt only; relay does not currently have this submission">local record ${escapeHtml(donationInfo.localRecordId)}</span>`
-      : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     if(donationInfo.donatedBefore) row.classList.add('donated-history-row');
     const currentFit = fit(s);
     const hasMenuActions = donationInfo.supportId && donationInfo.donatedBefore;
-    const chipLine = [statusPill, supportPill, localRecordPill].filter(Boolean).join(' ');
+    const chipLine = [statusPill, supportPill].filter(Boolean).join(' ');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div class="session-main">

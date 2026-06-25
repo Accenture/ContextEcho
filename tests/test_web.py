@@ -58,8 +58,8 @@ class WebTests(unittest.TestCase):
 
     def test_donated_rows_show_copyable_support_submission_id(self):
         self.assertIn("support-id", INDEX_HTML)
-        self.assertIn("local-record", INDEX_HTML)
-        self.assertIn("Local receipt only; relay does not currently have this submission", INDEX_HTML)
+        self.assertNotIn("local-record", INDEX_HTML)
+        self.assertNotIn("Local receipt only; relay does not currently have this submission", INDEX_HTML)
         self.assertIn("data-copy-submission", INDEX_HTML)
         self.assertIn("sessionMenu", INDEX_HTML)
         self.assertIn("data-session-action=\"update\"", INDEX_HTML)
@@ -82,8 +82,8 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("New public/credit name for this donation", INDEX_HTML)
         self.assertIn("Copied maintainer reset ID", INDEX_HTML)
         self.assertIn("normalizeSubmissionId", INDEX_HTML)
-        self.assertIn("localPathDonated", INDEX_HTML)
-        self.assertIn("record && !relayChecked", INDEX_HTML)
+        self.assertNotIn("localPathDonated", INDEX_HTML)
+        self.assertNotIn("record && !relayChecked", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
 
     def test_maintainer_metadata_updates_can_be_approved(self):
@@ -407,11 +407,11 @@ class WebTests(unittest.TestCase):
         self.assertEqual(server_cls.call_args_list[0].args[0], ("127.0.0.1", 8766))
         self.assertEqual(server_cls.call_args_list[1].args[0], ("127.0.0.1", 8767))
 
-    def test_annotate_donated_marks_known_source_key(self):
+    def test_annotate_donated_ignores_local_source_key_status(self):
         path = "/tmp/example-session.jsonl"
         with mock.patch("donate.web.load_donated_keys", return_value={session_key(path)}):
             rows = annotate_donated([{"path": path}, {"path": "/tmp/other.jsonl"}])
-        self.assertTrue(rows[0]["donated"])
+        self.assertFalse(rows[0]["donated"])
         self.assertFalse(rows[1]["donated"])
 
     def test_session_update_ready_uses_relay_growth_threshold(self):
@@ -419,7 +419,7 @@ class WebTests(unittest.TestCase):
         self.assertTrue(session_update_ready(120, 100))
         self.assertTrue(session_update_ready(150, 120))
 
-    def test_annotate_donated_marks_grown_source_update_ready(self):
+    def test_annotate_donated_ignores_local_source_update_ready(self):
         path = "/tmp/example-session.jsonl"
         record = {"source_path_key": "unused", "turns": 100}
         with (
@@ -430,12 +430,12 @@ class WebTests(unittest.TestCase):
             rows = annotate_donated([{"path": path, "turns": 130}])
 
         self.assertFalse(rows[0]["donated"])
-        self.assertTrue(rows[0]["donated_before"])
-        self.assertEqual(rows[0]["donated_turns"], 100)
-        self.assertEqual(rows[0]["new_turns"], 30)
-        self.assertTrue(rows[0]["update_ready"])
+        self.assertFalse(rows[0]["donated_before"])
+        self.assertEqual(rows[0]["donated_turns"], 0)
+        self.assertEqual(rows[0]["new_turns"], 0)
+        self.assertFalse(rows[0]["update_ready"])
 
-    def test_annotate_donated_marks_grown_source_below_threshold(self):
+    def test_annotate_donated_ignores_local_source_submission_id(self):
         path = "/tmp/example-session.jsonl"
         record = {
             "source_path_key": "unused",
@@ -453,17 +453,17 @@ class WebTests(unittest.TestCase):
         ):
             rows = annotate_donated([{"path": path, "turns": 110}])
 
-        self.assertTrue(rows[0]["donated"])
-        self.assertTrue(rows[0]["donated_before"])
-        self.assertEqual(rows[0]["new_turns"], 10)
+        self.assertFalse(rows[0]["donated"])
+        self.assertFalse(rows[0]["donated_before"])
+        self.assertEqual(rows[0]["new_turns"], 0)
         self.assertFalse(rows[0]["update_ready"])
-        self.assertEqual(rows[0]["local_submission_id"], "submission-local123")
-        self.assertEqual(rows[0]["local_credit_name"], "Local Donor")
-        self.assertEqual(rows[0]["local_contributor_email"], "local@example.com")
-        self.assertEqual(rows[0]["local_institute"], "Local Institute")
-        self.assertTrue(rows[0]["local_public_anonymous"])
+        self.assertEqual(rows[0]["relay_submission_id"], "")
+        self.assertEqual(rows[0]["local_credit_name"], "")
+        self.assertEqual(rows[0]["local_contributor_email"], "")
+        self.assertEqual(rows[0]["local_institute"], "")
+        self.assertFalse(rows[0]["local_public_anonymous"])
 
-    def test_annotate_donated_preserves_local_record_when_relay_not_received(self):
+    def test_annotate_donated_clears_status_when_relay_not_received(self):
         path = "/tmp/example-session.jsonl"
         record = {"source_path_key": "unused", "turns": 100, "submission": "pending/submission-stale/"}
         with (
@@ -480,8 +480,7 @@ class WebTests(unittest.TestCase):
         self.assertTrue(rows[0]["relay_checked"])
         self.assertFalse(rows[0]["donated"])
         self.assertFalse(rows[0]["donated_before"])
-        self.assertEqual(rows[0]["local_unconfirmed_submission_id"], "submission-stale")
-        self.assertEqual(rows[0]["local_submission_id"], "submission-stale")
+        self.assertEqual(rows[0]["relay_submission_id"], "")
 
     def test_annotate_donated_uses_relay_lineage_status(self):
         path = "/tmp/example-session.jsonl"
