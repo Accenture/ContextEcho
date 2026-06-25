@@ -1224,6 +1224,10 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip.long { background:#dff1d9; color:#13552f; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
+    .session-tools { display:flex; gap:10px; align-items:center; margin:-8px 0 12px; }
+    .session-search { flex:1 1 260px; min-width:0; }
+    .session-sort-select { flex:0 0 174px; width:174px; box-sizing:border-box; border:1px solid var(--line); border-radius:14px; padding:11px 13px; background:white; color:var(--ink); font:inherit; font-weight:800; }
+    .session-sort-select:focus { outline:3px solid rgba(31,111,67,.16); border-color:#7cb67d; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 110px 84px 66px 88px 16px; gap:12px; align-items:center; }
     .session-table-head { padding:10px 16px; background:#f2f5ef; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
@@ -1424,7 +1428,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .privacy-links { justify-content:flex-start; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-summary,.fit-summary { flex-wrap:wrap; } .session-table-head,.session-row { grid-template-columns:46px minmax(180px,1fr) 110px 84px 78px 22px; } .session-table-head > div:nth-child(6), .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-head { flex-direction:column; } .session-summary { justify-content:flex-start; } .session-table-head,.session-row { grid-template-columns:44px minmax(0,1fr) 22px; } .session-table-head > div:nth-child(n+3):nth-child(-n+6), .session-date,.session-turns,.session-cmp,.session-fit { display:none; } .session-icon { width:36px; height:36px; font-size:16px; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-head { flex-direction:column; } .session-summary { justify-content:flex-start; } .session-tools { flex-direction:column; align-items:stretch; } .session-sort-select { width:100%; flex-basis:auto; } .session-table-head,.session-row { grid-template-columns:44px minmax(0,1fr) 22px; } .session-table-head > div:nth-child(n+3):nth-child(-n+6), .session-date,.session-turns,.session-cmp,.session-fit { display:none; } .session-icon { width:36px; height:36px; font-size:16px; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -1494,6 +1498,13 @@ INDEX_HTML = r"""<!doctype html>
             <span id="sessionCount" class="count-badge"><strong>0</strong><span>found</span></span>
             <div id="fitSummary" class="fit-summary" aria-live="polite"></div>
           </div>
+        </div>
+        <div class="session-tools">
+          <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, agent, model, project">
+          <select id="sessionSortMode" class="session-sort-select" aria-label="Session sort">
+            <option value="original">Discovery order</option>
+            <option value="model">Group by model</option>
+          </select>
         </div>
         <div id="sessionList" class="session-list">
           <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active"><span class="header-icon">&#9719;</span> Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns"><span class="header-icon">&#9817;</span> User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions"><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
@@ -1613,6 +1624,8 @@ let submitted = false;
 let activeOperation = false;
 let page = 0;
 let sessionSort = {key:'', dir:'desc'};
+let sessionSortMode = 'original';
+let sessionSearchQuery = '';
 const pageSize = 5;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
@@ -2663,6 +2676,22 @@ function sessionGroupValue(s){
     s?.path || ''
   ].map(x => String(x).toLowerCase()).join('\u0000');
 }
+function sessionSearchText(s){
+  return [
+    s?.agent || '',
+    s?.model || '',
+    s?.session_label || '',
+    s?.project || '',
+    s?.last_active || '',
+    s?.modified || '',
+    s?.path || '',
+    fitLabel(fit(s)),
+  ].map(x => String(x).toLowerCase()).join(' ');
+}
+function filteredSessionItems(){
+  const q = sessionSearchQuery.trim().toLowerCase();
+  return sessions.map((s, idx) => ({s, idx})).filter(item => !q || sessionSearchText(item.s).includes(q));
+}
 function fitSortValue(s){
   return {best:4, good:3, long:2, improve:1}[fit(s)] || 0;
 }
@@ -2675,9 +2704,19 @@ function sessionSortValue(s, key){
   return 0;
 }
 function sortedSessions(){
-  if(!sessionSort.key) return sessions.map((s, idx) => ({s, idx}));
+  const items = filteredSessionItems();
+  if(!sessionSort.key && sessionSortMode !== 'model') return items;
+  if(!sessionSort.key && sessionSortMode === 'model'){
+    return items.sort((a, b) => {
+      const av = sessionGroupValue(a.s);
+      const bv = sessionGroupValue(b.s);
+      if(av < bv) return -1;
+      if(av > bv) return 1;
+      return a.idx - b.idx;
+    });
+  }
   const dir = sessionSort.dir === 'asc' ? 1 : -1;
-  return sessions.map((s, idx) => ({s, idx})).sort((a, b) => {
+  return items.sort((a, b) => {
     const av = sessionSortValue(a.s, sessionSort.key);
     const bv = sessionSortValue(b.s, sessionSort.key);
     if(av < bv) return -1 * dir;
@@ -2694,6 +2733,8 @@ function bindSessionSortHeaders(){
       sessionSort = sessionSort.key === key
         ? {key, dir: sessionSort.dir === 'desc' ? 'asc' : 'desc'}
         : {key, dir: defaultDir};
+      sessionSortMode = 'custom';
+      $('sessionSortMode').value = 'original';
       page = 0;
       renderSessions();
     };
@@ -2733,8 +2774,11 @@ function showSessionMenu(event, session, donationInfo){
 function renderSessions(){
   const list = $('sessionList');
   list.innerHTML = '';
-  const start = page * pageSize;
   const sorted = sortedSessions();
+  const totalVisible = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(totalVisible / pageSize));
+  if(page >= totalPages) page = totalPages - 1;
+  const start = page * pageSize;
   const rows = sorted.slice(start, start + pageSize);
   const allDonated = allSessionsDonated();
   const counts = fitCounts();
@@ -2752,7 +2796,9 @@ function renderSessions(){
     const searched = $('discoverProgress').style.display === 'block';
     const emptyText = searched
       ? `<div class="empty-sessions thanks">Thanks for considering a ContextEcho donation.<span>We did not find any Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.</span></div>`
-      : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>';
+      : (sessions.length && sessionSearchQuery.trim()
+        ? '<div class="empty-sessions">No sessions match this search.</div>'
+        : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>');
     list.innerHTML = `${sessionTableHead()}${emptyText}`;
     bindSessionSortHeaders();
   }
@@ -2823,7 +2869,7 @@ function renderSessions(){
     };
     list.appendChild(row);
   });
-  if(allDonated){
+  if(allDonated && totalVisible === sessions.length){
     selected = null;
     redacted = null;
     submitted = false;
@@ -2832,10 +2878,10 @@ function renderSessions(){
     $('reviewConfirm').checked = false;
     list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated. Click an ID pill to copy the maintainer reset ID if support is needed.</span></div>`);
   }
-  const totalPages = Math.max(1, Math.ceil(sessions.length / pageSize));
-  $('pageInfo').textContent = `Page ${page + 1} of ${totalPages} · showing ${sessions.length ? start + 1 : 0}-${Math.min(start + pageSize, sessions.length)} of ${sessions.length}`;
+  $('pageInfo').textContent = `Page ${page + 1} of ${totalPages} · showing ${totalVisible ? start + 1 : 0}-${Math.min(start + pageSize, totalVisible)} of ${totalVisible}${totalVisible !== sessions.length ? ` filtered from ${sessions.length}` : ''}`;
   $('prevPage').disabled = page <= 0;
   $('nextPage').disabled = page >= totalPages - 1;
+  $('pager').style.display = totalVisible > pageSize ? 'flex' : 'none';
   refreshButtons();
 }
 $('discoverBtn').onclick = async () => {
@@ -2885,7 +2931,6 @@ $('discoverBtn').onclick = async () => {
         ? `Found ${sessions.length} sessions. Donation status could not be checked with the relay, so previously donated sessions may not be marked here. You can still pick a session to donate.`
         : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} sessions. Click a row to select.`)));
     renderSessions();
-    $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
   } catch(e) { status('discoverStatus','ERROR: '+friendlyRequestError(e, 'discovery scan')); }
   finally {
     if(!discoverTiming && progressTimers.discoverProgress) discoverTiming = `Stopped after ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
@@ -2895,7 +2940,18 @@ $('discoverBtn').onclick = async () => {
   }
 };
 $('prevPage').onclick = () => { if(page > 0){ page--; renderSessions(); } };
-$('nextPage').onclick = () => { if((page + 1) * pageSize < sessions.length){ page++; renderSessions(); } };
+$('nextPage').onclick = () => { if((page + 1) * pageSize < sortedSessions().length){ page++; renderSessions(); } };
+$('sessionSearch').oninput = () => {
+  sessionSearchQuery = $('sessionSearch').value || '';
+  page = 0;
+  renderSessions();
+};
+$('sessionSortMode').onchange = () => {
+  sessionSortMode = $('sessionSortMode').value || 'original';
+  sessionSort = {key:'', dir:'desc'};
+  page = 0;
+  renderSessions();
+};
 document.addEventListener('click', hideSessionMenu);
 document.addEventListener('keydown', event => { if(event.key === 'Escape') hideSessionMenu(); });
 window.addEventListener('resize', hideSessionMenu);
