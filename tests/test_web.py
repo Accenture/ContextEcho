@@ -526,8 +526,8 @@ class WebTests(unittest.TestCase):
                 return_value=[{
                     "received": True,
                     "turns": 100,
-                    "new_turns": 80,
-                    "update_ready": True,
+                    "new_turns": 0,
+                    "update_ready": False,
                     "submission_id": "public-session-raw_transcript",
                 }],
             ),
@@ -537,7 +537,7 @@ class WebTests(unittest.TestCase):
         self.assertTrue(rows[0]["relay_received"])
         self.assertEqual(rows[0]["relay_submission_id"], "")
         self.assertEqual(rows[0]["relay_public_session_id"], "public-session-raw_transcript")
-        self.assertTrue(rows[0]["update_ready"])
+        self.assertFalse(rows[0]["update_ready"])
 
     def test_annotate_donated_uses_relay_update_ready_status(self):
         path = "/tmp/example-session.jsonl"

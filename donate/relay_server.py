@@ -772,6 +772,22 @@ def _lineage_status(item: dict, seen_records: list[dict]) -> dict:
         return {"received": False, "update_ready": False, "new_turns": 0, "new_records": 0}
     old_turns = _count_value(best.get("turns"))
     old_records = _count_value(best.get("records"))
+    submission_id = str(best.get("submission_id") or "")
+    if submission_id.startswith("public-session-") and not old_turns:
+        return {
+            "received": True,
+            "update_ready": False,
+            "new_turns": 0,
+            "new_records": 0,
+            "turns": old_turns,
+            "records": old_records,
+            "submission_id": submission_id,
+            "match_type": best_match_type,
+            "credit_name": best.get("credit_name", ""),
+            "contributor_email": best.get("contributor_email", ""),
+            "contributor_institute": best.get("contributor_institute", ""),
+            "public_anonymous": bool(best.get("public_anonymous")),
+        }
     turn_delta = max(0, current_turns - old_turns)
     record_delta = max(0, current_records - old_records)
     turn_growth = (turn_delta / old_turns) if old_turns else (1.0 if turn_delta else 0.0)
@@ -788,7 +804,7 @@ def _lineage_status(item: dict, seen_records: list[dict]) -> dict:
         "new_records": record_delta,
         "turns": old_turns,
         "records": old_records,
-        "submission_id": best.get("submission_id", ""),
+        "submission_id": submission_id,
         "match_type": best_match_type,
         "credit_name": best.get("credit_name", ""),
         "contributor_email": best.get("contributor_email", ""),

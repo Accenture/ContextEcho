@@ -381,6 +381,27 @@ class RelayServerTests(unittest.TestCase):
         self.assertTrue(update_ready["update_ready"])
         self.assertEqual(update_ready["new_turns"], 60)
 
+    def test_lineage_status_does_not_offer_update_for_public_session_without_turns(self) -> None:
+        seen = [
+            {
+                "submission_id": "public-session-raw_transcript",
+                "source_session_id": "",
+                "conversation_fingerprint": "conv-public",
+                "turns": 0,
+                "records": 1200,
+            }
+        ]
+
+        status = relay_server._lineage_status(
+            {"conversation_fingerprint": "conv-public", "turns": 1300, "records": 2400},
+            seen,
+        )
+
+        self.assertTrue(status["received"])
+        self.assertFalse(status["update_ready"])
+        self.assertEqual(status["new_turns"], 0)
+        self.assertEqual(status["submission_id"], "public-session-raw_transcript")
+
     def test_status_seen_records_auto_backfills_empty_state(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             state_dir = Path(td)
