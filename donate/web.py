@@ -1368,7 +1368,7 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
         <div id="sessionList" class="session-list">
-          <div class="session-table-head"><div>#</div><div>Session</div><div><button type="button" class="sort-header" data-sort-key="last_active"><span class="header-icon">&#9719;</span> Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns"><span class="header-icon">&#9817;</span> User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions"><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
+          <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active"><span class="header-icon">&#9719;</span> Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns"><span class="header-icon">&#9817;</span> User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions"><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
           <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
         </div>
         <div class="fit-legend">
@@ -2503,7 +2503,7 @@ function sessionTableHead(){
   const aria = key => sessionSort.key === key ? (sessionSort.dir === 'asc' ? 'ascending' : 'descending') : 'none';
   return `<div class="session-table-head">
     <div>#</div>
-    <div>Session</div>
+    <div><button type="button" class="sort-header" data-sort-key="session" aria-sort="${aria('session')}">Session${arrow('session')}</button></div>
     <div><button type="button" class="sort-header" data-sort-key="last_active" aria-sort="${aria('last_active')}"><span class="header-icon">&#9719;</span> Last active${arrow('last_active')}</button></div>
     <div><button type="button" class="sort-header" data-sort-key="turns" aria-sort="${aria('turns')}"><span class="header-icon">&#9817;</span> User turns${arrow('turns')}</button></div>
     <div><button type="button" class="sort-header" data-sort-key="compactions" aria-sort="${aria('compactions')}"><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span>${arrow('compactions')}</button></div>
@@ -2519,10 +2519,19 @@ function sortableDateValue(s){
   const time = Date.parse(raw);
   return Number.isFinite(time) ? time : 0;
 }
+function sessionGroupValue(s){
+  return [
+    s?.agent || '',
+    s?.model || '',
+    s?.session_label || s?.project || '',
+    s?.path || ''
+  ].map(x => String(x).toLowerCase()).join('\u0000');
+}
 function fitSortValue(s){
   return {best:4, good:3, long:2, improve:1}[fit(s)] || 0;
 }
 function sessionSortValue(s, key){
+  if(key === 'session') return sessionGroupValue(s);
   if(key === 'last_active') return sortableDateValue(s);
   if(key === 'turns') return Number(s?.turns || 0);
   if(key === 'compactions') return Number(s?.compactions || 0);
