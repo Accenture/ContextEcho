@@ -213,7 +213,7 @@ powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://github.com/A
 ```
 
 These commands bootstrap a private `uv` runner with Python if needed, then launch
-the local browser wizard from the GitHub repo with Python 3.14. Verified
+the local browser wizard from the GitHub repo with a supported Python 3.10-3.13 runtime. Verified
 donations upload through the official ContextEcho relay:
 
 ```text

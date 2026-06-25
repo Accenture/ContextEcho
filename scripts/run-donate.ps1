@@ -8,6 +8,13 @@ $ErrorActionPreference = "Stop"
 
 $Spec = if ($env:CONTEXTECHO_DONATE_SPEC) { $env:CONTEXTECHO_DONATE_SPEC } else { "git+https://github.com/Accenture/ContextEcho.git" }
 $env:CONTEXTECHO_RELAY_URL = if ($env:CONTEXTECHO_RELAY_URL) { $env:CONTEXTECHO_RELAY_URL } else { "https://contextecho2026-context-echo-donation-relay.hf.space" }
+$DonatePythonCandidates = if ($env:CONTEXTECHO_DONATE_PYTHON) {
+  @($env:CONTEXTECHO_DONATE_PYTHON)
+} elseif ($env:CONTEXTECHO_DONATE_PYTHONS) {
+  $env:CONTEXTECHO_DONATE_PYTHONS -split "\s+"
+} else {
+  @("3.12", "3.11", "3.13", "3.10")
+}
 
 function Invoke-CandidatePython {
   param(
@@ -24,7 +31,10 @@ function Invoke-CandidatePython {
 
 function Find-Python {
   $candidates = @(
-    @("py", "-3.14"),
+    @("py", "-3.12"),
+    @("py", "-3.11"),
+    @("py", "-3.13"),
+    @("py", "-3.10"),
     @("py", "-3"),
     @("python"),
     @("python3")
@@ -52,11 +62,12 @@ ContextEcho could not start the local donation wizard.
 
 What to try next:
   1. Check that this machine can reach GitHub and PyPI.
-  2. Install Python 3 from https://www.python.org/downloads/windows/ or ask IT to allow Python.
+  2. Install Python 3.10-3.13 from https://www.python.org/downloads/windows/ or ask IT to allow one of: $($DonatePythonCandidates -join ", ").
   3. Rerun the same command; ContextEcho reuses its private cache.
 
 Debug details:
   OS: Windows
+  wizard python candidates: $($DonatePythonCandidates -join ", ")
   cache: $CacheRoot
   exit code: $ExitCode
 "@
@@ -103,19 +114,26 @@ if (Get-Command uv -ErrorAction SilentlyContinue) {
 Write-Host "[ContextEcho] starting local donation wizard..."
 Write-Host "[ContextEcho] raw sessions stay on this machine; the browser wizard will open automatically."
 
-$uvArgs = @("run", "--refresh", "--no-project", "--python", "3.14", "--managed-python", "--with", $Spec, "contextecho-donate")
-if ($DonateArgs) {
-  $uvArgs += $DonateArgs
+$lastRc = 1
+foreach ($pyVersion in $DonatePythonCandidates) {
+  Write-Host "[ContextEcho] trying Python $pyVersion for the local wizard..."
+  $uvArgs = @("run", "--refresh", "--no-project", "--python", $pyVersion, "--with", $Spec, "contextecho-donate")
+  if ($DonateArgs) {
+    $uvArgs += $DonateArgs
+  }
+  try {
+    & $UvCmd @uvArgs
+    $rc = $LASTEXITCODE
+    if ($rc -eq 0) {
+      exit 0
+    }
+    $lastRc = $rc
+    Write-Warning "[ContextEcho] Python $pyVersion did not start the wizard; trying the next supported runtime if available."
+  } catch {
+    $lastRc = 1
+    Write-Warning "[ContextEcho] Python $pyVersion did not start the wizard; trying the next supported runtime if available."
+  }
 }
 
-try {
-  & $UvCmd @uvArgs
-  $rc = $LASTEXITCODE
-  if ($rc -ne 0) {
-    Explain-Failure $rc
-    exit $rc
-  }
-} catch {
-  Explain-Failure 1
-  exit 1
-}
+Explain-Failure $lastRc
+exit $lastRc

@@ -3,7 +3,11 @@ set -u
 
 SPEC="${CONTEXTECHO_DONATE_SPEC:-git+https://github.com/Accenture/ContextEcho.git}"
 CONTEXTECHO_RELAY_URL="${CONTEXTECHO_RELAY_URL:-https://contextecho2026-context-echo-donation-relay.hf.space}"
-CONTEXTECHO_DONATE_PYTHON="${CONTEXTECHO_DONATE_PYTHON:-3.12}"
+if [[ -n "${CONTEXTECHO_DONATE_PYTHON:-}" ]]; then
+  CONTEXTECHO_DONATE_PYTHONS="$CONTEXTECHO_DONATE_PYTHON"
+else
+  CONTEXTECHO_DONATE_PYTHONS="${CONTEXTECHO_DONATE_PYTHONS:-3.12 3.11 3.13 3.10}"
+fi
 
 host_os="$(uname -s)"
 host_arch="$(uname -m)"
@@ -23,14 +27,14 @@ explain_failure() {
   echo "[ContextEcho] The local donation wizard did not start." >&2
   echo "[ContextEcho] What to try next:" >&2
   echo "  1. Check that this machine can reach GitHub and PyPI." >&2
-  echo "  2. If your company blocks Python installs, ask IT to allow Python ${CONTEXTECHO_DONATE_PYTHON} and uv for this command." >&2
+  echo "  2. If your company blocks Python installs, ask IT to allow one of: ${CONTEXTECHO_DONATE_PYTHONS}." >&2
   echo "  3. On Apple Silicon, make sure Python and uv are arm64, not x86_64/Rosetta." >&2
   echo "  4. Rerun the same command; ContextEcho reuses its private cache." >&2
   echo "" >&2
   echo "[ContextEcho] Debug details:" >&2
   echo "  OS/arch: ${host_os}/${host_arch}" >&2
   echo "  python: ${python3_bin:-not found}" >&2
-  echo "  wizard python: ${CONTEXTECHO_DONATE_PYTHON}" >&2
+  echo "  wizard python candidates: ${CONTEXTECHO_DONATE_PYTHONS}" >&2
   if [[ -n "${python3_bin:-}" ]]; then
     echo "  python arch: $(python_arch "$python3_bin")" >&2
   fi
@@ -40,7 +44,7 @@ explain_failure() {
 
 choose_python() {
   if [[ "$host_os" == "Darwin" && "$host_arch" == "arm64" ]]; then
-    for candidate in /opt/homebrew/bin/python3.14 /opt/homebrew/bin/python3 /usr/bin/python3 "$(command -v python3.14 2>/dev/null || true)" "$(command -v python3 2>/dev/null || true)"; do
+    for candidate in /opt/homebrew/bin/python3.12 /opt/homebrew/bin/python3.11 /opt/homebrew/bin/python3.13 /opt/homebrew/bin/python3.10 /opt/homebrew/bin/python3 /usr/bin/python3 "$(command -v python3.12 2>/dev/null || true)" "$(command -v python3.11 2>/dev/null || true)" "$(command -v python3.13 2>/dev/null || true)" "$(command -v python3.10 2>/dev/null || true)" "$(command -v python3 2>/dev/null || true)"; do
       [[ -n "$candidate" && -x "$candidate" ]] || continue
       case "$(python_arch "$candidate")" in
         arm64|arm64e) printf '%s\n' "$candidate"; return 0 ;;
@@ -119,14 +123,24 @@ fi
 echo "[ContextEcho] starting local donation wizard..."
 echo "[ContextEcho] raw sessions stay on this machine; the browser wizard will open automatically."
 
-UV_ARGS=(run --no-project --python "$CONTEXTECHO_DONATE_PYTHON" --managed-python --with "$SPEC")
-if [[ "${CONTEXTECHO_DONATE_REFRESH:-1}" != "0" ]]; then
-  UV_ARGS=(run --refresh --no-project --python "$CONTEXTECHO_DONATE_PYTHON" --managed-python --with "$SPEC")
-fi
+last_rc=1
+for py_version in $CONTEXTECHO_DONATE_PYTHONS; do
+  echo "[ContextEcho] trying Python ${py_version} for the local wizard..."
+  UV_ARGS=(run --no-project --python "$py_version" --with "$SPEC")
+  if [[ "${CONTEXTECHO_DONATE_REFRESH:-1}" != "0" ]]; then
+    UV_ARGS=(run --refresh --no-project --python "$py_version" --with "$SPEC")
+  fi
+  "${UV_RUN[@]}" "${UV_ARGS[@]}" contextecho-donate "$@"
+  rc=$?
+  if [[ "$rc" == "0" ]]; then
+    exit 0
+  fi
+  if [[ "$rc" == "130" ]]; then
+    exit "$rc"
+  fi
+  last_rc="$rc"
+  echo "[ContextEcho] Python ${py_version} did not start the wizard; trying the next supported runtime if available." >&2
+done
 
-"${UV_RUN[@]}" "${UV_ARGS[@]}" contextecho-donate "$@"
-rc=$?
-if [[ "$rc" != "0" ]]; then
-  explain_failure "$rc"
-  exit "$rc"
-fi
+explain_failure "$last_rc"
+exit "$last_rc"

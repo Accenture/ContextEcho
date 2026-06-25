@@ -14,8 +14,11 @@ DONATE_URL = "https://accenture.github.io/ContextEcho/donate/"
 
 def test_launcher_starts_local_browser_wizard_with_managed_python() -> None:
     assert "contextecho-donate" in RUN_DONATE
-    assert "--python 3.14" in RUN_DONATE
-    assert "--managed-python" in RUN_DONATE
+    assert "CONTEXTECHO_DONATE_PYTHONS" in RUN_DONATE
+    assert "3.12 3.11 3.13 3.10" in RUN_DONATE
+    assert "--python \"$py_version\"" in RUN_DONATE
+    assert "--managed-python" not in RUN_DONATE
+    assert "3.14" not in RUN_DONATE
     assert "sys.version_info >= (3, 8)" in RUN_DONATE
     assert "Python 3.10+ to bootstrap" not in RUN_DONATE
     assert "raw sessions stay on this machine" in RUN_DONATE
@@ -25,15 +28,19 @@ def test_launcher_starts_local_browser_wizard_with_managed_python() -> None:
 
 def test_windows_launcher_starts_local_browser_wizard_with_managed_python() -> None:
     assert "contextecho-donate" in RUN_DONATE_PS1
-    assert "--python\", \"3.14" in RUN_DONATE_PS1
-    assert "--managed-python" in RUN_DONATE_PS1
+    assert "DonatePythonCandidates" in RUN_DONATE_PS1
+    assert '@("3.12", "3.11", "3.13", "3.10")' in RUN_DONATE_PS1
+    assert '"--python", $pyVersion' in RUN_DONATE_PS1
+    assert "--managed-python" not in RUN_DONATE_PS1
+    assert "3.14" not in RUN_DONATE_PS1
     assert "sys.version_info >= (3, 8)" in RUN_DONATE_PS1
     assert "raw sessions stay on this machine" in RUN_DONATE_PS1
     assert "run-donate.ps1" not in RUN_DONATE
 
 
 def test_hosted_landing_page_points_to_local_scanner() -> None:
-    assert "Donate a coding-agent session to ContextEcho" in LANDING
+    assert "Donate a coding-agent session to" in LANDING
+    assert "<span>ContextEcho</span>" in LANDING
     assert "curl -Ls https://github.com/Accenture/ContextEcho/raw/main/scripts/run-donate.sh | bash" in LANDING
     assert "Windows PowerShell" in LANDING
     assert "run-donate.ps1" in LANDING
@@ -59,7 +66,7 @@ def test_hosted_landing_page_points_to_local_scanner() -> None:
     assert "Local wizard preview" not in LANDING
     assert "Discover and pick a session" in LANDING
     assert "file picker" not in LANDING
-    assert "do not need to know where session history files live" in LANDING
+    assert "click <strong>Discover Sessions</strong>, choose one useful session row" in LANDING
 
 
 def test_public_docs_point_to_hosted_donor_page() -> None:
