@@ -192,6 +192,7 @@ SUPPORT_REASONS = {
     "reset_for_resubmit",
     "wrong_session",
     "duplicate",
+    "wizard_error",
     "other",
 }
 
@@ -214,14 +215,16 @@ def _request_log_rows(path: Path, id_key: str, limit: int = 200) -> list[dict]:
 
 def _support_request(payload: dict) -> dict:
     submission_id = str(payload.get("submission_id") or "").strip()
-    if not re.fullmatch(r"submission-[A-Za-z0-9_-]+", submission_id):
-        raise HTTPException(status_code=400, detail="submission_id must look like submission-xxxxxxxx")
     reason = str(payload.get("reason") or "other").strip()
     if reason not in SUPPORT_REASONS:
         raise HTTPException(status_code=400, detail="support reason is invalid")
+    if reason == "wizard_error" and not submission_id:
+        submission_id = "wizard-error"
+    if not re.fullmatch(r"(submission-[A-Za-z0-9_-]+|wizard-error)", submission_id):
+        raise HTTPException(status_code=400, detail="submission_id must look like submission-xxxxxxxx")
     message = str(payload.get("message") or "").strip()[:2000]
     record = {
-        "support_id": f"support-{uuid.uuid4().hex[:8]}",
+        "support_id": f"{'support-wizard' if reason == 'wizard_error' else 'support'}-{uuid.uuid4().hex[:8]}",
         "submitted_utc": _utc_now(),
         "status": "pending",
         "submission_id": submission_id,

@@ -550,6 +550,26 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(events[0]["event"], "support_requested")
         self.assertEqual(events[-1]["event"], "support_resolved")
 
+    def test_wizard_error_support_request_does_not_need_submission_id(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SUPPORT_REQUESTS", state_dir / "support_requests.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+            ):
+                request = relay_server._support_request({
+                    "reason": "wizard_error",
+                    "message": "Redaction failed: RuntimeError",
+                    "source_session_id": "source-abc",
+                })
+                rows = relay_server._support_request_rows()
+
+        self.assertTrue(request["support_id"].startswith("support-wizard-"))
+        self.assertEqual(request["submission_id"], "wizard-error")
+        self.assertEqual(rows[0]["reason"], "wizard_error")
+        self.assertEqual(rows[0]["source_session_id"], "source-abc")
+
     def test_approve_metadata_update_applies_seen_record_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             state_dir = Path(td)

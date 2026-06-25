@@ -33,8 +33,10 @@ from donate.web import (
     save_donation_record,
     session_update_ready,
     session_key,
+    sanitize_diagnostic_text,
     stream_error_message,
     submit_auto_metadata,
+    wizard_error_report_payload,
     write_receipt,
 )
 
@@ -50,6 +52,27 @@ class WebTests(unittest.TestCase):
         message = stream_error_message(missing, "Redaction")
         self.assertIn("missing presidio_analyzer", message)
         self.assertIn("rerun the install command", message)
+
+    def test_wizard_error_report_is_sanitized_for_maintainers(self):
+        text = "/Users/jane.doe/project/file.py hf_abcdefghijklmnopqrstuvwxyz jane@example.com"
+        sanitized = sanitize_diagnostic_text(text)
+        self.assertNotIn("jane.doe", sanitized)
+        self.assertNotIn("abcdefghijklmnopqrstuvwxyz", sanitized)
+        self.assertNotIn("jane@example.com", sanitized)
+        self.assertIn("/Users/<USER>", sanitized)
+        self.assertIn("<SECRET>", sanitized)
+        self.assertIn("<EMAIL>", sanitized)
+
+        payload = wizard_error_report_payload(
+            {"auto": {"agent": "Codex CLI", "model": "gpt-5", "turns": 120, "records": 300}},
+            RuntimeError("bad path /Users/jane.doe/session.jsonl"),
+            "Redaction",
+            "Traceback /Users/jane.doe/session.jsonl",
+        )
+        self.assertEqual(payload["submission_id"], "wizard-error")
+        self.assertEqual(payload["reason"], "wizard_error")
+        self.assertIn("Codex CLI", payload["message"])
+        self.assertNotIn("jane.doe", payload["message"])
 
     def test_submit_step_previews_public_leaderboard_identity(self):
         self.assertIn("submitLeaderboardPreview", INDEX_HTML)

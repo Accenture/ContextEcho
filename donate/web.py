@@ -14,6 +14,7 @@ import errno
 import hashlib
 import json
 import os
+import platform
 import queue
 import re
 import subprocess
@@ -74,6 +75,72 @@ def stream_error_message(exc: BaseException, action: str) -> str:
             "Stop the wizard and rerun the install command so ContextEcho can refresh its private environment."
         )
     return f"{action} failed: {msg or name}"
+
+
+def sanitize_diagnostic_text(text: object) -> str:
+    """Remove obvious local identifiers from automatic maintainer diagnostics."""
+    value = str(text or "")
+    home = str(Path.home())
+    if home:
+        value = value.replace(home, "~")
+    value = re.sub(r"/Users/[^/\s\"']+", "/Users/<USER>", value)
+    value = re.sub(r"/home/[^/\s\"']+", "/home/<USER>", value)
+    value = re.sub(r"[A-Za-z]:\\Users\\[^\\\s\"']+", r"C:\\Users\\<USER>", value)
+    value = re.sub(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", "<EMAIL>", value)
+    secret_patterns = [
+        r"sk-[A-Za-z0-9_\-]{16,}",
+        r"sk-ant-[A-Za-z0-9_\-]{16,}",
+        r"gh[pousr]_[A-Za-z0-9]{20,}",
+        r"hf_[A-Za-z0-9]{20,}",
+        r"AKIA[0-9A-Z]{16}",
+        r"AIza[0-9A-Za-z_\-]{35}",
+        r"xox[baprs]-[0-9A-Za-z\-]{10,}",
+        r"Bearer\s+[A-Za-z0-9._\-]{20,}",
+    ]
+    for pattern in secret_patterns:
+        value = re.sub(pattern, "<SECRET>", value)
+    return value[:4000]
+
+
+def wizard_error_report_payload(data: dict, exc: BaseException, action: str, traceback_text: str) -> dict:
+    auto = data.get("auto") if isinstance(data.get("auto"), dict) else {}
+    source_session_id = ""
+    try:
+        source_session_id = describe_mod.source_session_id(auto) if auto else ""
+    except Exception:
+        source_session_id = ""
+    message = "\n".join([
+        f"Automatic wizard error report: {action}",
+        f"Error: {stream_error_message(exc, action)}",
+        f"Platform: {platform.platform()}",
+        f"Python: {sys.version.split()[0]}",
+        f"Agent: {auto.get('agent', '')}",
+        f"Model: {auto.get('model', '')}",
+        f"Turns: {auto.get('turns', '')}",
+        f"Records: {auto.get('records', '')}",
+        f"Compactions: {auto.get('compactions', '')}",
+        "",
+        sanitize_diagnostic_text(traceback_text),
+    ])
+    return {
+        "submission_id": "wizard-error",
+        "reason": "wizard_error",
+        "message": sanitize_diagnostic_text(message),
+        "source_session_id": source_session_id,
+        "conversation_fingerprint": str(auto.get("conversation_fingerprint") or "").strip(),
+    }
+
+
+def report_wizard_error(data: dict, exc: BaseException, action: str, traceback_text: str) -> str:
+    try:
+        result = relay_support_request(wizard_error_report_payload(data, exc, action, traceback_text))
+    except Exception as report_exc:
+        print(f"[web] automatic wizard error report failed: {report_exc}", file=sys.stderr)
+        return ""
+    support_id = str(result.get("support_id") or "")
+    if support_id:
+        print(f"[web] automatic wizard error report sent: {support_id}", file=sys.stderr)
+    return support_id
 
 
 def create_server(host: str, port: int, attempts: int = 20) -> tuple[ThreadingHTTPServer, int]:
@@ -3359,8 +3426,13 @@ class Handler(BaseHTTPRequestHandler):
         except ClientDisconnected:
             return
         except Exception as exc:
-            traceback.print_exc(file=sys.stderr)
-            self._event({"event": "error", "error": stream_error_message(exc, "Redaction")})
+            tb = traceback.format_exc()
+            print(tb, file=sys.stderr, end="")
+            support_id = report_wizard_error(data, exc, "Redaction", tb)
+            error = stream_error_message(exc, "Redaction")
+            if support_id:
+                error = f"{error} A sanitized diagnostic was sent to the maintainer relay as {support_id}."
+            self._event({"event": "error", "error": error})
 
     def _handle_describe(self) -> None:
         data = self._read_json()
@@ -3401,8 +3473,13 @@ class Handler(BaseHTTPRequestHandler):
         except ClientDisconnected:
             return
         except Exception as exc:
-            traceback.print_exc(file=sys.stderr)
-            self._event({"event": "error", "error": stream_error_message(exc, "Manifest preparation")})
+            tb = traceback.format_exc()
+            print(tb, file=sys.stderr, end="")
+            support_id = report_wizard_error(data, exc, "Manifest preparation", tb)
+            error = stream_error_message(exc, "Manifest preparation")
+            if support_id:
+                error = f"{error} A sanitized diagnostic was sent to the maintainer relay as {support_id}."
+            self._event({"event": "error", "error": error})
 
     def _handle_submit(self) -> None:
         data = self._read_json()
@@ -3475,8 +3552,13 @@ class Handler(BaseHTTPRequestHandler):
         except ClientDisconnected:
             return
         except Exception as exc:
-            traceback.print_exc(file=sys.stderr)
-            self._event({"event": "error", "error": stream_error_message(exc, "Submission")})
+            tb = traceback.format_exc()
+            print(tb, file=sys.stderr, end="")
+            support_id = report_wizard_error(data, exc, "Submission", tb)
+            error = stream_error_message(exc, "Submission")
+            if support_id:
+                error = f"{error} A sanitized diagnostic was sent to the maintainer relay as {support_id}."
+            self._event({"event": "error", "error": error})
 
     def _handle_submit_job(self) -> None:
         data = self._read_json()
