@@ -168,7 +168,7 @@
     .mascot-laptop { position:absolute; left:43px; top:67px; width:48px; height:34px; border-radius:7px 7px 3px 3px; background:#d7d8d3; transform:skew(-8deg); box-shadow:0 5px 0 #b9bbb5; }
     .mascot-laptop:after { content:""; position:absolute; left:20px; top:14px; width:6px; height:6px; border-radius:50%; background:white; opacity:.9; }
     .mascot-star { position:absolute; right:12px; top:4px; color:var(--gold); font-size:30px; line-height:1; }
-    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
     .stat-card {
       min-height:112px;
       padding:12px 10px;
@@ -498,6 +498,11 @@
           <div class="stats" aria-live="polite">
             <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
               <div class="stat-icon" data-icon="download"></div>
+              <div class="stat-value" data-stat-value="total-downloads">8,350</div>
+              <div class="stat-label">Total Downloads<br>Tracked</div>
+            </a>
+            <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
+              <div class="stat-icon" data-icon="download"></div>
               <div class="stat-value" data-stat-value="downloads">8,350</div>
               <div class="stat-label">Downloads<br>Last Month</div>
             </a>
@@ -751,6 +756,13 @@ async function refreshProjectStats() {
     const el = document.querySelector(`[data-stat-value="${name}"]`);
     if (el) el.textContent = formatStat(value);
   };
+  try {
+    const tracked = await fetch('../project_stats.json', {cache:'no-store'});
+    if (tracked.ok) {
+      const data = await tracked.json();
+      setValue('total-downloads', data.dataset_total_downloads);
+    }
+  } catch (e) {}
   try {
     const github = await fetch('https://api.github.com/repos/Accenture/ContextEcho', {cache:'no-store'});
     if (github.ok) {

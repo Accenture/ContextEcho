@@ -235,6 +235,7 @@ class WebTests(unittest.TestCase):
         self.assertNotIn('<button class="dataset" type="button">Like Dataset</button>', INDEX_HTML)
         self.assertNotIn("Star on GitHub</a>", INDEX_HTML)
         self.assertNotIn("Like Dataset</a>", INDEX_HTML)
+        self.assertIn("Total Downloads", INDEX_HTML)
         self.assertIn("Downloads Last Month", INDEX_HTML)
         self.assertIn("GitHub Stars", INDEX_HTML)
         self.assertIn("Dataset Likes", INDEX_HTML)

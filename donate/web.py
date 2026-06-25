@@ -834,11 +834,25 @@ def _load_dataset_card_markdown(local_path: Path | None = None) -> str:
         return _fetch_text("https://raw.githubusercontent.com/Accenture/ContextEcho/main/DATASET_CARD.md")
 
 
+def _load_tracked_project_stats(local_path: Path | None = None) -> dict:
+    if local_path is None:
+        local_path = Path(__file__).resolve().parents[1] / "docs" / "project_stats.json"
+        try:
+            return _fetch_json("https://raw.githubusercontent.com/Accenture/ContextEcho/main/docs/project_stats.json")
+        except Exception:
+            return json.loads(local_path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(local_path.read_text(encoding="utf-8"))
+    except Exception:
+        return _fetch_json("https://raw.githubusercontent.com/Accenture/ContextEcho/main/docs/project_stats.json")
+
+
 def project_stats() -> dict:
     """Best-effort public project stats. Never block the donation flow."""
     stats = {
         "github_stars": None,
         "donated_sessions": None,
+        "dataset_total_downloads": None,
         "dataset_downloads": None,
         "dataset_likes": None,
         "leaderboard": [],
@@ -852,6 +866,11 @@ def project_stats() -> dict:
     try:
         readme = _fetch_text("https://raw.githubusercontent.com/Accenture/ContextEcho/main/README.md")
         stats["donated_sessions"] = _parse_donated_sessions(readme)
+    except Exception:
+        pass
+    try:
+        tracked = _load_tracked_project_stats()
+        stats["dataset_total_downloads"] = tracked.get("dataset_total_downloads")
     except Exception:
         pass
     try:
@@ -1033,7 +1052,7 @@ INDEX_HTML = r"""<!doctype html>
     .intro-head { display:flex; gap:22px; align-items:flex-start; padding-bottom:20px; border-bottom:1px solid var(--line); }
     .folder-icon { width:76px; height:76px; border-radius:18px; display:grid; place-items:center; background:linear-gradient(135deg,#eef6d4,#f7faeb); }
     .folder-icon:before { content:""; width:42px; height:29px; border:3px solid var(--accent); border-radius:6px; box-sizing:border-box; box-shadow:0 -10px 0 -6px var(--accent); }
-    .stats { display:grid; grid-template-columns:repeat(3,minmax(82px,1fr)); gap:10px; align-items:stretch; min-width:330px; }
+    .stats { display:grid; grid-template-columns:repeat(4,minmax(74px,1fr)); gap:10px; align-items:stretch; min-width:420px; }
     .stat-card { min-height:78px; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fff; border:1px solid #e3e7df; border-radius:10px; padding:8px 9px; box-shadow:0 5px 14px rgba(43,59,37,.06); color:inherit; text-decoration:none; transition:.15s ease; }
     a.stat-card:hover, a.stat-card:focus { transform:translateY(-1px); border-color:#c9dcc5; box-shadow:0 8px 18px rgba(43,59,37,.1); outline:none; }
     a.stat-card:focus-visible { outline:3px solid rgba(31,111,67,.18); }
@@ -1328,6 +1347,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="support-copy">Star the GitHub repo or like the dataset by clicking the cards.</div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
+          <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Total Downloads</div></a>
           <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Downloads Last Month</div></a>
           <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></a>
           <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></a>
@@ -1839,6 +1859,7 @@ function escapeHtml(s){
 }
 function renderProjectStats(){
   const cards = [
+    ['download', 'Total Downloads', publicStats.dataset_total_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
     ['download', 'Downloads Last Month', publicStats.dataset_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
     ['star', 'GitHub Stars', publicStats.github_stars, 'https://github.com/Accenture/ContextEcho'],
     ['heart', 'Dataset Likes', publicStats.dataset_likes, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
