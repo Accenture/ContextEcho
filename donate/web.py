@@ -1800,6 +1800,9 @@ function allSessionsDonated(){
     return info.exactDonated || (info.donatedBefore && !info.updateReady);
   });
 }
+function relayStatusChecked(){
+  return sessions.length > 0 && sessions.every(s => !!s.relay_checked);
+}
 function allSessionsDonatedMessage(){
   return `Thank you for donating all your scanned session data. ${sessions.length} session${sessions.length === 1 ? '' : 's'} on this machine are marked donated.`;
 }
@@ -1879,6 +1882,9 @@ function donatedCount(){
     const info = localDonationInfo(s);
     return count + (info.donatedBefore || info.exactDonated ? 1 : 0);
   }, 0);
+}
+function donatedSummaryLabel(){
+  return relayStatusChecked() ? `Donated ${donatedCount()}` : 'Donated ?';
 }
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 function compactionNote(s){
@@ -2708,9 +2714,8 @@ function renderSessions(){
   const allDonated = allSessionsDonated();
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   const counts = fitCounts();
-  const donatedTotal = donatedCount();
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip donated">Donated ${donatedTotal}</span><span class="fit-chip best">Best ${counts.best || 0}</span><span class="fit-chip good">Good ${counts.good || 0}</span><span class="fit-chip long">Long ${counts.long || 0}</span><span class="fit-chip improve">Improve ${counts.improve || 0}</span>`
+    ? `<span class="fit-chip donated">${donatedSummaryLabel()}</span><span class="fit-chip best">Best ${counts.best || 0}</span><span class="fit-chip good">Good ${counts.good || 0}</span><span class="fit-chip long">Long ${counts.long || 0}</span><span class="fit-chip improve">Improve ${counts.improve || 0}</span>`
     : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
@@ -2843,7 +2848,11 @@ $('discoverBtn').onclick = async () => {
     sessions = (final && final.sessions) || [];
     page = 0;
     discoverTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
-    status('discoverStatus', sessions.length === 0 ? noSessionsMessage() : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} sessions. Click a row to select.`));
+    status('discoverStatus', sessions.length === 0
+      ? noSessionsMessage()
+      : (!relayStatusChecked()
+        ? `Found ${sessions.length} sessions. Donation status could not be checked with the relay, so previously donated sessions may not be marked here. You can still pick a session to donate.`
+        : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} sessions. Click a row to select.`)));
     renderSessions();
     $('pager').style.display = sessions.length > pageSize ? 'flex' : 'none';
   } catch(e) { status('discoverStatus','ERROR: '+friendlyRequestError(e, 'discovery scan')); }

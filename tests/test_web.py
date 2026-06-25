@@ -287,6 +287,12 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("['gift', 'Donated Sessions'", INDEX_HTML)
         self.assertNotIn('<div class="stat-card"><div class="stat-icon" data-icon="gift"', INDEX_HTML)
 
+    def test_donor_summary_distinguishes_unchecked_relay_status(self):
+        self.assertIn("function relayStatusChecked()", INDEX_HTML)
+        self.assertIn("function donatedSummaryLabel()", INDEX_HTML)
+        self.assertIn("relayStatusChecked() ? `Donated ${donatedCount()}` : 'Donated ?'", INDEX_HTML)
+        self.assertIn("Donation status could not be checked with the relay", INDEX_HTML)
+
     def test_pick_session_shows_public_dataset_composition(self):
         self.assertIn("datasetComposition", INDEX_HTML)
         self.assertIn("renderDatasetComposition", INDEX_HTML)
