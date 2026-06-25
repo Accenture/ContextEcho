@@ -36,9 +36,10 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | 15 | Anonymous donor 38bd5d46 | 1 | 106 | Codex CLI | gpt-5.5 | 5 |
 | 16 | Anonymous donor 37744e94 | 1 | 101 | Codex CLI | gpt-5.3-codex | 5 |
 | 17 | Xianzhong Ding | 1 | 87 | Claude Code | claude-opus-4-5.x (mixed) | 5 |
-| 18 | Anonymous donor 297da79a | 1 | 53 | Claude Code | claude-sonnet-4.x (mixed) | 5 |
+| 18 | Anonymous donor 86ff44fe | 1 | 61 | Claude Code | claude-sonnet-4-6 | 5 |
+| 19 | Anonymous donor 297da79a | 1 | 53 | Claude Code | claude-sonnet-4.x (mixed) | 5 |
 
-*Corpus total: **18 sessions · 26,187 user turns**.*
+*Corpus total: **19 sessions · 26,248 user turns**.*
 
 > Anonymous donors are assigned stable session nicknames unless they provide
 > name, email, and institute. Contributions are merged only when all three
@@ -74,6 +75,7 @@ per contributor counts toward points.
 | S16 | Xianzhong Ding | Claude Code | claude-opus-4-5.x (mixed) | Anthropic | agentic-coding | mixed | 87 | 2 | 5 | v2 |
 | S17 | Anonymous donor 297da79a | Claude Code | claude-sonnet-4.x (mixed) | Anthropic | agentic-coding | mixed | 53 | 2 | 5 | v2 |
 | S18 | Anonymous donor 37744e94 | Codex CLI | gpt-5.3-codex | OpenAI | agentic-coding | mixed | 101 | 0 | 5 | v2 |
+| S19 | Anonymous donor 86ff44fe | Claude Code | claude-sonnet-4-6 | Anthropic | agentic-coding | mixed | 61 | 1 | 5 | v2 |
 
 ---
 
