@@ -246,11 +246,11 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(records[0]["submission_id"], "submission-public")
         self.assertTrue(records[0]["conversation_fingerprint"].startswith("conv-"))
 
-    def test_pending_submissions_are_annotated_from_release_ledger(self) -> None:
+    def test_pending_submissions_are_annotated_from_private_review_status(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             pending_manifest = root / "pending_manifest.json"
-            ledger = root / "ledger.jsonl"
+            status = root / "reviewed_submissions.jsonl"
             pending_manifest.write_text(
                 json.dumps({
                     "session_id": "donation-public",
@@ -263,13 +263,13 @@ class RelayServerTests(unittest.TestCase):
                 }),
                 encoding="utf-8",
             )
-            ledger.write_text(
+            status.write_text(
                 json.dumps({
                     "submission_id": "submission-public",
                     "decision": "ACCEPTABLE",
-                    "label": "anonymous-donor-submission-public",
-                    "session_path": "data/sessions/session_public.jsonl",
-                    "manifest_path": "data/donations/anonymous-donor-submission-public/manifest.json",
+                    "promoted": True,
+                    "quick_validation": True,
+                    "reviewed_utc": "2026-06-24T00:00:00+00:00",
                 })
                 + "\n",
                 encoding="utf-8",
@@ -286,12 +286,13 @@ class RelayServerTests(unittest.TestCase):
                         "pending/submission-new/session.redacted.jsonl",
                         "pending/submission-new/manifest.json",
                         "pending/submission-new/CONSENT.md",
+                        "maintainer/reviewed_submissions.jsonl",
                     ]
-                return ["data/donations/ledger.jsonl"]
+                return []
 
             def fake_download(*, filename: str, **_kwargs: object) -> str:
-                if filename == "data/donations/ledger.jsonl":
-                    return str(ledger)
+                if filename == "maintainer/reviewed_submissions.jsonl":
+                    return str(status)
                 return str(pending_manifest)
 
             api.list_repo_files.side_effect = fake_list_repo_files
@@ -299,14 +300,16 @@ class RelayServerTests(unittest.TestCase):
                 mock.patch("donate.relay_server.HfApi", return_value=api),
                 mock.patch("donate.relay_server.hf_hub_download", side_effect=fake_download),
                 mock.patch("donate.relay_server.STAGING_REPO", "owner/staging"),
-                mock.patch("donate.relay_server.BACKFILL_REPOS", ["owner/release"]),
+                mock.patch("donate.relay_server.REVIEW_STATUS_PATH", "maintainer/reviewed_submissions.jsonl"),
             ):
                 result = relay_server._pending_submissions_from_hf()
 
         rows = {row["submission_id"]: row for row in result["submissions"]}
         self.assertTrue(rows["submission-public"]["promoted"])
         self.assertEqual(rows["submission-public"]["review_status"], "promoted")
-        self.assertEqual(rows["submission-public"]["release_label"], "anonymous-donor-submission-public")
+        self.assertEqual(rows["submission-public"]["review_decision"], "ACCEPTABLE")
+        self.assertEqual(rows["submission-public"]["reviewed_utc"], "2026-06-24T00:00:00+00:00")
+        self.assertTrue(rows["submission-public"]["quick_validation"])
         self.assertFalse(rows["submission-new"]["promoted"])
         self.assertEqual(rows["submission-new"]["review_status"], "needs_validation")
 

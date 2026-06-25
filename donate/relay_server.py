@@ -46,6 +46,10 @@ BACKFILL_REPOS = [
     ).split(",")
     if repo.strip()
 ]
+REVIEW_STATUS_PATH = os.environ.get(
+    "CONTEXTECHO_RELAY_REVIEW_STATUS_PATH",
+    "maintainer/reviewed_submissions.jsonl",
+)
 
 REQUIRED_MANIFEST_FIELDS = {
     "session_id",
@@ -507,26 +511,33 @@ def _release_ledger_rows(repo_id: str, files: list[str], token: str | None) -> l
     return rows
 
 
-def _release_promotion_index(api: HfApi, token: str | None, errors: list[str]) -> dict[str, dict]:
-    promoted: dict[str, dict] = {}
-    for repo_id in BACKFILL_REPOS:
-        try:
-            files = api.list_repo_files(repo_id=repo_id, repo_type="dataset")
-        except Exception as exc:
-            errors.append(f"{repo_id}: release status list failed: {exc}")
+def _staging_review_status_index(files: list[str], token: str | None, errors: list[str]) -> dict[str, dict]:
+    if REVIEW_STATUS_PATH not in files:
+        return {}
+    try:
+        local_path = hf_hub_download(
+            repo_id=STAGING_REPO,
+            repo_type="dataset",
+            filename=REVIEW_STATUS_PATH,
+            token=token,
+        )
+    except Exception as exc:
+        errors.append(f"{REVIEW_STATUS_PATH}: review status unavailable: {exc}")
+        return {}
+    statuses: dict[str, dict] = {}
+    for line in Path(local_path).read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
             continue
-        for row in _release_ledger_rows(repo_id, files, token):
-            submission_id = str(row.get("submission_id") or "").strip()
-            if not submission_id:
-                continue
-            promoted[submission_id] = {
-                "repo_id": repo_id,
-                "decision": row.get("decision") or "ACCEPTABLE",
-                "label": row.get("label") or "",
-                "session_path": row.get("session_path") or "",
-                "manifest_path": row.get("manifest_path") or "",
-            }
-    return promoted
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        submission_id = str(row.get("submission_id") or "").strip()
+        if submission_id:
+            statuses[submission_id] = row
+    return statuses
 
 
 def _release_session_paths(files: list[str]) -> list[str]:
@@ -555,24 +566,23 @@ def _pending_submissions_from_hf() -> dict:
         files = api.list_repo_files(repo_id=STAGING_REPO, repo_type="dataset")
     except Exception as exc:
         return {"ok": False, "submissions": [], "errors": [f"{STAGING_REPO}: list failed: {exc}"]}
-    promoted = _release_promotion_index(api, token, errors)
+    review_statuses = _staging_review_status_index(files, token, errors)
     for prefix in _pending_submission_prefixes(files):
         submission_id = prefix.split("/")[-1]
         manifest_path = f"{prefix}/manifest.json"
         manifest = _read_hf_json(STAGING_REPO, manifest_path, token, files)
         if not manifest:
             errors.append(f"{prefix}: manifest unavailable")
-        release_status = promoted.get(submission_id, {})
-        is_promoted = bool(release_status)
+        review_status = review_statuses.get(submission_id, {})
+        is_promoted = bool(review_status.get("promoted")) or review_status.get("decision") == "ACCEPTABLE"
         submissions.append({
             "submission_id": submission_id,
             "prefix": prefix,
             "review_status": "promoted" if is_promoted else "needs_validation",
             "promoted": is_promoted,
-            "release_repo": release_status.get("repo_id", ""),
-            "release_label": release_status.get("label", ""),
-            "release_session_path": release_status.get("session_path", ""),
-            "review_decision": release_status.get("decision", ""),
+            "review_decision": review_status.get("decision", ""),
+            "reviewed_utc": review_status.get("reviewed_utc", ""),
+            "quick_validation": bool(review_status.get("quick_validation")),
             "has_session": f"{prefix}/session.redacted.jsonl" in files,
             "has_manifest": manifest_path in files,
             "has_consent": f"{prefix}/CONSENT.md" in files,

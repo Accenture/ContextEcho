@@ -461,7 +461,7 @@ function setPendingStatusFilter(value){
 }
 function reviewStatusPill(row){
   if(row.review_status === 'promoted' || row.promoted){
-    const detail = row.release_label || row.release_repo || 'release ledger';
+    const detail = row.review_decision || row.reviewed_utc || 'private review registry';
     return `<span class="pill">promoted</span><div class="hint">${escapeHtml(detail)}</div>`;
   }
   return '<span class="pill warn">needs validation</span><div class="hint">Run maintainer intake locally</div>';
