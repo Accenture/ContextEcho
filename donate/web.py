@@ -1214,6 +1214,10 @@ INDEX_HTML = r"""<!doctype html>
     .count-badge span { display:block; margin-top:2px; font-size:12px; color:#38423d; }
     .fit-summary { display:flex; flex-wrap:nowrap; gap:10px; justify-content:flex-end; }
     .fit-chip { border-radius:10px; padding:12px 14px; font-size:14px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:118px; white-space:nowrap; }
+    .count-badge[data-tooltip], .fit-chip[data-tooltip] { position:relative; cursor:help; }
+    .count-badge[data-tooltip]:after, .fit-chip[data-tooltip]:after { content:attr(data-tooltip); position:absolute; left:50%; top:calc(100% + 8px); transform:translateX(-50%); opacity:0; pointer-events:none; z-index:30; min-width:150px; padding:8px 10px; border-radius:8px; background:#14241d; color:#fff; box-shadow:0 8px 20px rgba(15,25,20,.18); font-size:12px; font-weight:800; line-height:1.35; text-align:left; white-space:pre-line; }
+    .count-badge[data-tooltip]:before, .fit-chip[data-tooltip]:before { content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); opacity:0; pointer-events:none; z-index:31; border:5px solid transparent; border-bottom-color:#14241d; }
+    .count-badge[data-tooltip]:hover:after, .count-badge[data-tooltip]:hover:before, .fit-chip[data-tooltip]:hover:after, .fit-chip[data-tooltip]:hover:before { opacity:1; }
     .fit-chip.ready { background:#dff1d9; color:#13552f; }
     .fit-chip.best { background:#dff1d9; color:#13552f; }
     .fit-chip.good { background:#e8ecd7; color:#5c5d16; }
@@ -2736,10 +2740,11 @@ function renderSessions(){
   const agentCounts = agentFamilyCounts();
   const sessionSummaryTitle = `Claude: ${agentCounts.claude}\nCodex: ${agentCounts.codex}\nOther: ${agentCounts.other}`;
   const readySummaryTitle = `Best: ${counts.best || 0}\nGood: ${counts.good || 0}\nLong: ${counts.long || 0}`;
-  $('sessionCount').title = sessionSummaryTitle;
+  $('sessionCount').dataset.tooltip = sessionSummaryTitle;
+  $('sessionCount').setAttribute('aria-label', sessionSummaryTitle);
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip ready" title="${escapeHtml(readySummaryTitle)}">Ready ${readyCount}</span><span class="fit-chip improve" title="Not ready yet: needs more turns or a context compaction">Keep chatting ${counts.improve || 0}</span>`
+    ? `<span class="fit-chip ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}">Ready ${readyCount}</span><span class="fit-chip improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction">Keep chatting ${counts.improve || 0}</span>`
     : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
