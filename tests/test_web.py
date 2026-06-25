@@ -224,8 +224,13 @@ class WebTests(unittest.TestCase):
         self.assertNotIn(">Retry failed upload<", INDEX_HTML)
 
     def test_pick_session_explains_research_value_fit(self):
-        self.assertIn("All sessions are shown", INDEX_HTML)
-        self.assertIn("Best, good, and long are ready to donate", INDEX_HTML)
+        self.assertIn("Ready sessions can be donated now", INDEX_HTML)
+        self.assertIn("keep chatting sessions need more turns or a context compaction", INDEX_HTML)
+        self.assertIn('<span class="fit-chip ready">Ready ${readyCount}</span>', INDEX_HTML)
+        self.assertIn('<span class="fit-chip improve">Keep chatting ${counts.improve || 0}</span>', INDEX_HTML)
+        self.assertIn("const readyCount = (counts.best || 0) + (counts.good || 0) + (counts.long || 0)", INDEX_HTML)
+        self.assertNotIn('class="fit-chip donated"', INDEX_HTML)
+        self.assertNotIn("Best ${counts.best || 0}", INDEX_HTML)
         self.assertIn("100+ turns and 2+ ctx cmp", INDEX_HTML)
         self.assertIn("50+ turns and 1+ ctx cmp", INDEX_HTML)
         self.assertIn("Long</span> 100+ turns", INDEX_HTML)
@@ -290,9 +295,8 @@ class WebTests(unittest.TestCase):
 
     def test_donor_summary_distinguishes_unchecked_relay_status(self):
         self.assertIn("function relayStatusChecked()", INDEX_HTML)
-        self.assertIn("function donatedSummaryLabel()", INDEX_HTML)
-        self.assertIn("relayStatusChecked() ? `Donated ${donatedCount()}` : 'Donated ?'", INDEX_HTML)
         self.assertIn("Donation status could not be checked with the relay", INDEX_HTML)
+        self.assertNotIn("Donated ?", INDEX_HTML)
 
     def test_pick_session_shows_public_dataset_composition(self):
         self.assertIn("datasetComposition", INDEX_HTML)

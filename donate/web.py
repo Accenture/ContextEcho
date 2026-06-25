@@ -1213,7 +1213,8 @@ INDEX_HTML = r"""<!doctype html>
     .count-badge strong { display:block; color:var(--accent); font-size:24px; line-height:1; }
     .count-badge span { display:block; margin-top:2px; font-size:12px; color:#38423d; }
     .fit-summary { display:flex; flex-wrap:nowrap; gap:10px; justify-content:flex-end; }
-    .fit-chip { border-radius:10px; padding:12px 14px; font-size:14px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:74px; white-space:nowrap; }
+    .fit-chip { border-radius:10px; padding:12px 14px; font-size:14px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:118px; white-space:nowrap; }
+    .fit-chip.ready { background:#dff1d9; color:#13552f; }
     .fit-chip.best { background:#dff1d9; color:#13552f; }
     .fit-chip.good { background:#e8ecd7; color:#5c5d16; }
     .fit-chip.long { background:#e6eef8; color:#1e4f87; }
@@ -1471,7 +1472,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="folder-icon"></div>
           <div>
             <h2>1. Pick a Session</h2>
-            <p class="muted">All sessions are shown. Best, good, and long are ready to donate; improve means keep chatting.</p>
+            <p class="muted">Ready sessions can be donated now; keep chatting sessions need more turns or a context compaction.</p>
           </div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
@@ -1894,15 +1895,6 @@ function fitCounts(){
     acc[fit(s)] = (acc[fit(s)] || 0) + 1;
     return acc;
   }, {best:0, good:0, long:0, improve:0});
-}
-function donatedCount(){
-  return sessions.reduce((count, s) => {
-    const info = localDonationInfo(s);
-    return count + (info.donatedBefore || info.exactDonated ? 1 : 0);
-  }, 0);
-}
-function donatedSummaryLabel(){
-  return relayStatusChecked() ? `Donated ${donatedCount()}` : 'Donated ?';
 }
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 function compactionNote(s){
@@ -2732,8 +2724,9 @@ function renderSessions(){
   const allDonated = allSessionsDonated();
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   const counts = fitCounts();
+  const readyCount = (counts.best || 0) + (counts.good || 0) + (counts.long || 0);
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip donated">${donatedSummaryLabel()}</span><span class="fit-chip best">Best ${counts.best || 0}</span><span class="fit-chip good">Good ${counts.good || 0}</span><span class="fit-chip long">Long ${counts.long || 0}</span><span class="fit-chip improve">Improve ${counts.improve || 0}</span>`
+    ? `<span class="fit-chip ready">Ready ${readyCount}</span><span class="fit-chip improve">Keep chatting ${counts.improve || 0}</span>`
     : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
