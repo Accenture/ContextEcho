@@ -1220,7 +1220,7 @@ INDEX_HTML = r"""<!doctype html>
     .count-badge[data-tooltip]:hover:after, .count-badge[data-tooltip]:hover:before, .fit-chip[data-tooltip]:hover:after, .fit-chip[data-tooltip]:hover:before { opacity:1; }
     .fit-chip.ready { background:#dff1d9; color:#13552f; }
     .fit-chip.best { background:#dff1d9; color:#13552f; }
-    .fit-chip.good { background:#e8ecd7; color:#5c5d16; }
+    .fit-chip.good { background:#dff1d9; color:#13552f; }
     .fit-chip.long { background:#dff1d9; color:#13552f; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
@@ -1274,7 +1274,7 @@ INDEX_HTML = r"""<!doctype html>
     .next-button { min-width:170px; font-size:16px; }
     .pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:850; background:#edf1e4; line-height:1; box-shadow:inset 0 0 0 1px rgba(24,38,30,.05); }
     .pill.best { background:#dff1d9; color:#13552f; }
-    .pill.good { background:#e8ecd7; color:#5c5d16; }
+    .pill.good { background:#dff1d9; color:#13552f; }
     .pill.long { background:#dff1d9; color:#13552f; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#cfe1f5; color:#163f70; }

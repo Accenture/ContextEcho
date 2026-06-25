@@ -237,6 +237,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("const sessionSummaryTitle = `Claude: ${agentCounts.claude}\\nCodex: ${agentCounts.codex}\\nOther: ${agentCounts.other}`", INDEX_HTML)
         self.assertIn("$('sessionCount').dataset.tooltip = sessionSummaryTitle", INDEX_HTML)
         self.assertIn("$('sessionCount').setAttribute('aria-label', sessionSummaryTitle)", INDEX_HTML)
+        self.assertIn(".pill.good { background:#dff1d9; color:#13552f; }", INDEX_HTML)
         self.assertIn(".pill.long { background:#dff1d9; color:#13552f; }", INDEX_HTML)
         self.assertNotIn('class="fit-chip donated"', INDEX_HTML)
         self.assertNotIn("Best ${counts.best || 0}", INDEX_HTML)
