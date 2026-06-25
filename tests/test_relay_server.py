@@ -246,6 +246,70 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(records[0]["submission_id"], "submission-public")
         self.assertTrue(records[0]["conversation_fingerprint"].startswith("conv-"))
 
+    def test_pending_submissions_are_annotated_from_release_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            pending_manifest = root / "pending_manifest.json"
+            ledger = root / "ledger.jsonl"
+            pending_manifest.write_text(
+                json.dumps({
+                    "session_id": "donation-public",
+                    "agent": "Codex CLI",
+                    "model": "gpt-5",
+                    "turns": 120,
+                    "records": 2400,
+                    "compactions": 2,
+                    "credit_name": "Donor",
+                }),
+                encoding="utf-8",
+            )
+            ledger.write_text(
+                json.dumps({
+                    "submission_id": "submission-public",
+                    "decision": "ACCEPTABLE",
+                    "label": "anonymous-donor-submission-public",
+                    "session_path": "data/sessions/session_public.jsonl",
+                    "manifest_path": "data/donations/anonymous-donor-submission-public/manifest.json",
+                })
+                + "\n",
+                encoding="utf-8",
+            )
+
+            api = mock.Mock()
+
+            def fake_list_repo_files(*, repo_id: str, **_kwargs: object) -> list[str]:
+                if repo_id == "owner/staging":
+                    return [
+                        "pending/submission-public/session.redacted.jsonl",
+                        "pending/submission-public/manifest.json",
+                        "pending/submission-public/CONSENT.md",
+                        "pending/submission-new/session.redacted.jsonl",
+                        "pending/submission-new/manifest.json",
+                        "pending/submission-new/CONSENT.md",
+                    ]
+                return ["data/donations/ledger.jsonl"]
+
+            def fake_download(*, filename: str, **_kwargs: object) -> str:
+                if filename == "data/donations/ledger.jsonl":
+                    return str(ledger)
+                return str(pending_manifest)
+
+            api.list_repo_files.side_effect = fake_list_repo_files
+            with (
+                mock.patch("donate.relay_server.HfApi", return_value=api),
+                mock.patch("donate.relay_server.hf_hub_download", side_effect=fake_download),
+                mock.patch("donate.relay_server.STAGING_REPO", "owner/staging"),
+                mock.patch("donate.relay_server.BACKFILL_REPOS", ["owner/release"]),
+            ):
+                result = relay_server._pending_submissions_from_hf()
+
+        rows = {row["submission_id"]: row for row in result["submissions"]}
+        self.assertTrue(rows["submission-public"]["promoted"])
+        self.assertEqual(rows["submission-public"]["review_status"], "promoted")
+        self.assertEqual(rows["submission-public"]["release_label"], "anonymous-donor-submission-public")
+        self.assertFalse(rows["submission-new"]["promoted"])
+        self.assertEqual(rows["submission-new"]["review_status"], "needs_validation")
+
     def test_backfill_seen_hashes_reads_public_session_files_without_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -367,12 +431,12 @@ class RelayServerTests(unittest.TestCase):
 
                 result = relay_server._remove_seen_records({"submission_id": "submission-one"})
                 records = relay_server._read_seen_records()
+                events = [json.loads(line) for line in (state_dir / "submission_events.jsonl").read_text().splitlines()]
 
         self.assertEqual(result["removed"], 1)
         self.assertEqual(result["remaining"], 1)
         self.assertEqual(result["removed_submission_ids"], ["submission-one"])
         self.assertEqual(records[0]["submission_id"], "submission-two")
-        events = [json.loads(line) for line in (state_dir / "submission_events.jsonl").read_text().splitlines()]
         self.assertEqual(events[0]["event"], "reset_one")
         self.assertEqual(events[0]["removed"], 1)
         self.assertEqual(events[0]["removed_submission_ids"], ["submission-one"])

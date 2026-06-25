@@ -507,6 +507,28 @@ def _release_ledger_rows(repo_id: str, files: list[str], token: str | None) -> l
     return rows
 
 
+def _release_promotion_index(api: HfApi, token: str | None, errors: list[str]) -> dict[str, dict]:
+    promoted: dict[str, dict] = {}
+    for repo_id in BACKFILL_REPOS:
+        try:
+            files = api.list_repo_files(repo_id=repo_id, repo_type="dataset")
+        except Exception as exc:
+            errors.append(f"{repo_id}: release status list failed: {exc}")
+            continue
+        for row in _release_ledger_rows(repo_id, files, token):
+            submission_id = str(row.get("submission_id") or "").strip()
+            if not submission_id:
+                continue
+            promoted[submission_id] = {
+                "repo_id": repo_id,
+                "decision": row.get("decision") or "ACCEPTABLE",
+                "label": row.get("label") or "",
+                "session_path": row.get("session_path") or "",
+                "manifest_path": row.get("manifest_path") or "",
+            }
+    return promoted
+
+
 def _release_session_paths(files: list[str]) -> list[str]:
     return sorted(
         filename
@@ -533,15 +555,24 @@ def _pending_submissions_from_hf() -> dict:
         files = api.list_repo_files(repo_id=STAGING_REPO, repo_type="dataset")
     except Exception as exc:
         return {"ok": False, "submissions": [], "errors": [f"{STAGING_REPO}: list failed: {exc}"]}
+    promoted = _release_promotion_index(api, token, errors)
     for prefix in _pending_submission_prefixes(files):
         submission_id = prefix.split("/")[-1]
         manifest_path = f"{prefix}/manifest.json"
         manifest = _read_hf_json(STAGING_REPO, manifest_path, token, files)
         if not manifest:
             errors.append(f"{prefix}: manifest unavailable")
+        release_status = promoted.get(submission_id, {})
+        is_promoted = bool(release_status)
         submissions.append({
             "submission_id": submission_id,
             "prefix": prefix,
+            "review_status": "promoted" if is_promoted else "needs_validation",
+            "promoted": is_promoted,
+            "release_repo": release_status.get("repo_id", ""),
+            "release_label": release_status.get("label", ""),
+            "release_session_path": release_status.get("session_path", ""),
+            "review_decision": release_status.get("decision", ""),
             "has_session": f"{prefix}/session.redacted.jsonl" in files,
             "has_manifest": manifest_path in files,
             "has_consent": f"{prefix}/CONSENT.md" in files,

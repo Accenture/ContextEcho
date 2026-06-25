@@ -101,6 +101,19 @@ class WebTests(unittest.TestCase):
         self.assertIn("function resolveSupport", html)
         self.assertIn("Mark resolved", html)
 
+    def test_maintainer_pending_view_separates_promoted_from_needs_validation(self):
+        html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")
+        self.assertIn("pendingStatusFilter:'needs_validation'", html)
+        self.assertIn("Needs validation", html)
+        self.assertIn("Promoted", html)
+        self.assertIn("All staging", html)
+        self.assertIn("review_status", html)
+        self.assertIn("function reviewStatusPill", html)
+        self.assertIn("promoted</span>", html)
+        self.assertIn("needs validation</span>", html)
+        self.assertIn("Run maintainer intake locally", html)
+        self.assertIn("Loaded ${counts.all} staging submission", html)
+
     def test_submit_requires_contributor_identity_fields(self):
         self.assertIn("Contributor info is required", INDEX_HTML)
         self.assertIn('id="contributorName" placeholder="your name or handle" required', INDEX_HTML)

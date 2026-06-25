@@ -70,6 +70,9 @@
     h2 { margin:0; font-size:24px; }
     .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .toolbar input { min-width:260px; }
+    .status-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+    .status-tab { background:white; border-color:#dce4df; color:#415148; }
+    .status-tab.active { background:#10211a; color:white; }
     table { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     th, td { text-align:left; padding:11px 12px; border-bottom:1px solid #edf1e9; vertical-align:top; font-size:14px; }
     th { background:#f3f6ef; color:#4e5b54; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
@@ -297,7 +300,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], metadataUpdates:[], supportRequests:[], records:[], events:[] };
+const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', metadataUpdates:[], supportRequests:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -369,7 +372,7 @@ async function loadSummary(){
   renderPendingComposition();
   renderPending();
   const extra = pendingData.errors?.length ? ` (${pendingData.errors.length} pending warning${pendingData.errors.length === 1 ? '' : 's'})` : '';
-  status('pendingStatus', `Loaded ${state.pending.length} pending submission${state.pending.length === 1 ? '' : 's'}${extra}.`, 'ok');
+  status('pendingStatus', pendingStatusText(extra), 'ok');
   status('globalStatus', 'Connected to relay.', 'ok');
 }
 function renderSummary(data){
@@ -413,6 +416,14 @@ function pendingComposition(){
   });
   return {sessions:state.pending.length, donors:donors.size, institutes:institutes.size, agents:agents.size, turns, records, compactions};
 }
+function pendingReviewCounts(){
+  const counts = {all: state.pending.length, needs_validation: 0, promoted: 0};
+  state.pending.forEach(row => {
+    if(row.review_status === 'promoted' || row.promoted) counts.promoted += 1;
+    else counts.needs_validation += 1;
+  });
+  return counts;
+}
 function renderPendingComposition(){
   const c = pendingComposition();
   $('pendingComposition').innerHTML = `
@@ -429,18 +440,47 @@ async function loadPending(){
   renderPending();
   renderPendingComposition();
   const extra = data.errors?.length ? ` (${data.errors.length} warning${data.errors.length === 1 ? '' : 's'})` : '';
-  status('pendingStatus', `Loaded ${state.pending.length} pending submission${state.pending.length === 1 ? '' : 's'}${extra}.`, 'ok');
+  status('pendingStatus', pendingStatusText(extra), 'ok');
+}
+function pendingStatusText(extra=''){
+  const counts = pendingReviewCounts();
+  return `Loaded ${counts.all} staging submission${counts.all === 1 ? '' : 's'}: ${counts.needs_validation} need validation, ${counts.promoted} promoted${extra}.`;
 }
 function pendingRows(){
   const q = $('pendingFilter').value.toLowerCase().trim();
-  return state.pending.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
+  return state.pending.filter(row => {
+    const promoted = row.review_status === 'promoted' || row.promoted;
+    if(state.pendingStatusFilter === 'needs_validation' && promoted) return false;
+    if(state.pendingStatusFilter === 'promoted' && !promoted) return false;
+    return !q || JSON.stringify(row).toLowerCase().includes(q);
+  });
+}
+function setPendingStatusFilter(value){
+  state.pendingStatusFilter = value;
+  renderPending();
+}
+function reviewStatusPill(row){
+  if(row.review_status === 'promoted' || row.promoted){
+    const detail = row.release_label || row.release_repo || 'release ledger';
+    return `<span class="pill">promoted</span><div class="hint">${escapeHtml(detail)}</div>`;
+  }
+  return '<span class="pill warn">needs validation</span><div class="hint">Run maintainer intake locally</div>';
 }
 function renderPending(){
   const rows = pendingRows();
+  const counts = pendingReviewCounts();
+  const tabs = `
+    <div class="status-tabs" role="tablist" aria-label="Pending review status">
+      <button class="status-tab ${state.pendingStatusFilter === 'needs_validation' ? 'active' : ''}" data-pending-status="needs_validation">Needs validation (${compact(counts.needs_validation)})</button>
+      <button class="status-tab ${state.pendingStatusFilter === 'promoted' ? 'active' : ''}" data-pending-status="promoted">Promoted (${compact(counts.promoted)})</button>
+      <button class="status-tab ${state.pendingStatusFilter === 'all' ? 'active' : ''}" data-pending-status="all">All staging (${compact(counts.all)})</button>
+    </div>
+  `;
   $('pendingTable').innerHTML = table(
-    ['Submission', 'Donor', 'Institute', 'Session', 'Stats', 'Files'],
+    ['Submission', 'Review', 'Donor', 'Institute', 'Session', 'Stats', 'Files'],
     rows.map(row => [
       `<code>${escapeHtml(row.submission_id)}</code>`,
+      reviewStatusPill(row),
       `${escapeHtml(row.contributor || '')}<div class="hint">${escapeHtml(row.email || '')}</div>`,
       escapeHtml(row.institute || ''),
       `${escapeHtml(row.agent || '')}<div class="hint">${escapeHtml(row.model || '')}</div>`,
@@ -448,6 +488,10 @@ function renderPending(){
       `${filePill(row.has_session, 'session')} ${filePill(row.has_manifest, 'manifest')} ${filePill(row.has_consent, 'consent')}`,
     ])
   );
+  $('pendingTable').innerHTML = tabs + $('pendingTable').innerHTML;
+  document.querySelectorAll('[data-pending-status]').forEach(btn => {
+    btn.onclick = () => setPendingStatusFilter(btn.dataset.pendingStatus || 'needs_validation');
+  });
 }
 function filePill(ok, label){
   return `<span class="pill ${ok ? '' : 'bad'}">${escapeHtml(label)}</span>`;
