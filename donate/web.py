@@ -195,7 +195,7 @@ def _auto_from_existing_manifest(session: Path) -> dict:
 def submit_auto_metadata(data: dict, session: Path) -> dict:
     auto = data.get("auto")
     if isinstance(auto, dict) and auto:
-        return auto
+        return dict(auto)
     source_path = Path(data.get("source_path", "")).expanduser()
     if source_path.exists() and not is_redacted_artifact(source_path):
         try:
@@ -203,6 +203,24 @@ def submit_auto_metadata(data: dict, session: Path) -> dict:
         except Exception:
             pass
     return _auto_from_existing_manifest(session)
+
+
+def count_jsonl_records(path: Path) -> int:
+    records = 0
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if line.strip():
+                records += 1
+    return records
+
+
+def metadata_for_redacted_artifact(data: dict, session: Path) -> dict:
+    auto = submit_auto_metadata(data, session)
+    try:
+        auto["records"] = count_jsonl_records(session)
+    except OSError:
+        pass
+    return auto
 
 
 def required_contributor_fields(data: dict) -> dict[str, str]:
@@ -3454,7 +3472,7 @@ class Handler(BaseHTTPRequestHandler):
         contributor_fields = required_contributor_fields(data)
         if emit:
             emit({"event": "progress", "percent": 20, "message": "Checking verified redacted file..."})
-        auto = submit_auto_metadata(data, session)
+        auto = metadata_for_redacted_artifact(data, session)
         if emit:
             emit({"event": "progress", "percent": 45, "message": "Inferring manifest metadata..."})
         manifest, consent, _ = describe_mod.write_manifest_and_consent(
@@ -3507,7 +3525,7 @@ class Handler(BaseHTTPRequestHandler):
                 "Pick another session, or use Clear local donated labels only if the previous "
                 "submission truly failed."
             )
-        auto = submit_auto_metadata(data, session)
+        auto = metadata_for_redacted_artifact(data, session)
         if not donation_ready(auto.get("turns", 0), auto.get("compactions", 0)):
             raise ValueError("This session is not ready to donate yet. Keep working until it reaches 100+ turns or 50+ turns and 1+ context compaction.")
         if emit:

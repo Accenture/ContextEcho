@@ -27,6 +27,7 @@ from donate.web import (
     is_duplicate_submit_output,
     load_donated_artifact_keys,
     local_pending_summary,
+    metadata_for_redacted_artifact,
     parse_submit_output,
     relay_url,
     required_contributor_fields,
@@ -674,6 +675,21 @@ class WebTests(unittest.TestCase):
         self.assertEqual(auto["model"], "gpt-5")
         self.assertEqual(auto["turns"], 42)
         inspect_session.assert_called_once_with(source)
+
+    def test_metadata_for_redacted_artifact_refreshes_record_count(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            session = root / "session.redacted.jsonl"
+            session.write_text(
+                '{"type":"user","message":"one"}\n'
+                '{"type":"assistant","message":"two"}\n',
+                encoding="utf-8",
+            )
+            original_auto = {"agent": "Claude Code", "model": "claude", "turns": 1, "records": 1, "compactions": 0}
+            auto = metadata_for_redacted_artifact({"auto": original_auto}, session)
+
+        self.assertEqual(auto["records"], 2)
+        self.assertEqual(original_auto["records"], 1)
 
     def test_local_pending_summary_merges_full_identity(self):
         with TemporaryDirectory() as td:
