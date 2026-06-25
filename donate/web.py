@@ -1348,7 +1348,6 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
           <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Total Downloads</div></a>
-          <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Downloads Last Month</div></a>
           <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></a>
           <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></a>
         </div>
@@ -1860,7 +1859,6 @@ function escapeHtml(s){
 function renderProjectStats(){
   const cards = [
     ['download', 'Total Downloads', publicStats.dataset_total_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
-    ['download', 'Downloads Last Month', publicStats.dataset_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
     ['star', 'GitHub Stars', publicStats.github_stars, 'https://github.com/Accenture/ContextEcho'],
     ['heart', 'Dataset Likes', publicStats.dataset_likes, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
   ];

@@ -501,11 +501,6 @@
               <div class="stat-value" data-stat-value="total-downloads">8,350</div>
               <div class="stat-label">Total Downloads<br>Tracked</div>
             </a>
-            <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
-              <div class="stat-icon" data-icon="download"></div>
-              <div class="stat-value" data-stat-value="downloads">8,350</div>
-              <div class="stat-label">Downloads<br>Last Month</div>
-            </a>
             <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">
               <div class="stat-icon" data-icon="star"></div>
               <div class="stat-value" data-stat-value="stars">11</div>
@@ -774,7 +769,6 @@ async function refreshProjectStats() {
     const hf = await fetch('https://huggingface.co/api/datasets/contextecho2026/persona-drift-contextecho', {cache:'no-store'});
     if (hf.ok) {
       const data = await hf.json();
-      setValue('downloads', data.downloads);
       setValue('likes', data.likes);
     }
   } catch (e) {}

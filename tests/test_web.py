@@ -236,7 +236,7 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("Star on GitHub</a>", INDEX_HTML)
         self.assertNotIn("Like Dataset</a>", INDEX_HTML)
         self.assertIn("Total Downloads", INDEX_HTML)
-        self.assertIn("Downloads Last Month", INDEX_HTML)
+        self.assertNotIn("Downloads Last Month", INDEX_HTML)
         self.assertIn("GitHub Stars", INDEX_HTML)
         self.assertIn("Dataset Likes", INDEX_HTML)
         self.assertIn('<a class="stat-card" href="https://github.com/Accenture/ContextEcho"', INDEX_HTML)
