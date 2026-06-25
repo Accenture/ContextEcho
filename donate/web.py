@@ -1566,15 +1566,15 @@ function resetMetadataUpdateUi(){
 function localDonationInfo(s){
   const pathKey = sessionPathKey(s);
   const relayChecked = !!s?.relay_checked;
-  const useLocalFallback = !relayChecked;
-  const record = useLocalFallback && pathKey ? donatedRecords[pathKey] : null;
-  const localRecordId = normalizeSubmissionId(s?.local_unconfirmed_submission_id || (useLocalFallback ? (s?.local_submission_id || record?.submission_id || record?.submission || '') : ''));
-  const supportId = normalizeSubmissionId(s?.relay_submission_id || (useLocalFallback ? localRecordId : ''));
+  const record = pathKey ? donatedRecords[pathKey] : null;
+  const localPathDonated = donatedPaths.has(sessionLocalKey(s));
+  const localRecordId = normalizeSubmissionId(s?.local_unconfirmed_submission_id || s?.local_submission_id || record?.submission_id || record?.submission || '');
+  const supportId = normalizeSubmissionId(s?.relay_submission_id || localRecordId);
   const previousTurns = Number(s?.donated_turns || record?.turns || 0);
   const currentTurns = Number(s?.turns || 0);
   const newTurns = Math.max(0, Number(s?.new_turns || (previousTurns ? currentTurns - previousTurns : 0)));
   const updateReady = !!s?.update_ready || !!(record && newTurns && (newTurns >= 50 || (previousTurns && newTurns / previousTurns >= 0.20)));
-  const exactDonated = !!s?.donated || (useLocalFallback && donatedPaths.has(sessionLocalKey(s)));
+  const exactDonated = !!s?.donated || localPathDonated || (!!record && !relayChecked);
   const donatedBefore = exactDonated || !!s?.donated_before || !!record;
   return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId};
 }

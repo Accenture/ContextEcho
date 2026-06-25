@@ -82,7 +82,8 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("New public/credit name for this donation", INDEX_HTML)
         self.assertIn("Copied maintainer reset ID", INDEX_HTML)
         self.assertIn("normalizeSubmissionId", INDEX_HTML)
-        self.assertIn("useLocalFallback", INDEX_HTML)
+        self.assertIn("localPathDonated", INDEX_HTML)
+        self.assertIn("record && !relayChecked", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
 
     def test_maintainer_metadata_updates_can_be_approved(self):
@@ -462,7 +463,7 @@ class WebTests(unittest.TestCase):
         self.assertEqual(rows[0]["local_institute"], "Local Institute")
         self.assertTrue(rows[0]["local_public_anonymous"])
 
-    def test_annotate_donated_lets_relay_not_received_override_local_record(self):
+    def test_annotate_donated_preserves_local_record_when_relay_not_received(self):
         path = "/tmp/example-session.jsonl"
         record = {"source_path_key": "unused", "turns": 100, "submission": "pending/submission-stale/"}
         with (
@@ -480,6 +481,7 @@ class WebTests(unittest.TestCase):
         self.assertFalse(rows[0]["donated"])
         self.assertFalse(rows[0]["donated_before"])
         self.assertEqual(rows[0]["local_unconfirmed_submission_id"], "submission-stale")
+        self.assertEqual(rows[0]["local_submission_id"], "submission-stale")
 
     def test_annotate_donated_uses_relay_lineage_status(self):
         path = "/tmp/example-session.jsonl"

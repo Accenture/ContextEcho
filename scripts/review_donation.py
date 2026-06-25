@@ -165,8 +165,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--label", default="", help="validation label; default is contributor plus submission id")
     p.add_argument("--python", default=sys.executable)
     p.add_argument("--run-quick", action="store_true", help="run 30-cell API validation gate")
-    p.add_argument("--env-file", type=Path,
-                   default=Path("/Users/xianzhong.ding/Library/CloudStorage/OneDrive-Accenture/Documents/mock_interview/me/projects/.env"))
+    p.add_argument(
+        "--env-file",
+        type=Path,
+        default=Path(os.environ.get("CONTEXTECHO_REVIEW_ENV_FILE", str(REPO_ROOT / ".env"))),
+        help="environment file used for quick validation API keys",
+    )
     p.add_argument("--target", default="claude-sonnet-4-5")
     p.add_argument("--json", action="store_true")
     return p.parse_args(argv)
