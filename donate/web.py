@@ -1217,7 +1217,7 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip.ready { background:#dff1d9; color:#13552f; }
     .fit-chip.best { background:#dff1d9; color:#13552f; }
     .fit-chip.good { background:#e8ecd7; color:#5c5d16; }
-    .fit-chip.long { background:#e6eef8; color:#1e4f87; }
+    .fit-chip.long { background:#dff1d9; color:#13552f; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
@@ -1271,7 +1271,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:850; background:#edf1e4; line-height:1; box-shadow:inset 0 0 0 1px rgba(24,38,30,.05); }
     .pill.best { background:#dff1d9; color:#13552f; }
     .pill.good { background:#e8ecd7; color:#5c5d16; }
-    .pill.long { background:#e6eef8; color:#1e4f87; }
+    .pill.long { background:#dff1d9; color:#13552f; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#cfe1f5; color:#163f70; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
@@ -1895,6 +1895,15 @@ function fitCounts(){
     acc[fit(s)] = (acc[fit(s)] || 0) + 1;
     return acc;
   }, {best:0, good:0, long:0, improve:0});
+}
+function agentFamilyCounts(){
+  return sessions.reduce((acc, s) => {
+    const agent = String(s.agent || '').toLowerCase();
+    if(agent.includes('claude')) acc.claude += 1;
+    else if(agent.includes('codex')) acc.codex += 1;
+    else acc.other += 1;
+    return acc;
+  }, {claude:0, codex:0, other:0});
 }
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 function compactionNote(s){
@@ -2722,11 +2731,15 @@ function renderSessions(){
   const sorted = sortedSessions();
   const rows = sorted.slice(start, start + pageSize);
   const allDonated = allSessionsDonated();
-  $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   const counts = fitCounts();
   const readyCount = (counts.best || 0) + (counts.good || 0) + (counts.long || 0);
+  const agentCounts = agentFamilyCounts();
+  const sessionSummaryTitle = `Claude: ${agentCounts.claude}\nCodex: ${agentCounts.codex}\nOther: ${agentCounts.other}`;
+  const readySummaryTitle = `Best: ${counts.best || 0}\nGood: ${counts.good || 0}\nLong: ${counts.long || 0}`;
+  $('sessionCount').title = sessionSummaryTitle;
+  $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip ready">Ready ${readyCount}</span><span class="fit-chip improve">Keep chatting ${counts.improve || 0}</span>`
+    ? `<span class="fit-chip ready" title="${escapeHtml(readySummaryTitle)}">Ready ${readyCount}</span><span class="fit-chip improve" title="Not ready yet: needs more turns or a context compaction">Keep chatting ${counts.improve || 0}</span>`
     : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
