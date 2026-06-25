@@ -17,23 +17,23 @@ not included.
 | Public v1 founding sessions | 3 |
 | Public v1 per-cell evaluations | 41,921 |
 | Public v1 data size | 310 MB redacted sessions + 705 MB per-cell evaluations |
-| Active public/candidate sessions tracked locally | 9 |
-| Active public/candidate user turns tracked locally | 24,649 |
-| Active public/candidate context compactions tracked locally | 73 |
-| Public contributors in leaderboard | 9 |
-| V2 promotion ledger status | 6 promoted accepted donation(s) |
+| Active public/candidate sessions tracked locally | 18 |
+| Active public/candidate user turns tracked locally | 26,187 |
+| Active public/candidate context compactions tracked locally | 102 |
+| Public contributors in leaderboard | 18 |
+| V2 promotion ledger status | 15 promoted accepted donation(s) |
 
 ## Composition
 
 | Axis | Values |
 |------|--------|
-| Agent / harness | Claude Code (6), Codex CLI (3) |
-| Model family | Opus 4.x (mixed) (3), claude-opus-4.x (mixed) (3), gpt-5.5 (2), gpt-5.4 (1) |
-| Model organization | Anthropic (6), OpenAI (3) |
-| Task domain | agentic-coding (6), manuscript-writing (1), non-coding-docs (1), web-frontend (1) |
-| Primary language | mixed (8), Python (1) |
-| Privacy tier | full_redacted (6) |
-| Institution coverage | 6 institutions |
+| Agent / harness | Claude Code (11), Codex CLI (7) |
+| Model family | gpt-5.5 (5), claude-opus-4.x (mixed) (4), Opus 4.x (mixed) (3), claude-sonnet-4-6 (2), gpt-5.4 (1), claude-opus-4-5.x (mixed) (1), claude-sonnet-4.x (mixed) (1), gpt-5.3-codex (1) |
+| Model organization | Anthropic (11), OpenAI (7) |
+| Task domain | agentic-coding (12), web-frontend (4), manuscript-writing (1), non-coding-docs (1) |
+| Primary language | mixed (17), Python (1) |
+| Privacy tier | full_redacted (15) |
+| Institution coverage | 12 institutions |
 
 ## Donation And Promotion Pipeline
 
@@ -64,8 +64,8 @@ composition.
 
 | Ledger state | Count |
 |--------------|------:|
-| Total rows | 6 |
-| ACCEPTABLE | 6 |
+| Total rows | 15 |
+| ACCEPTABLE | 15 |
 | SUPERSEDED | 0 |
 | CHECK_REQUIRED | 0 |
 | DUPLICATE | 0 |
