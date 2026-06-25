@@ -1503,7 +1503,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="legend-items">
             <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
             <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Good</span> 50+ turns and 1+ ctx cmp</span>
-            <span class="legend-item"><span class="pill long"><span class="fit-arrow">&uarr;</span>Long</span> 100+ turns</span>
+            <span class="legend-item"><span class="pill long"><span class="fit-star">&#9733;</span>Long</span> 100+ turns</span>
             <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
           </div>
           <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
@@ -2787,7 +2787,7 @@ function renderSessions(){
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
-      <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' || currentFit === 'long' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
+      <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
       <button type="button" class="session-chevron" aria-label="${hasMenuActions ? 'Open session actions' : 'Session details'}" ${hasMenuActions ? 'title="Actions: update info or report problem"' : 'disabled'}>&rsaquo;</button>
     `;
     row.querySelectorAll('[data-copy-submission]').forEach(el => {
