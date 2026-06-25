@@ -198,6 +198,10 @@ def normalize_submission_id(value: object) -> str:
     return str(value or "").replace("pending/", "").strip("/")
 
 
+def is_support_submission_id(value: object) -> bool:
+    return normalize_submission_id(value).startswith("submission-")
+
+
 def session_update_ready(current_turns: int, previous_turns: int) -> bool:
     delta = max(0, int(current_turns or 0) - int(previous_turns or 0))
     growth = (delta / previous_turns) if previous_turns else (1.0 if delta else 0.0)
@@ -689,7 +693,9 @@ def annotate_donated(sessions: list[dict]) -> list[dict]:
         row["update_ready"] = bool(row.get("update_ready") or update_ready)
         row["donated"] = bool(exact_donated or (not row["update_ready"]))
         row["relay_received"] = True
-        row["relay_submission_id"] = status.get("submission_id", "")
+        relay_submission_id = normalize_submission_id(status.get("submission_id", ""))
+        row["relay_submission_id"] = relay_submission_id if is_support_submission_id(relay_submission_id) else ""
+        row["relay_public_session_id"] = "" if is_support_submission_id(relay_submission_id) else relay_submission_id
         row["local_credit_name"] = row.get("local_credit_name") or status.get("credit_name", "")
         row["local_contributor_email"] = row.get("local_contributor_email") or status.get("contributor_email", "")
         row["local_institute"] = row.get("local_institute") or status.get("contributor_institute", "")
@@ -1569,7 +1575,8 @@ function localDonationInfo(s){
   const record = pathKey ? donatedRecords[pathKey] : null;
   const localPathDonated = donatedPaths.has(sessionLocalKey(s));
   const localRecordId = normalizeSubmissionId(s?.local_unconfirmed_submission_id || s?.local_submission_id || record?.submission_id || record?.submission || '');
-  const supportId = normalizeSubmissionId(s?.relay_submission_id || localRecordId);
+  const relayRecordId = normalizeSubmissionId(s?.relay_submission_id || '');
+  const supportId = normalizeSubmissionId((relayRecordId.startsWith('submission-') ? relayRecordId : '') || (localRecordId.startsWith('submission-') ? localRecordId : ''));
   const previousTurns = Number(s?.donated_turns || record?.turns || 0);
   const currentTurns = Number(s?.turns || 0);
   const newTurns = Math.max(0, Number(s?.new_turns || (previousTurns ? currentTurns - previousTurns : 0)));

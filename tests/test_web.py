@@ -516,6 +516,29 @@ class WebTests(unittest.TestCase):
         self.assertEqual(rows[0]["local_institute"], "Existing Lab")
         self.assertTrue(rows[0]["local_public_anonymous"])
 
+    def test_annotate_donated_does_not_use_public_session_id_for_support(self):
+        path = "/tmp/example-session.jsonl"
+        with (
+            mock.patch("donate.web.load_donated_keys", return_value=set()),
+            mock.patch("donate.web.load_donated_source_records", return_value={}),
+            mock.patch(
+                "donate.web.relay_donation_status",
+                return_value=[{
+                    "received": True,
+                    "turns": 100,
+                    "new_turns": 80,
+                    "update_ready": True,
+                    "submission_id": "public-session-raw_transcript",
+                }],
+            ),
+        ):
+            rows = annotate_donated([{"path": path, "turns": 180, "records": 300}])
+
+        self.assertTrue(rows[0]["relay_received"])
+        self.assertEqual(rows[0]["relay_submission_id"], "")
+        self.assertEqual(rows[0]["relay_public_session_id"], "public-session-raw_transcript")
+        self.assertTrue(rows[0]["update_ready"])
+
     def test_annotate_donated_uses_relay_update_ready_status(self):
         path = "/tmp/example-session.jsonl"
         with (
