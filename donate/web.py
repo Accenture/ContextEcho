@@ -1502,8 +1502,8 @@ INDEX_HTML = r"""<!doctype html>
         <div class="fit-legend">
           <div class="legend-items">
             <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
-            <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Good</span> 50+ turns and 1+ ctx cmp</span>
-            <span class="legend-item"><span class="pill long"><span class="fit-star">&#9733;</span>Long</span> 100+ turns</span>
+            <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Better</span> 50+ turns and 1+ ctx cmp</span>
+            <span class="legend-item"><span class="pill long"><span class="fit-star">&#9733;</span>Good</span> 100+ turns</span>
             <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
           </div>
           <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
@@ -2646,6 +2646,8 @@ function sessionTableHead(){
   </div>`;
 }
 function fitLabel(value){
+  if(value === 'good') return 'Better';
+  if(value === 'long') return 'Good';
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 }
 function sortableDateValue(s){
@@ -2739,7 +2741,7 @@ function renderSessions(){
   const readyCount = (counts.best || 0) + (counts.good || 0) + (counts.long || 0);
   const agentCounts = agentFamilyCounts();
   const sessionSummaryTitle = `Claude: ${agentCounts.claude}\nCodex: ${agentCounts.codex}\nOther: ${agentCounts.other}`;
-  const readySummaryTitle = `Best: ${counts.best || 0}\nGood: ${counts.good || 0}\nLong: ${counts.long || 0}`;
+  const readySummaryTitle = `Best: ${counts.best || 0}\nBetter: ${counts.good || 0}\nGood: ${counts.long || 0}`;
   $('sessionCount').dataset.tooltip = sessionSummaryTitle;
   $('sessionCount').setAttribute('aria-label', sessionSummaryTitle);
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
