@@ -33,6 +33,7 @@ from donate.web import (
     save_donation_record,
     session_update_ready,
     session_key,
+    stream_error_message,
     submit_auto_metadata,
     write_receipt,
 )
@@ -42,6 +43,13 @@ class WebTests(unittest.TestCase):
     def test_relay_url_defaults_to_official_relay(self):
         with mock.patch.dict("os.environ", {}, clear=True):
             self.assertEqual(relay_url(), DEFAULT_RELAY_URL)
+
+    def test_stream_error_message_does_not_hide_blank_exceptions(self):
+        self.assertEqual(stream_error_message(AssertionError(), "Redaction"), "Redaction failed: AssertionError")
+        missing = ModuleNotFoundError("No module named 'presidio_analyzer'", name="presidio_analyzer")
+        message = stream_error_message(missing, "Redaction")
+        self.assertIn("missing presidio_analyzer", message)
+        self.assertIn("rerun the install command", message)
 
     def test_submit_step_previews_public_leaderboard_identity(self):
         self.assertIn("submitLeaderboardPreview", INDEX_HTML)

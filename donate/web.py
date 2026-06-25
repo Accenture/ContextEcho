@@ -20,6 +20,7 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -55,6 +56,24 @@ SUBMIT_JOBS_LOCK = threading.Lock()
 
 class ClientDisconnected(Exception):
     """Browser closed or navigated away while a local stream was active."""
+
+
+def stream_error_message(exc: BaseException, action: str) -> str:
+    """Return a donor-visible error that is useful even for blank exceptions."""
+    name = exc.__class__.__name__
+    msg = str(exc).strip()
+    if isinstance(exc, ModuleNotFoundError):
+        missing = getattr(exc, "name", "") or msg or "a Python package"
+        return (
+            f"{action} failed because the local Python environment is missing {missing}. "
+            "Stop the wizard and rerun the install command so ContextEcho can refresh its private environment."
+        )
+    if isinstance(exc, ImportError):
+        return (
+            f"{action} failed while loading the local redaction engine: {msg or name}. "
+            "Stop the wizard and rerun the install command so ContextEcho can refresh its private environment."
+        )
+    return f"{action} failed: {msg or name}"
 
 
 def create_server(host: str, port: int, attempts: int = 20) -> tuple[ThreadingHTTPServer, int]:
@@ -3340,7 +3359,8 @@ class Handler(BaseHTTPRequestHandler):
         except ClientDisconnected:
             return
         except Exception as exc:
-            self._event({"event": "error", "error": str(exc)})
+            traceback.print_exc(file=sys.stderr)
+            self._event({"event": "error", "error": stream_error_message(exc, "Redaction")})
 
     def _handle_describe(self) -> None:
         data = self._read_json()
@@ -3381,7 +3401,8 @@ class Handler(BaseHTTPRequestHandler):
         except ClientDisconnected:
             return
         except Exception as exc:
-            self._event({"event": "error", "error": str(exc)})
+            traceback.print_exc(file=sys.stderr)
+            self._event({"event": "error", "error": stream_error_message(exc, "Manifest preparation")})
 
     def _handle_submit(self) -> None:
         data = self._read_json()
@@ -3454,7 +3475,8 @@ class Handler(BaseHTTPRequestHandler):
         except ClientDisconnected:
             return
         except Exception as exc:
-            self._event({"event": "error", "error": str(exc)})
+            traceback.print_exc(file=sys.stderr)
+            self._event({"event": "error", "error": stream_error_message(exc, "Submission")})
 
     def _handle_submit_job(self) -> None:
         data = self._read_json()
