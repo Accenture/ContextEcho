@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from unittest import mock
 
+from donate.adapters.claude import ClaudeCodeAdapter
 from donate.discover import MIN_RESEARCH_TURNS, discover, discover_iter, inspect_session, is_research_candidate
 from donate.adapters.base import date_from_timestamp, is_redacted_artifact
 
@@ -215,6 +216,21 @@ class DiscoverTests(unittest.TestCase):
 
         self.assertEqual(info["records"], 3)
         self.assertEqual(info["turns"], 1)
+
+    def test_claude_discovery_skips_subagent_project_sessions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / ".claude" / "projects"
+            normal_path = root / "-Users-alice-Documents-client-safe-repo" / "session.jsonl"
+            subagent_path = root / "-Users-alice-Documents-subagents" / "session.jsonl"
+            write_jsonl(normal_path, [{"message": {"role": "user", "content": "fix the tests"}}])
+            write_jsonl(subagent_path, [{"message": {"role": "user", "content": "helper task"}}])
+
+            adapter = ClaudeCodeAdapter()
+            with mock.patch.object(adapter, "roots", [root]):
+                paths = list(adapter.discover_paths())
+
+        self.assertIn(normal_path, paths)
+        self.assertNotIn(subagent_path, paths)
 
     def test_unknown_jsonl_falls_back_to_generic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

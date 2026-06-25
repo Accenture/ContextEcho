@@ -17,7 +17,7 @@ class ClaudeCodeAdapter(GenericJsonlAdapter):
             if root.exists():
                 yield from (
                     p for p in sorted(root.rglob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
-                    if not is_redacted_artifact(p)
+                    if not is_redacted_artifact(p) and safe_project_name_from_path(p.parent.name).lower() != "subagents"
                 )
 
     def can_inspect_path(self, path: Path) -> bool:
