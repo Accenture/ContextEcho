@@ -47,6 +47,7 @@ GOOD_SESSION_TURNS = 50
 GOOD_SESSION_COMPACTIONS = 1
 BEST_SESSION_TURNS = 100
 BEST_SESSION_COMPACTIONS = 2
+LONG_SESSION_TURNS = 100
 CLIENT_DISCONNECT_ERRNOS = {errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED}
 SUBMIT_JOBS: dict[str, dict] = {}
 SUBMIT_JOBS_LOCK = threading.Lock()
@@ -300,6 +301,8 @@ def donation_fit(turns: str | int = 0, compactions: str | int = 0) -> str:
         return "best"
     if turns_n >= GOOD_SESSION_TURNS and compactions_n >= GOOD_SESSION_COMPACTIONS:
         return "good"
+    if turns_n >= LONG_SESSION_TURNS:
+        return "long"
     return "improve"
 
 
@@ -1090,6 +1093,7 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip { border-radius:10px; padding:12px 14px; font-size:14px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:74px; white-space:nowrap; }
     .fit-chip.best { background:#dff1d9; color:#13552f; }
     .fit-chip.good { background:#e8ecd7; color:#5c5d16; }
+    .fit-chip.long { background:#e6eef8; color:#1e4f87; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
@@ -1143,6 +1147,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:850; background:#edf1e4; line-height:1; box-shadow:inset 0 0 0 1px rgba(24,38,30,.05); }
     .pill.best { background:#dff1d9; color:#13552f; }
     .pill.good { background:#e8ecd7; color:#5c5d16; }
+    .pill.long { background:#e6eef8; color:#1e4f87; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#cfe1f5; color:#163f70; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
@@ -1343,7 +1348,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="folder-icon"></div>
           <div>
             <h2>1. Pick a Session</h2>
-            <p class="muted">All sessions are shown. Best and good are ready to donate; improve means keep chatting.</p>
+            <p class="muted">All sessions are shown. Best, good, and long are ready to donate; improve means keep chatting.</p>
           </div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
@@ -1370,6 +1375,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="legend-items">
             <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
             <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Good</span> 50+ turns and 1+ ctx cmp</span>
+            <span class="legend-item"><span class="pill long"><span class="fit-arrow">&uarr;</span>Long</span> 100+ turns</span>
             <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
           </div>
           <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
@@ -1755,13 +1761,13 @@ function setUiProcessing(on){
   });
   if(!activeOperation) refreshButtons();
 }
-function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>=2?'best':(t>=50&&c>=1?'good':'improve'); }
+function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>=2?'best':(t>=50&&c>=1?'good':(t>=100?'long':'improve')); }
 function sessionReady(s){ return fit(s) !== 'improve'; }
 function fitCounts(){
   return sessions.reduce((acc, s) => {
     acc[fit(s)] = (acc[fit(s)] || 0) + 1;
     return acc;
-  }, {best:0, good:0, improve:0});
+  }, {best:0, good:0, long:0, improve:0});
 }
 function donatedCount(){
   return sessions.reduce((count, s) => {
@@ -2514,7 +2520,7 @@ function sortableDateValue(s){
   return Number.isFinite(time) ? time : 0;
 }
 function fitSortValue(s){
-  return {best:3, good:2, improve:1}[fit(s)] || 0;
+  return {best:4, good:3, long:2, improve:1}[fit(s)] || 0;
 }
 function sessionSortValue(s, key){
   if(key === 'last_active') return sortableDateValue(s);
@@ -2590,7 +2596,7 @@ function renderSessions(){
   const counts = fitCounts();
   const donatedTotal = donatedCount();
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip donated">Donated ${donatedTotal}</span><span class="fit-chip best">Best ${counts.best || 0}</span><span class="fit-chip good">Good ${counts.good || 0}</span><span class="fit-chip improve">Improve ${counts.improve || 0}</span>`
+    ? `<span class="fit-chip donated">Donated ${donatedTotal}</span><span class="fit-chip best">Best ${counts.best || 0}</span><span class="fit-chip good">Good ${counts.good || 0}</span><span class="fit-chip long">Long ${counts.long || 0}</span><span class="fit-chip improve">Improve ${counts.improve || 0}</span>`
     : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
@@ -2633,7 +2639,7 @@ function renderSessions(){
       <div class="session-date">${escapeHtml(s.last_active || s.modified || '?')}</div>
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
-      <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
+      <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' || currentFit === 'long' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
       <button type="button" class="session-chevron" aria-label="${hasMenuActions ? 'Open session actions' : 'Session details'}" ${hasMenuActions ? 'title="Actions: update info or report problem"' : 'disabled'}>&rsaquo;</button>
     `;
     row.querySelectorAll('[data-copy-submission]').forEach(el => {
@@ -2650,7 +2656,7 @@ function renderSessions(){
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     row.onclick = () => {
       if(!ready){
-        status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 50+ turns and 1+ context compaction.');
+        status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 100+ turns or 50+ turns and 1+ context compaction.');
         return;
       }
       if(donated){
@@ -3368,7 +3374,7 @@ class Handler(BaseHTTPRequestHandler):
             )
         auto = submit_auto_metadata(data, session)
         if not donation_ready(auto.get("turns", 0), auto.get("compactions", 0)):
-            raise ValueError("This session is not ready to donate yet. Keep working until it reaches 50+ turns and 1+ context compaction.")
+            raise ValueError("This session is not ready to donate yet. Keep working until it reaches 100+ turns or 50+ turns and 1+ context compaction.")
         if emit:
             emit({"event": "progress", "percent": 30, "message": "Writing manifest and consent files..."})
         describe_result = self._describe_payload(data)
