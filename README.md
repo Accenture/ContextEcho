@@ -285,6 +285,10 @@ Accepted sessions are copied into `data_archive_release_v2/data/sessions/`,
 with consent, manifests, review reports, and a donation ledger under
 `data_archive_release_v2/data/donations/`. The lower-level Make targets remain
 available for debugging individual stages.
+After approving contributor metadata changes in the maintainer console, run
+`make update-release-metadata`; it first syncs approved relay updates into the
+local release ledger/manifests, then regenerates `CONTRIBUTORS.md` and
+`DATASET_CARD.md`.
 See [`MAINTAINER_DONATION_WORKFLOW.md`](MAINTAINER_DONATION_WORKFLOW.md) for
 the full donor-to-ledger workflow and maintainer checklist.
 

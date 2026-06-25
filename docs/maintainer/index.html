@@ -545,6 +545,7 @@ async function approveMetadata(requestId){
   const parts = [`Approved ${requestId}.`];
   parts.push(`Relay records updated: ${data.seen_updated || 0}.`);
   parts.push(data.staging_manifest_updated ? 'Staging manifest updated.' : 'No staging manifest update was made.');
+  parts.push('Run make update-release-metadata locally to sync approved metadata into public files.');
   await loadMetadata();
   if(state.records.length) await loadRecords();
   if(state.pending.length) await loadPending();

@@ -6,6 +6,7 @@ from scripts.promote_donation import default_label as promote_default_label
 from scripts.promote_donation import normalize_manifest
 from scripts.promote_donation import sha256_file
 from scripts.review_donation import default_label as review_default_label
+from scripts.sync_approved_metadata_updates import apply_approved_updates
 
 
 class MaintainerLabelTests(unittest.TestCase):
@@ -62,6 +63,48 @@ class MaintainerLabelTests(unittest.TestCase):
         self.assertEqual(manifest["reviewed_domain"], "agentic-coding")
         self.assertEqual(manifest["reviewed_submission_id"], "submission-abc12345")
         self.assertIn("session_sha256", manifest)
+
+    def test_sync_approved_metadata_updates_patches_promoted_release(self):
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            donation_dir = root / "data" / "donations" / "Carlos-submission-abc12345"
+            donation_dir.mkdir(parents=True)
+            manifest_path = donation_dir / "manifest.json"
+            manifest_path.write_text(
+                '{"credit_name":"Carlos","contributor_email":"old@example.com","contributor_institute":"Old Lab","public_anonymous":false}\n',
+                encoding="utf-8",
+            )
+            ledger = root / "data" / "donations" / "ledger.jsonl"
+            ledger.write_text(
+                '{"submission_id":"submission-abc12345","manifest_path":"data/donations/Carlos-submission-abc12345/manifest.json","credit_name":"Carlos","contributor_email":"old@example.com","institute":"Old Lab","public_anonymous":false,"decision":"ACCEPTABLE"}\n',
+                encoding="utf-8",
+            )
+
+            result = apply_approved_updates(
+                root,
+                [
+                    {
+                        "request_id": "metadata-one",
+                        "status": "approved",
+                        "approved_utc": "2026-06-25T23:45:00+00:00",
+                        "submission_id": "submission-abc12345",
+                        "credit_name": "Anonymous donor",
+                        "contributor_email": "new@example.com",
+                        "contributor_institute": "New Lab",
+                        "public_anonymous": True,
+                    }
+                ],
+            )
+
+            self.assertEqual(result["ledger"], 1)
+            self.assertEqual(result["manifests"], 1)
+            ledger_text = ledger.read_text(encoding="utf-8")
+            manifest_text = manifest_path.read_text(encoding="utf-8")
+            self.assertIn('"credit_name": "Anonymous donor"', ledger_text)
+            self.assertIn('"institute": "New Lab"', ledger_text)
+            self.assertIn('"public_anonymous": true', ledger_text)
+            self.assertIn('"contributor_email": "new@example.com"', manifest_text)
+            self.assertIn('"metadata_update_request_id": "metadata-one"', manifest_text)
 
 
 if __name__ == "__main__":
