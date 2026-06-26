@@ -1480,9 +1480,6 @@ INDEX_HTML = r"""<!doctype html>
         <div id="discoverProgress" class="progress"><div></div></div>
       </div>
       <div class="pick-column-right">
-        <div class="pick-redact-row">
-          <button id="pickNext" class="secondary next-button" disabled>Next: Redact  -&gt;</button>
-        </div>
         <div class="card sessions-card">
           <div class="session-head">
             <div>
@@ -1514,6 +1511,9 @@ INDEX_HTML = r"""<!doctype html>
               <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
             </div>
           </div>
+        </div>
+        <div class="pick-redact-row">
+          <button id="pickNext" class="secondary next-button" disabled>Next: Redact  -&gt;</button>
         </div>
       </div>
     </div>
