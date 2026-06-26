@@ -49,7 +49,7 @@ GOOD_SESSION_TURNS = 50
 GOOD_SESSION_COMPACTIONS = 1
 BEST_SESSION_TURNS = 100
 BEST_SESSION_COMPACTIONS = 2
-LONG_SESSION_TURNS = 100
+LONG_SESSION_TURNS = 50
 CLIENT_DISCONNECT_ERRNOS = {errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED}
 SUBMIT_JOBS: dict[str, dict] = {}
 SUBMIT_JOBS_LOCK = threading.Lock()
@@ -395,7 +395,7 @@ def relay_support_request(payload: dict) -> dict:
 def donation_points_range(turns: str | int = 0, compactions: str | int = 0) -> tuple[int, int]:
     turns_n = int(turns or 0)
     compactions_n = int(compactions or 0)
-    return (3, 5) if turns_n >= 100 or compactions_n >= 1 else (2, 4)
+    return (3, 5) if turns_n >= LONG_SESSION_TURNS or compactions_n >= 1 else (2, 4)
 
 
 def donation_fit(turns: str | int = 0, compactions: str | int = 0) -> str:
@@ -1508,7 +1508,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="legend-items">
             <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
             <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Better</span> 50+ turns and 1+ ctx cmp</span>
-            <span class="legend-item"><span class="pill long"><span class="fit-star">&#9733;</span>Good</span> 100+ turns</span>
+            <span class="legend-item"><span class="pill long"><span class="fit-star">&#9733;</span>Good</span> 50+ turns</span>
             <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
           </div>
         </div>
@@ -1897,7 +1897,7 @@ function setUiProcessing(on){
   });
   if(!activeOperation) refreshButtons();
 }
-function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>=2?'best':(t>=50&&c>=1?'good':(t>=100?'long':'improve')); }
+function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>=2?'best':(t>=50&&c>=1?'good':(t>=50?'long':'improve')); }
 function sessionReady(s){ return fit(s) !== 'improve'; }
 function fitCounts(){
   return sessions.reduce((acc, s) => {
@@ -2249,7 +2249,7 @@ function publicCreditLabel(creditName, publicAnonymous, publicId='pending'){
   return `Anonymous donor ${suffix}`;
 }
 function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending = {}, pendingDisplayName = ''){
-  const highValue = Number(turns || 0) >= 100 || Number(compactions || 0) >= 1;
+  const highValue = Number(turns || 0) >= 50 || Number(compactions || 0) >= 1;
   const pendingPointsLow = highValue ? 3 : 2;
   const pendingPointsHigh = highValue ? 5 : 4;
   const localPendingSessions = Number(localPending.sessions || 1);
@@ -2840,7 +2840,7 @@ function renderSessions(){
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     row.onclick = () => {
       if(!ready){
-        status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 100+ turns or 50+ turns and 1+ context compaction.');
+        status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
         return;
       }
       if(donated){
@@ -3578,7 +3578,7 @@ class Handler(BaseHTTPRequestHandler):
             )
         auto = metadata_for_redacted_artifact(data, session)
         if not donation_ready(auto.get("turns", 0), auto.get("compactions", 0)):
-            raise ValueError("This session is not ready to donate yet. Keep working until it reaches 100+ turns or 50+ turns and 1+ context compaction.")
+            raise ValueError("This session is not ready to donate yet. Keep working until it reaches 50+ turns.")
         if emit:
             emit({"event": "progress", "percent": 30, "message": "Writing manifest and consent files..."})
         describe_result = self._describe_payload(data)

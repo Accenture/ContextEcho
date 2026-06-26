@@ -24,7 +24,7 @@ from donate.adapters import ADAPTERS, GenericJsonlAdapter
 from donate.adapters.base import guess_org as guess_org
 from donate.adapters.base import safe_project_name_from_path as project_hint
 
-MIN_RESEARCH_TURNS = 100
+MIN_RESEARCH_TURNS = 50
 
 
 def adapter_for_path(path: Path):
