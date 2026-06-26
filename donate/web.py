@@ -1148,6 +1148,8 @@ INDEX_HTML = r"""<!doctype html>
     input:focus, textarea:focus { outline:3px solid rgba(31,111,67,.16); border-color:#7cb67d; }
     label { display:block; font-weight:700; margin:12px 0 6px; }
     .pick-grid { display:grid; grid-template-columns:minmax(300px,.62fr) minmax(620px,1.38fr); gap:22px; margin-top:16px; }
+    .pick-column-right { display:flex; flex-direction:column; gap:14px; }
+    .pick-redact-row { display:flex; justify-content:flex-end; }
     .pick-intro { min-height:342px; }
     .intro-head { display:flex; gap:22px; align-items:flex-start; padding-bottom:20px; border-bottom:1px solid var(--line); }
     .folder-icon { width:76px; height:76px; border-radius:18px; display:grid; place-items:center; background:linear-gradient(135deg,#eef6d4,#f7faeb); }
@@ -1265,9 +1267,6 @@ INDEX_HTML = r"""<!doctype html>
     .session-menu button:hover { background:#eaf4e5; transform:none; }
     .session-menu button.danger { color:#7a2c1f; }
     .empty-sessions { padding:26px; text-align:center; color:var(--muted); }
-    .bottom-nav { margin-top:16px; padding:12px 34px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
-    .tip { display:flex; gap:12px; align-items:center; color:#3f4843; }
-    .tip:before { content:"?"; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; border:2px solid var(--accent); color:var(--accent); font-weight:950; }
     .next-button { min-width:170px; font-size:16px; }
     .pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:850; background:#edf1e4; line-height:1; box-shadow:inset 0 0 0 1px rgba(24,38,30,.05); }
     .pill.best { background:#dff1d9; color:#13552f; }
@@ -1480,44 +1479,45 @@ INDEX_HTML = r"""<!doctype html>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
       </div>
-      <div class="card sessions-card">
-        <div class="session-head">
-          <div>
-            <h2>Recently discovered sessions</h2>
-            <div class="session-subtitle">Detected from your local conversations.</div>
+      <div class="pick-column-right">
+        <div class="pick-redact-row">
+          <button id="pickNext" class="secondary next-button" disabled>Next: Redact  -&gt;</button>
+        </div>
+        <div class="card sessions-card">
+          <div class="session-head">
+            <div>
+              <h2>Recently discovered sessions</h2>
+              <div class="session-subtitle">Detected from your local conversations.</div>
+            </div>
+            <div class="session-summary">
+              <span id="sessionCount" class="count-badge"><strong>0</strong><span>found</span></span>
+              <div id="fitSummary" class="fit-summary" aria-live="polite"></div>
+            </div>
           </div>
-          <div class="session-summary">
-            <span id="sessionCount" class="count-badge"><strong>0</strong><span>found</span></span>
-            <div id="fitSummary" class="fit-summary" aria-live="polite"></div>
+          <div class="session-tools">
+            <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, agent, model, project">
+            <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
           </div>
-        </div>
-        <div class="session-tools">
-          <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, agent, model, project">
-          <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
-        </div>
-        <div id="sessionList" class="session-list">
-          <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
-          <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
-        </div>
-        <div id="pager" class="session-pager">
-          <button id="prevPage" class="secondary">&lsaquo; Previous</button>
-          <span id="pageInfo" class="muted"></span>
-          <button id="nextPage" class="secondary">Next &rsaquo;</button>
-        </div>
-        <div class="fit-legend">
-          <div class="legend-items">
-            <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
-            <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Excellent</span> 50+ turns</span>
-            <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
+          <div id="sessionList" class="session-list">
+            <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
+            <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
+          </div>
+          <div id="pager" class="session-pager">
+            <button id="prevPage" class="secondary">&lsaquo; Previous</button>
+            <span id="pageInfo" class="muted"></span>
+            <button id="nextPage" class="secondary">Next &rsaquo;</button>
+          </div>
+          <div class="fit-legend">
+            <div class="legend-items">
+              <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
+              <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Excellent</span> 50+ turns</span>
+              <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
     <div id="sessionMenu" class="session-menu" role="menu" aria-label="Session actions"></div>
-    <div class="bottom-nav">
-      <div class="tip"><strong>Tip:</strong> Context compactions are detected from agent logs; Codex may record them internally without a visible progress bar.</div>
-      <button id="pickNext" class="next-button" disabled>Next: Redact  -&gt;</button>
-    </div>
   </section>
 
   <section id="step2" class="card step">
