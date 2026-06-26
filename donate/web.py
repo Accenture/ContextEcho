@@ -46,10 +46,8 @@ MAX_AUTO_REPAIR_PASSES = 3
 MIN_SESSION_GROWTH_RATIO = 0.20
 MIN_SESSION_GROWTH_TURNS = 50
 GOOD_SESSION_TURNS = 50
-GOOD_SESSION_COMPACTIONS = 1
 BEST_SESSION_TURNS = 100
 BEST_SESSION_COMPACTIONS = 2
-LONG_SESSION_TURNS = 50
 CLIENT_DISCONNECT_ERRNOS = {errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED}
 SUBMIT_JOBS: dict[str, dict] = {}
 SUBMIT_JOBS_LOCK = threading.Lock()
@@ -395,7 +393,7 @@ def relay_support_request(payload: dict) -> dict:
 def donation_points_range(turns: str | int = 0, compactions: str | int = 0) -> tuple[int, int]:
     turns_n = int(turns or 0)
     compactions_n = int(compactions or 0)
-    return (3, 5) if turns_n >= LONG_SESSION_TURNS or compactions_n >= 1 else (2, 4)
+    return (3, 5) if turns_n >= GOOD_SESSION_TURNS or compactions_n >= 1 else (2, 4)
 
 
 def donation_fit(turns: str | int = 0, compactions: str | int = 0) -> str:
@@ -403,10 +401,8 @@ def donation_fit(turns: str | int = 0, compactions: str | int = 0) -> str:
     compactions_n = int(compactions or 0)
     if turns_n >= BEST_SESSION_TURNS and compactions_n >= BEST_SESSION_COMPACTIONS:
         return "best"
-    if turns_n >= GOOD_SESSION_TURNS and compactions_n >= GOOD_SESSION_COMPACTIONS:
+    if turns_n >= GOOD_SESSION_TURNS:
         return "good"
-    if turns_n >= LONG_SESSION_TURNS:
-        return "long"
     return "improve"
 
 
@@ -1221,7 +1217,6 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip.ready { background:#dff1d9; color:#13552f; }
     .fit-chip.best { background:#dff1d9; color:#13552f; }
     .fit-chip.good { background:#dff1d9; color:#13552f; }
-    .fit-chip.long { background:#dff1d9; color:#13552f; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
     .session-tools { display:flex; gap:16px; align-items:center; justify-content:space-between; margin:-8px 0 12px; }
@@ -1277,7 +1272,6 @@ INDEX_HTML = r"""<!doctype html>
     .pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:850; background:#edf1e4; line-height:1; box-shadow:inset 0 0 0 1px rgba(24,38,30,.05); }
     .pill.best { background:#dff1d9; color:#13552f; }
     .pill.good { background:#dff1d9; color:#13552f; }
-    .pill.long { background:#dff1d9; color:#13552f; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#cfe1f5; color:#163f70; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
@@ -1508,8 +1502,7 @@ INDEX_HTML = r"""<!doctype html>
         <div class="fit-legend">
           <div class="legend-items">
             <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
-            <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Better</span> 50+ turns and 1+ ctx cmp</span>
-            <span class="legend-item"><span class="pill long"><span class="fit-star">&#9733;</span>Good</span> 50+ turns</span>
+            <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Good</span> 50+ turns</span>
             <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
           </div>
         </div>
@@ -1898,13 +1891,13 @@ function setUiProcessing(on){
   });
   if(!activeOperation) refreshButtons();
 }
-function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>=2?'best':(t>=50&&c>=1?'good':(t>=50?'long':'improve')); }
+function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>=2?'best':(t>=50?'good':'improve'); }
 function sessionReady(s){ return fit(s) !== 'improve'; }
 function fitCounts(){
   return sessions.reduce((acc, s) => {
     acc[fit(s)] = (acc[fit(s)] || 0) + 1;
     return acc;
-  }, {best:0, good:0, long:0, improve:0});
+  }, {best:0, good:0, improve:0});
 }
 function agentFamilyCounts(){
   return sessions.reduce((acc, s) => {
@@ -2652,8 +2645,6 @@ function sessionTableHead(){
   </div>`;
 }
 function fitLabel(value){
-  if(value === 'good') return 'Better';
-  if(value === 'long') return 'Good';
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 }
 function sortableDateValue(s){
@@ -2689,7 +2680,7 @@ function filteredSessionItems(){
   return sessions.map((s, idx) => ({s, idx})).filter(item => !q || sessionSearchText(item.s).includes(q));
 }
 function fitSortValue(s){
-  return {best:4, good:3, long:2, improve:1}[fit(s)] || 0;
+  return {best:3, good:2, improve:1}[fit(s)] || 0;
 }
 function sessionSortValue(s, key){
   if(key === 'session') return sessionGroupValue(s);
@@ -2767,14 +2758,14 @@ function renderSessions(){
   const rows = sorted.slice(start, start + pageSize);
   const allDonated = allSessionsDonated();
   const counts = fitCounts();
-  const readyCount = (counts.best || 0) + (counts.good || 0) + (counts.long || 0);
+  const readyCount = (counts.best || 0) + (counts.good || 0);
   const donatedTotal = sessions.reduce((count, s) => {
     const info = localDonationInfo(s);
     return count + (info.exactDonated || info.donatedBefore ? 1 : 0);
   }, 0);
   const agentCounts = agentFamilyCounts();
   const sessionSummaryTitle = `Claude: ${agentCounts.claude}\nCodex: ${agentCounts.codex}\nOther: ${agentCounts.other}`;
-  const readySummaryTitle = `Best: ${counts.best || 0}\nBetter: ${counts.good || 0}\nGood: ${counts.long || 0}`;
+  const readySummaryTitle = `Best: ${counts.best || 0}\nGood: ${counts.good || 0}`;
   $('sessionCount').dataset.tooltip = sessionSummaryTitle;
   $('sessionCount').setAttribute('aria-label', sessionSummaryTitle);
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;

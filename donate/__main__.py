@@ -83,10 +83,8 @@ def quality_tag(session: dict) -> str:
     compactions = int(session.get("compactions") or 0)
     if turns >= 100 and compactions >= 2:
         return "best"
-    if turns >= 50 and compactions >= 1:
-        return "good"
     if turns >= 50:
-        return "long"
+        return "good"
     return "improve"
 
 
@@ -107,7 +105,7 @@ def print_session_table(sessions: list[dict], start: int = 0, limit: int = 15) -
     print(f"\n  Showing {start + 1}-{end} of {len(sessions)} discovered sessions.")
     print("  UserT = human/user prompt turns. CCmp = context compactions detected in local logs.")
     print("  All discovered sessions are shown; use Fit to choose what to donate or improve.")
-    print("  Fit: best = 100+ user turns and 2+ CCmp; good = 50+ turns and 1+ CCmp; long = 50+ turns; improve = keep chatting.")
+    print("  Fit: best = 100+ user turns and 2+ CCmp; good = 50+ turns; improve = keep chatting.")
     if end < len(sessions):
         print("  Type 'more' to show more, a number to select, or paste a session path.")
 
