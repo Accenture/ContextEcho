@@ -1909,6 +1909,24 @@ function agentFamilyCounts(){
     return acc;
   }, {claude:0, codex:0, other:0});
 }
+function donatedModelCounts(){
+  const counts = new Map();
+  sessions.forEach(s => {
+    const info = localDonationInfo(s);
+    if(!(info.exactDonated || info.donatedBefore)) return;
+    const model = String(s.model || 'Unknown model').trim() || 'Unknown model';
+    counts.set(model, (counts.get(model) || 0) + 1);
+  });
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+function donatedModelSummary(maxItems = 5){
+  const rows = donatedModelCounts();
+  if(!rows.length) return 'No donated sessions yet.';
+  const visible = rows.slice(0, maxItems).map(([model, count]) => `${model}: ${count}`);
+  if(rows.length > maxItems) visible.push(`+${rows.length - maxItems} more model${rows.length - maxItems === 1 ? '' : 's'}`);
+  return visible.join('\n');
+}
 function compactNumber(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 function compactionNote(s){
   const agent = String(s.agent || '').toLowerCase();
@@ -2768,11 +2786,12 @@ function renderSessions(){
   const agentCounts = agentFamilyCounts();
   const sessionSummaryTitle = `Claude: ${agentCounts.claude}\nCodex: ${agentCounts.codex}\nOther: ${agentCounts.other}`;
   const readySummaryTitle = `Best: ${counts.best || 0}\nExcellent: ${counts.good || 0}`;
+  const donatedSummaryTitle = donatedModelSummary();
   $('sessionCount').dataset.tooltip = sessionSummaryTitle;
   $('sessionCount').setAttribute('aria-label', sessionSummaryTitle);
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip donated">Donated ${donatedTotal}</span><span class="fit-chip ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}">Ready ${readyCount}</span><span class="fit-chip improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction">Keep chatting ${counts.improve || 0}</span>`
+    ? `<span class="fit-chip donated" data-tooltip="${escapeHtml(donatedSummaryTitle)}" aria-label="${escapeHtml(donatedSummaryTitle)}">Donated ${donatedTotal}</span><span class="fit-chip ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}">Ready ${readyCount}</span><span class="fit-chip improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction">Keep chatting ${counts.improve || 0}</span>`
     : '';
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
