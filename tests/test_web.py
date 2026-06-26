@@ -256,6 +256,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("This session is not ready to donate yet", INDEX_HTML)
         self.assertIn("donation_ready(auto.get", Path("donate/web.py").read_text(encoding="utf-8"))
         self.assertIn("s.session_label || s.project", INDEX_HTML)
+        self.assertIn("s?.last_active_ts || s?.modified_ts || s?.last_active || s?.modified", INDEX_HTML)
         self.assertIn('id="sessionSearch"', INDEX_HTML)
         self.assertIn('placeholder="Search sessions, agent, model, project"', INDEX_HTML)
         self.assertIn(".session-search { flex:0 1 360px; max-width:360px; min-width:220px; }", INDEX_HTML)

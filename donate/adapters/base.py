@@ -104,7 +104,14 @@ def modified_date(path: Path) -> str:
         return "?"
 
 
-def date_from_timestamp(value: str) -> str | None:
+def modified_timestamp(path: Path) -> str:
+    try:
+        return dt.datetime.fromtimestamp(path.stat().st_mtime).isoformat()
+    except Exception:
+        return ""
+
+
+def timestamp_from_value(value: str) -> str | None:
     text = value.strip()
     if not text:
         return None
@@ -113,10 +120,23 @@ def date_from_timestamp(value: str) -> str | None:
         parsed = dt.datetime.fromisoformat(normalized)
         if parsed.tzinfo is not None:
             parsed = parsed.astimezone()
-        return parsed.date().isoformat()
+        return parsed.isoformat()
     except Exception:
-        match = re.match(r"(\d{4}-\d{2}-\d{2})", text)
-        return match.group(1) if match else None
+        return None
+
+
+def date_from_timestamp(value: str) -> str | None:
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = timestamp_from_value(text)
+        if parsed:
+            return dt.datetime.fromisoformat(parsed).date().isoformat()
+    except Exception:
+        pass
+    match = re.match(r"(\d{4}-\d{2}-\d{2})", text)
+    return match.group(1) if match else None
 
 
 def iter_jsonl(path: Path) -> Iterable[tuple[str, Any | None]]:
@@ -339,6 +359,7 @@ class GenericJsonlAdapter:
         compactions = 0
         project_hint: str | None = None
         event_dates: list[str] = []
+        event_timestamps: list[str] = []
         for line, obj in iter_jsonl(path):
             records += 1
             if looks_like_human_turn(obj):
@@ -352,10 +373,16 @@ class GenericJsonlAdapter:
                 date = date_from_timestamp(timestamp)
                 if date:
                     event_dates.append(date)
+                full_timestamp = timestamp_from_value(timestamp)
+                if full_timestamp:
+                    event_timestamps.append(full_timestamp)
 
         model_label = dominant_model(models)
         started = min(event_dates) if event_dates else modified_date(path)
         last_active = max(event_dates) if event_dates else modified_date(path)
+        fallback_ts = modified_timestamp(path)
+        started_ts = min(event_timestamps) if event_timestamps else fallback_ts
+        last_active_ts = max(event_timestamps) if event_timestamps else fallback_ts
         fingerprint = conversation_fingerprint(path)
         project = safe_project_name_from_path(project_hint or path)
         return {
@@ -367,6 +394,9 @@ class GenericJsonlAdapter:
             "modified": last_active,
             "started": started,
             "last_active": last_active,
+            "modified_ts": last_active_ts,
+            "started_ts": started_ts,
+            "last_active_ts": last_active_ts,
             "records": records,
             "turns": turns,
             "compactions": compactions,

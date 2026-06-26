@@ -2657,7 +2657,7 @@ function fitLabel(value){
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 }
 function sortableDateValue(s){
-  const raw = String(s?.last_active || s?.modified || '');
+  const raw = String(s?.last_active_ts || s?.modified_ts || s?.last_active || s?.modified || '');
   const time = Date.parse(raw);
   return Number.isFinite(time) ? time : 0;
 }
