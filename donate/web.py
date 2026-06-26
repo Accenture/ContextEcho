@@ -1267,6 +1267,7 @@ INDEX_HTML = r"""<!doctype html>
     .session-menu button.danger { color:#7a2c1f; }
     .empty-sessions { padding:26px; text-align:center; color:var(--muted); }
     .next-button { min-width:170px; font-size:16px; }
+    .pick-redact-row .next-button { background:var(--accent); color:white; box-shadow:0 10px 20px rgba(23,113,63,.22); }
     .pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:850; background:#edf1e4; line-height:1; box-shadow:inset 0 0 0 1px rgba(24,38,30,.05); }
     .pill.best { background:#dff1d9; color:#13552f; }
     .pill.good { background:#dff1d9; color:#13552f; }
@@ -1283,7 +1284,6 @@ INDEX_HTML = r"""<!doctype html>
     .fit-arrow { color:#a75009; font-size:13px; line-height:1; }
     .session-pager { display:none; margin-top:22px; align-items:center; justify-content:center; gap:24px; }
     .session-pager button { min-width:118px; }
-    .session-pager #nextPage { background:var(--accent); color:white; box-shadow:0 10px 20px rgba(23,113,63,.22); }
     .session-pager #pageInfo { font-size:14px; color:#555f59; }
     .inline-status { margin-top:10px; color:var(--muted); font-size:14px; }
     .inline-status.ok { color:#12683a; font-weight:850; }
@@ -1511,7 +1511,7 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
         <div class="pick-redact-row">
-          <button id="pickNext" class="secondary next-button" disabled>Next: Redact  -&gt;</button>
+          <button id="pickNext" class="next-button" disabled>Next: Redact  -&gt;</button>
         </div>
       </div>
     </div>
