@@ -1204,16 +1204,16 @@ INDEX_HTML = r"""<!doctype html>
     .reset-donated { margin-top:12px; justify-content:center; }
     .reset-donated button { padding:8px 12px; font-size:12px; }
     .sessions-card { min-height:342px; }
-    .session-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; margin-bottom:24px; }
+    .session-head { display:flex; justify-content:space-between; align-items:flex-start; gap:22px; margin-bottom:26px; }
     .session-head > div:first-child { min-width:0; }
-    .session-head h2 { font-size:24px; line-height:1.05; }
+    .session-head h2 { font-size:25px; line-height:1.05; }
     .session-subtitle { margin-top:6px; color:#59615d; font-size:14px; }
-    .session-summary { display:flex; flex-wrap:nowrap; gap:10px; justify-content:flex-end; align-items:stretch; flex:0 0 auto; }
-    .count-badge { min-width:66px; border:1px solid #d9ded6; border-radius:12px; padding:8px 12px; color:#13231c; background:#fff; font-weight:900; text-align:center; box-shadow:0 8px 24px rgba(38,54,44,.05); }
-    .count-badge strong { display:block; color:var(--accent); font-size:24px; line-height:1; }
+    .session-summary { display:flex; flex-wrap:nowrap; gap:14px; justify-content:flex-end; align-items:stretch; flex:0 0 auto; }
+    .count-badge { min-width:82px; border:1px solid #d9ded6; border-radius:10px; padding:10px 12px; color:#13231c; background:#fff; font-weight:900; text-align:center; box-shadow:0 8px 24px rgba(38,54,44,.05); }
+    .count-badge strong { display:block; color:var(--accent); font-size:27px; line-height:1; }
     .count-badge span { display:block; margin-top:2px; font-size:12px; color:#38423d; }
-    .fit-summary { display:flex; flex-wrap:nowrap; gap:10px; justify-content:flex-end; }
-    .fit-chip { border-radius:10px; padding:12px 14px; font-size:14px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:118px; white-space:nowrap; }
+    .fit-summary { display:flex; flex-wrap:nowrap; gap:14px; justify-content:flex-end; }
+    .fit-chip { border-radius:8px; padding:15px 18px; font-size:15px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:128px; white-space:nowrap; }
     .count-badge[data-tooltip], .fit-chip[data-tooltip] { position:relative; cursor:help; }
     .count-badge[data-tooltip]:after, .fit-chip[data-tooltip]:after { content:attr(data-tooltip); position:absolute; left:50%; top:calc(100% + 8px); transform:translateX(-50%); opacity:0; pointer-events:none; z-index:30; min-width:150px; padding:8px 10px; border-radius:8px; background:#14241d; color:#fff; box-shadow:0 8px 20px rgba(15,25,20,.18); font-size:12px; font-weight:800; line-height:1.35; text-align:left; white-space:pre-line; }
     .count-badge[data-tooltip]:before, .fit-chip[data-tooltip]:before { content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); opacity:0; pointer-events:none; z-index:31; border:5px solid transparent; border-bottom-color:#14241d; }
@@ -1224,19 +1224,37 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip.long { background:#dff1d9; color:#13552f; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
-    .session-tools { display:flex; gap:10px; align-items:center; margin:-8px 0 12px; }
-    .session-search { flex:0 1 360px; max-width:360px; min-width:220px; }
-    .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
-    .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 110px 84px 66px 88px 16px; gap:12px; align-items:center; }
-    .session-table-head { padding:10px 16px; background:#f2f5ef; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
+    .session-tools { display:flex; gap:12px; align-items:center; justify-content:space-between; margin:-4px 0 14px; position:relative; }
+    .session-search-wrap { position:relative; flex:0 1 380px; max-width:380px; min-width:240px; }
+    .session-search-wrap:before { content:"⌕"; position:absolute; left:15px; top:50%; transform:translateY(-50%); color:#5f6a64; font-size:24px; line-height:1; pointer-events:none; }
+    .session-search { width:100%; padding-left:44px; border-radius:10px; }
+    .columns-btn { flex:0 0 auto; display:inline-flex; align-items:center; gap:9px; border:1px solid var(--line); border-radius:10px; background:#fff; color:#26312d; box-shadow:none; padding:10px 14px; }
+    .columns-btn:before { content:"▥"; color:#5d6660; font-size:17px; line-height:1; }
+    .columns-btn:after { content:"⌄"; color:#5d6660; font-size:14px; line-height:1; }
+    .columns-menu { position:absolute; right:0; top:calc(100% + 6px); z-index:50; display:none; min-width:150px; padding:8px; border:1px solid var(--line); border-radius:10px; background:#fffef8; box-shadow:0 16px 38px rgba(25,38,31,.16); }
+    .columns-menu.show { display:grid; gap:4px; }
+    .columns-menu label { margin:0; display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:8px; color:#25312d; font-size:12px; font-weight:850; }
+    .columns-menu label:hover { background:#eef6ec; }
+    .columns-menu input { width:auto; margin:0; }
+    .session-list { --date-col:140px; --turns-col:92px; --cmp-col:82px; --fit-col:102px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
+    .session-list.hide-col-date { --date-col:0px; }
+    .session-list.hide-col-turns { --turns-col:0px; }
+    .session-list.hide-col-cmp { --cmp-col:0px; }
+    .session-list.hide-col-fit { --fit-col:0px; }
+    .session-table-head, .session-row { display:grid; grid-template-columns:50px minmax(300px,1fr) var(--date-col) var(--turns-col) var(--cmp-col) var(--fit-col) 24px; gap:16px; align-items:center; }
+    .session-table-head { padding:16px 18px; background:#fff; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
     .session-table-head > div { display:flex; align-items:center; gap:5px; }
+    .session-list.hide-col-date .session-table-head > div:nth-child(3), .session-list.hide-col-date .session-date { display:none; }
+    .session-list.hide-col-turns .session-table-head > div:nth-child(4), .session-list.hide-col-turns .session-turns { display:none; }
+    .session-list.hide-col-cmp .session-table-head > div:nth-child(5), .session-list.hide-col-cmp .session-cmp { display:none; }
+    .session-list.hide-col-fit .session-table-head > div:nth-child(6), .session-list.hide-col-fit .session-fit { display:none; }
     .sort-header { border:0; background:transparent; box-shadow:none; color:inherit; padding:0; min-width:0; border-radius:6px; display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:950; letter-spacing:inherit; text-transform:inherit; cursor:pointer; }
     .sort-header:hover:not(:disabled), .sort-header:focus-visible { background:#e5ecdf; color:#123d29; transform:none; outline:none; }
     .sort-arrow { min-width:9px; color:#17713f; font-size:10px; line-height:1; }
     .header-icon { font-size:13px; color:#5d6660; line-height:1; }
     .header-footnote { color:#1f6f43; font-size:10px; font-weight:950; vertical-align:super; letter-spacing:0; margin-left:2px; }
     .table-note { color:var(--muted); font-size:12px; text-align:right; }
-    .session-row { min-height:52px; padding:7px 16px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
+    .session-row { min-height:78px; padding:13px 18px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
@@ -1247,22 +1265,22 @@ INDEX_HTML = r"""<!doctype html>
     .session-row.improve-row { cursor:not-allowed; background:#fff9f0; opacity:.82; }
     .session-row.improve-row:hover { background:#fff9f0; }
     .session-main { min-width:0; }
-    .session-title-line { font-weight:950; font-size:13px; color:#0e1714; line-height:1.15; overflow-wrap:anywhere; }
-    .session-chip-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px; }
+    .session-title-line { font-weight:950; font-size:15px; color:#0e1714; line-height:1.18; overflow-wrap:anywhere; }
+    .session-chip-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
     .session-chip-row:empty { display:none; }
     .session-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .all-donated-note { margin:12px; border:1px solid #b9d6b0; background:#f2fbef; border-radius:14px; padding:14px 16px; color:#145832; font-weight:900; }
     .all-donated-note span { display:block; margin-top:4px; color:#52605a; font-weight:650; }
     .empty-sessions.thanks { color:#145832; font-weight:900; background:#f8fcf4; }
     .empty-sessions.thanks span { display:block; margin-top:6px; color:#52605a; font-weight:650; }
-    .session-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:8px; background:#e8f1e4; color:var(--accent); font-weight:950; font-size:15px; }
+    .session-icon { width:42px; height:42px; display:grid; place-items:center; border-radius:9px; background:#e1f0dc; color:var(--accent); font-weight:950; font-size:18px; }
     .donated-history-row .session-icon, .donated-row .session-icon { background:#cfe0c8; color:#0f6a3a; }
     .session-title { font-weight:900; font-size:14px; }
-    .session-date { color:#5f6662; font-size:13px; }
-    .session-num { font-weight:950; font-size:15px; color:#07110d; }
+    .session-date { color:#5f6662; font-size:14px; }
+    .session-num { font-weight:950; font-size:16px; color:#07110d; }
     .session-fit { display:flex; justify-content:flex-start; }
     .session-fit .pill { text-transform:capitalize; }
-    .session-chevron { color:#5f6662; font-size:20px; line-height:1; justify-self:end; border:0; background:transparent; box-shadow:none; padding:2px 4px; min-width:0; border-radius:8px; }
+    .session-chevron { color:#2f3934; font-size:22px; line-height:1; justify-self:end; border:0; background:transparent; box-shadow:none; padding:4px 6px; min-width:0; border-radius:8px; }
     .session-chevron:hover:not(:disabled), .session-row:hover .session-chevron { color:#13552f; background:#eaf4e5; transform:none; }
     .session-menu { position:fixed; z-index:1000; min-width:168px; padding:6px; border:1px solid var(--line); border-radius:12px; background:#fffef8; box-shadow:0 16px 42px rgba(25,38,31,.18); display:none; }
     .session-menu.show { display:block; }
@@ -1282,14 +1300,14 @@ INDEX_HTML = r"""<!doctype html>
     .pill.donated { background:#cfe1f5; color:#163f70; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
-    .session-list .pill { padding:3px 7px; font-size:11px; }
+    .session-list .pill { padding:4px 8px; font-size:12px; }
     .session-list .fit-star, .session-list .fit-arrow { font-size:11px; }
-    .fit-legend { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:14px; padding:10px 14px; border:1px solid var(--line); border-radius:12px; background:#fbfcf8; color:var(--muted); font-size:12px; line-height:1.35; }
+    .fit-legend { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:16px; padding:11px 14px; border:1px solid var(--line); border-radius:10px; background:#fffefb; color:var(--muted); font-size:12px; line-height:1.35; }
     .legend-items { display:flex; flex-wrap:wrap; gap:16px; align-items:center; }
     .legend-item { display:inline-flex; align-items:center; gap:7px; }
     .fit-star { color:#1f7a47; font-size:12px; line-height:1; }
     .fit-arrow { color:#a75009; font-size:13px; line-height:1; }
-    .session-pager { display:none; margin-top:22px; align-items:center; justify-content:center; gap:24px; }
+    .session-pager { display:none; margin-top:22px; align-items:center; justify-content:center; gap:34px; }
     .session-pager button { min-width:118px; }
     .session-pager #nextPage { background:var(--accent); color:white; box-shadow:0 10px 20px rgba(23,113,63,.22); }
     .session-pager #pageInfo { font-size:14px; color:#555f59; }
@@ -1426,7 +1444,7 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
     @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .privacy-links { justify-content:flex-start; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-summary,.fit-summary { flex-wrap:wrap; } .session-table-head,.session-row { grid-template-columns:46px minmax(180px,1fr) 110px 84px 78px 22px; } .session-table-head > div:nth-child(6), .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-head { flex-direction:column; } .session-summary { justify-content:flex-start; } .session-tools { align-items:stretch; } .session-search { max-width:none; width:100%; } .session-table-head,.session-row { grid-template-columns:44px minmax(0,1fr) 22px; } .session-table-head > div:nth-child(n+3):nth-child(-n+6), .session-date,.session-turns,.session-cmp,.session-fit { display:none; } .session-icon { width:36px; height:36px; font-size:16px; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-head { flex-direction:column; } .session-summary { justify-content:flex-start; } .session-tools { align-items:stretch; flex-wrap:wrap; } .session-search-wrap { max-width:none; min-width:0; flex:1 1 100%; } .columns-btn { flex:1 1 auto; justify-content:center; } .columns-menu { left:0; right:auto; } .session-table-head,.session-row { grid-template-columns:44px minmax(0,1fr) 22px; } .session-table-head > div:nth-child(n+3):nth-child(-n+6), .session-date,.session-turns,.session-cmp,.session-fit { display:none; } .session-icon { width:36px; height:36px; font-size:16px; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -1498,7 +1516,16 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
         <div class="session-tools">
-          <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, agent, model, project">
+          <div class="session-search-wrap">
+            <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, agent, model, project">
+          </div>
+          <button id="columnsBtn" class="columns-btn secondary" type="button" aria-expanded="false" aria-controls="columnsMenu">Columns</button>
+          <div id="columnsMenu" class="columns-menu" role="menu" aria-label="Session columns">
+            <label><input type="checkbox" data-column-toggle="date" checked> Last active</label>
+            <label><input type="checkbox" data-column-toggle="turns" checked> Turns</label>
+            <label><input type="checkbox" data-column-toggle="cmp" checked> Ctx cmp</label>
+            <label><input type="checkbox" data-column-toggle="fit" checked> Fit</label>
+          </div>
         </div>
         <div id="sessionList" class="session-list">
           <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active"><span class="header-icon">&#9719;</span> Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns"><span class="header-icon">&#9817;</span> User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions"><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
@@ -1514,7 +1541,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
         </div>
         <div id="pager" class="session-pager">
-          <button id="prevPage" class="secondary">&lsaquo; Previous</button>
+          <button id="prevPage" class="secondary">&lsaquo; Prev</button>
           <span id="pageInfo" class="muted"></span>
           <button id="nextPage" class="secondary">Next &rsaquo;</button>
         </div>
@@ -1619,6 +1646,7 @@ let activeOperation = false;
 let page = 0;
 let sessionSort = {key:'', dir:'desc'};
 let sessionSearchQuery = '';
+let sessionColumnVisibility = {date:true, turns:true, cmp:true, fit:true};
 const pageSize = 5;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
@@ -2725,6 +2753,19 @@ function bindSessionSortHeaders(){
     };
   });
 }
+function applySessionColumnVisibility(){
+  const list = $('sessionList');
+  if(!list) return;
+  ['date', 'turns', 'cmp', 'fit'].forEach(key => {
+    list.classList.toggle(`hide-col-${key}`, !sessionColumnVisibility[key]);
+  });
+}
+function hideColumnsMenu(){
+  const menu = $('columnsMenu');
+  const btn = $('columnsBtn');
+  if(menu) menu.classList.remove('show');
+  if(btn) btn.setAttribute('aria-expanded', 'false');
+}
 function hideSessionMenu(){
   const menu = $('sessionMenu');
   if(menu) menu.classList.remove('show');
@@ -2759,6 +2800,7 @@ function showSessionMenu(event, session, donationInfo){
 function renderSessions(){
   const list = $('sessionList');
   list.innerHTML = '';
+  applySessionColumnVisibility();
   const sorted = sortedSessions();
   const totalVisible = sorted.length;
   const totalPages = Math.max(1, Math.ceil(totalVisible / pageSize));
@@ -2789,10 +2831,12 @@ function renderSessions(){
         ? '<div class="empty-sessions">No sessions match this search.</div>'
         : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>');
     list.innerHTML = `${sessionTableHead()}${emptyText}`;
+    applySessionColumnVisibility();
     bindSessionSortHeaders();
   }
   if(rows.length){
     list.innerHTML = sessionTableHead();
+    applySessionColumnVisibility();
     bindSessionSortHeaders();
   }
   rows.forEach(({s}, i) => {
@@ -2825,7 +2869,7 @@ function renderSessions(){
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
       <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
-      <button type="button" class="session-chevron" aria-label="${hasMenuActions ? 'Open session actions' : 'Session details'}" ${hasMenuActions ? 'title="Actions: update info or report problem"' : 'disabled'}>&rsaquo;</button>
+      <button type="button" class="session-chevron" aria-label="${hasMenuActions ? 'Open session actions' : 'Session details'}" ${hasMenuActions ? 'title="Actions: update info or report problem"' : 'disabled'}>&vellip;</button>
     `;
     row.querySelectorAll('[data-copy-submission]').forEach(el => {
       el.onclick = event => {
@@ -2935,10 +2979,25 @@ $('sessionSearch').oninput = () => {
   page = 0;
   renderSessions();
 };
+$('columnsBtn').onclick = event => {
+  event.stopPropagation();
+  const menu = $('columnsMenu');
+  const open = !menu.classList.contains('show');
+  menu.classList.toggle('show', open);
+  $('columnsBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+};
+document.querySelectorAll('[data-column-toggle]').forEach(input => {
+  input.onchange = () => {
+    const key = input.dataset.columnToggle || '';
+    sessionColumnVisibility[key] = !!input.checked;
+    applySessionColumnVisibility();
+  };
+});
 document.addEventListener('click', hideSessionMenu);
-document.addEventListener('keydown', event => { if(event.key === 'Escape') hideSessionMenu(); });
-window.addEventListener('resize', hideSessionMenu);
-window.addEventListener('scroll', hideSessionMenu, true);
+document.addEventListener('click', hideColumnsMenu);
+document.addEventListener('keydown', event => { if(event.key === 'Escape'){ hideSessionMenu(); hideColumnsMenu(); } });
+window.addEventListener('resize', () => { hideSessionMenu(); hideColumnsMenu(); });
+window.addEventListener('scroll', () => { hideSessionMenu(); hideColumnsMenu(); }, true);
 $('safeConfirm').onchange = refreshButtons;
 $('reviewConfirm').onchange = refreshButtons;
 document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
