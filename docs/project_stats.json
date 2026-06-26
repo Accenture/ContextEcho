@@ -1,5 +1,5 @@
 {
-  "dataset_total_downloads": 8350,
-  "dataset_total_downloads_updated": "2026-06-25",
-  "dataset_total_downloads_note": "Maintainer-tracked cumulative download count seeded from the public Hugging Face downloads metric."
+  "dataset_total_downloads": 47350,
+  "dataset_total_downloads_updated": "2026-06-26",
+  "dataset_total_downloads_note": "Maintainer-tracked cumulative download count: current public Hugging Face downloads plus historical 13,000 and 26,000 totals."
 }
