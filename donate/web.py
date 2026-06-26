@@ -1229,7 +1229,7 @@ INDEX_HTML = r"""<!doctype html>
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 146px 96px 92px 88px 16px; gap:18px; align-items:center; }
     .session-table-head { padding:10px 16px; background:#f2f5ef; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
-    .session-table-head > div { display:flex; align-items:center; gap:5px; }
+    .session-table-head > div { display:flex; align-items:center; justify-content:center; gap:5px; text-align:center; }
     .sort-header { border:0; background:transparent; box-shadow:none; color:inherit; padding:0; min-width:0; border-radius:6px; display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:950; letter-spacing:inherit; text-transform:inherit; cursor:pointer; }
     .sort-header:hover:not(:disabled), .sort-header:focus-visible { background:#e5ecdf; color:#123d29; transform:none; outline:none; }
     .sort-arrow { min-width:9px; color:#17713f; font-size:10px; line-height:1; }
