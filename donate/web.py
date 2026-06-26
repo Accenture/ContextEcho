@@ -1619,7 +1619,7 @@ let activeOperation = false;
 let page = 0;
 let sessionSort = {key:'', dir:'desc'};
 let sessionSearchQuery = '';
-const pageSize = 5;
+const pageSize = 4;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
 let donatedRecords = JSON.parse(localStorage.getItem('contextechoDonatedRecordsV1') || '{}');
