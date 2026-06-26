@@ -1207,7 +1207,7 @@ INDEX_HTML = r"""<!doctype html>
     .session-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; margin-bottom:24px; }
     .session-head > div:first-child { min-width:0; }
     .session-head h2 { font-size:24px; line-height:1.05; }
-    .session-subtitle { margin-top:6px; color:#59615d; font-size:14px; }
+    .session-subtitle { margin-top:6px; color:#59615d; font-size:14px; white-space:nowrap; }
     .session-summary { display:flex; flex-wrap:nowrap; gap:10px; justify-content:flex-end; align-items:stretch; flex:0 0 auto; }
     .count-badge { min-width:66px; border:1px solid #d9ded6; border-radius:12px; padding:8px 12px; color:#13231c; background:#fff; font-weight:900; text-align:center; box-shadow:0 8px 24px rgba(38,54,44,.05); }
     .count-badge strong { display:block; color:var(--accent); font-size:24px; line-height:1; }
@@ -1224,7 +1224,7 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip.long { background:#dff1d9; color:#13552f; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
-    .session-tools { display:flex; gap:10px; align-items:center; margin:-8px 0 12px; }
+    .session-tools { display:flex; gap:16px; align-items:center; justify-content:space-between; margin:-8px 0 12px; }
     .session-search { flex:0 1 360px; max-width:360px; min-width:220px; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 110px 84px 66px 88px 16px; gap:12px; align-items:center; }
@@ -1235,7 +1235,7 @@ INDEX_HTML = r"""<!doctype html>
     .sort-arrow { min-width:9px; color:#17713f; font-size:10px; line-height:1; }
     .header-icon { font-size:13px; color:#5d6660; line-height:1; }
     .header-footnote { color:#1f6f43; font-size:10px; font-weight:950; vertical-align:super; letter-spacing:0; margin-left:2px; }
-    .table-note { color:var(--muted); font-size:12px; text-align:right; }
+    .table-note { color:var(--muted); font-size:12px; text-align:right; white-space:nowrap; }
     .session-row { min-height:52px; padding:7px 16px; border-bottom:1px solid var(--line); cursor:pointer; transition:.15s ease; }
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
@@ -1490,7 +1490,7 @@ INDEX_HTML = r"""<!doctype html>
         <div class="session-head">
           <div>
             <h2>Recently discovered sessions</h2>
-            <div class="session-subtitle">Sessions automatically detected from your conversations.</div>
+            <div class="session-subtitle">Detected from your local conversations.</div>
           </div>
           <div class="session-summary">
             <span id="sessionCount" class="count-badge"><strong>0</strong><span>found</span></span>
@@ -1499,6 +1499,7 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <div class="session-tools">
           <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, agent, model, project">
+          <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
         </div>
         <div id="sessionList" class="session-list">
           <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active"><span class="header-icon">&#9719;</span> Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns"><span class="header-icon">&#9817;</span> User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions"><span class="header-icon">&#9635;</span> Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
@@ -1511,7 +1512,6 @@ INDEX_HTML = r"""<!doctype html>
             <span class="legend-item"><span class="pill long"><span class="fit-star">&#9733;</span>Good</span> 100+ turns</span>
             <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
           </div>
-          <div class="table-note"><sup>1</sup> Ctx cmp = context compactions detected in local logs.</div>
         </div>
         <div id="pager" class="session-pager">
           <button id="prevPage" class="secondary">&lsaquo; Previous</button>
