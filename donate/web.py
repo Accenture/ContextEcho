@@ -1499,17 +1499,17 @@ INDEX_HTML = r"""<!doctype html>
           <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
           <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
         </div>
+        <div id="pager" class="session-pager">
+          <button id="prevPage" class="secondary">&lsaquo; Previous</button>
+          <span id="pageInfo" class="muted"></span>
+          <button id="nextPage" class="secondary">Next &rsaquo;</button>
+        </div>
         <div class="fit-legend">
           <div class="legend-items">
             <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
             <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Excellent</span> 50+ turns</span>
             <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
           </div>
-        </div>
-        <div id="pager" class="session-pager">
-          <button id="prevPage" class="secondary">&lsaquo; Previous</button>
-          <span id="pageInfo" class="muted"></span>
-          <button id="nextPage" class="secondary">Next &rsaquo;</button>
         </div>
       </div>
     </div>
