@@ -1472,7 +1472,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="folder-icon"></div>
           <div>
             <h2>1. Pick a Session</h2>
-            <p class="muted">Ready sessions can be donated now; keep chatting sessions need more turns or a context compaction.</p>
+            <p class="muted">Ready sessions can be donated now; keep chatting sessions need more turns.</p>
           </div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>

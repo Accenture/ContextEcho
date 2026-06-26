@@ -226,7 +226,7 @@ class WebTests(unittest.TestCase):
 
     def test_pick_session_explains_research_value_fit(self):
         self.assertIn("Ready sessions can be donated now", INDEX_HTML)
-        self.assertIn("keep chatting sessions need more turns or a context compaction", INDEX_HTML)
+        self.assertIn("keep chatting sessions need more turns", INDEX_HTML)
         self.assertIn(".count-badge[data-tooltip]:hover:after", INDEX_HTML)
         self.assertIn(".fit-chip[data-tooltip]:hover:after", INDEX_HTML)
         self.assertIn("white-space:pre-line", INDEX_HTML)
