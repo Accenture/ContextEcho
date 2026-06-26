@@ -2640,7 +2640,7 @@ function sessionTableHead(){
     <div><button type="button" class="sort-header" data-sort-key="session" aria-sort="${aria('session')}">Session${arrow('session')}</button></div>
     <div><button type="button" class="sort-header" data-sort-key="last_active" aria-sort="${aria('last_active')}">Last active${arrow('last_active')}</button></div>
     <div><button type="button" class="sort-header" data-sort-key="turns" aria-sort="${aria('turns')}">User turns${arrow('turns')}</button></div>
-    <div><button type="button" class="sort-header" data-sort-key="compactions" aria-sort="${aria('compactions')}">Ctx cmp<span class="header-footnote">1</span>${arrow('compactions')}</button></div>
+    <div><button type="button" class="sort-header" data-sort-key="compactions" aria-sort="${aria('compactions')}" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs.">Ctx cmp<span class="header-footnote">1</span>${arrow('compactions')}</button></div>
     <div><button type="button" class="sort-header" data-sort-key="fit" aria-sort="${aria('fit')}">Fit${arrow('fit')}</button></div>
     <div></div>
   </div>`;
