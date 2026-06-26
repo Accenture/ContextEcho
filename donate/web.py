@@ -1221,8 +1221,10 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip.good { background:#dff1d9; color:#13552f; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
-    .session-tools { display:flex; gap:16px; align-items:center; justify-content:space-between; margin:-8px 0 12px; }
+    .session-tools { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:-8px 0 12px; }
     .session-search { flex:0 1 360px; max-width:360px; min-width:220px; }
+    .session-tools .fit-legend { flex:1 1 360px; margin-top:0; margin-left:auto; justify-content:flex-end; }
+    .session-tools .legend-items { justify-content:flex-end; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 146px 96px 92px 88px 16px; gap:18px; align-items:center; }
     .session-table-head { padding:10px 16px; background:#f2f5ef; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
@@ -1492,6 +1494,13 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         <div class="session-tools">
           <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, agent, model, project">
+          <div class="fit-legend">
+            <div class="legend-items">
+              <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
+              <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Excellent</span> 50+ turns</span>
+              <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
+            </div>
+          </div>
         </div>
         <div id="sessionList" class="session-list">
           <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs.">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
@@ -1501,13 +1510,6 @@ INDEX_HTML = r"""<!doctype html>
             <button id="prevPage" class="secondary">&lsaquo; Previous</button>
             <span id="pageInfo" class="muted"></span>
             <button id="nextPage" class="secondary">Next &rsaquo;</button>
-          </div>
-          <div class="fit-legend">
-            <div class="legend-items">
-              <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
-              <span class="legend-item"><span class="pill good"><span class="fit-star">&#9733;</span>Excellent</span> 50+ turns</span>
-              <span class="legend-item"><span class="pill improve"><span class="fit-arrow">&uarr;</span>Improve</span> keep chatting before donating</span>
-            </div>
           </div>
         </div>
         <div class="pick-redact-row">
