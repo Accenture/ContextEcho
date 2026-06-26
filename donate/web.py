@@ -1221,11 +1221,11 @@ INDEX_HTML = r"""<!doctype html>
     .fit-chip.good { background:#dff1d9; color:#13552f; }
     .fit-chip.improve { background:#f3e5d2; color:#7a420a; }
     .fit-chip.donated { background:#dceafa; color:#1e4f87; }
-    .session-tools { display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:-8px 0 12px; }
-    .session-search { flex:0 1 260px; max-width:260px; min-width:200px; }
-    .session-tools .fit-legend { flex:1 1 0; min-width:0; margin-top:0; margin-left:auto; justify-content:flex-end; }
-    .session-tools .legend-items { justify-content:flex-end; flex-wrap:nowrap; gap:12px; }
-    .session-tools .legend-item { white-space:nowrap; }
+    .session-tools { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:-8px 0 12px; }
+    .session-search { flex:0 0 220px; max-width:220px; min-width:180px; }
+    .session-tools .fit-legend { flex:1 1 0; min-width:0; margin-top:0; margin-left:auto; justify-content:flex-end; padding:8px 10px; }
+    .session-tools .legend-items { justify-content:flex-end; flex-wrap:nowrap; gap:10px; }
+    .session-tools .legend-item { white-space:nowrap; font-size:11px; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 146px 96px 92px 88px 16px; gap:18px; align-items:center; }
     .session-table-head { padding:10px 16px; background:#f2f5ef; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
@@ -1494,7 +1494,7 @@ INDEX_HTML = r"""<!doctype html>
             </div>
           </div>
         <div class="session-tools">
-          <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, agent, model, project">
+          <input id="sessionSearch" class="session-search" type="search" placeholder="Search sessions, models">
           <div class="fit-legend">
             <div class="legend-items">
               <span class="legend-item"><span class="pill best"><span class="fit-star">&#9733;</span>Best</span> 100+ turns and 2+ ctx cmp</span>
