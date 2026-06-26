@@ -244,6 +244,8 @@ class WebTests(unittest.TestCase):
         self.assertNotIn(".pill.long", INDEX_HTML)
         self.assertNotIn("Best ${counts.best || 0}", INDEX_HTML)
         self.assertIn("100+ turns and 2+ ctx cmp", INDEX_HTML)
+        self.assertIn('data-tooltip="Context compactions detected in local logs."', INDEX_HTML)
+        self.assertIn('class="header-footnote" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs."', INDEX_HTML)
         self.assertIn('<span class="pill good"><span class="fit-star">&#9733;</span>Excellent</span> 50+ turns', INDEX_HTML)
         self.assertIn("if(value === 'good') return 'Excellent'", INDEX_HTML)
         self.assertNotIn("Better", INDEX_HTML)
