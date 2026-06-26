@@ -2677,6 +2677,7 @@ function sessionGroupValue(s){
   ].map(x => String(x).toLowerCase()).join('\u0000');
 }
 function sessionSearchText(s){
+  const donationInfo = localDonationInfo(s);
   return [
     s?.agent || '',
     s?.model || '',
@@ -2685,6 +2686,8 @@ function sessionSearchText(s){
     s?.last_active || '',
     s?.modified || '',
     s?.path || '',
+    s?.relay_submission_id || '',
+    donationInfo.supportId || '',
     fitLabel(fit(s)),
   ].map(x => String(x).toLowerCase()).join(' ');
 }
