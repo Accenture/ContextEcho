@@ -11,6 +11,7 @@ Run locally:
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import re
@@ -25,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 
 from donate.adapters.base import conversation_fingerprint
+from donate.redact import apply_scrub_terms_to_file
 
 STAGING_REPO = os.environ.get("CONTEXTECHO_STAGING_REPO", "contextecho2026/persona-drift-staging")
 MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(1024 * 1024 * 1024)))
@@ -35,6 +37,7 @@ SEEN_HASHES = STATE_DIR / "seen_artifact_hashes.jsonl"
 SUBMISSION_EVENTS = STATE_DIR / "submission_events.jsonl"
 METADATA_UPDATES = STATE_DIR / "metadata_updates.jsonl"
 SUPPORT_REQUESTS = STATE_DIR / "support_requests.jsonl"
+REDACTION_UPDATES = STATE_DIR / "redaction_updates.jsonl"
 ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
 MIN_SESSION_GROWTH_RATIO = float(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO", "0.20"))
 MIN_SESSION_GROWTH_TURNS = int(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS", "50"))
@@ -247,6 +250,140 @@ def _support_request(payload: dict) -> dict:
 
 def _support_request_rows(limit: int = 200) -> list[dict]:
     return _request_log_rows(SUPPORT_REQUESTS, "support_id", limit)
+
+
+def _redaction_update_request(payload: dict) -> dict:
+    submission_id = str(payload.get("submission_id") or "").strip()
+    if not re.fullmatch(r"submission-[A-Za-z0-9_-]+", submission_id):
+        raise HTTPException(status_code=400, detail="submission_id must look like submission-xxxxxxxx")
+    scrub_terms = _normalize_scrub_terms(payload.get("scrub_terms") or payload.get("terms"))
+    if not scrub_terms:
+        raise HTTPException(status_code=400, detail="scrub_terms is required")
+    note = str(payload.get("note") or "").strip()[:1000]
+
+    token = os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
+    if not token:
+        raise HTTPException(status_code=500, detail="relay missing HF_STAGING_TOKEN")
+
+    api = HfApi(token=token)
+    try:
+        files = api.list_repo_files(repo_id=STAGING_REPO, repo_type="dataset")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Hugging Face list failed: {exc}") from exc
+
+    prefix = f"pending/{submission_id}"
+    session_path = f"{prefix}/session.redacted.jsonl"
+    manifest_path = f"{prefix}/manifest.json"
+    if session_path not in files:
+        raise HTTPException(status_code=404, detail="submission redacted session not found")
+    if manifest_path not in files:
+        raise HTTPException(status_code=404, detail="submission manifest not found")
+
+    session_local = Path(
+        hf_hub_download(
+            repo_id=STAGING_REPO,
+            repo_type="dataset",
+            filename=session_path,
+            token=token,
+        )
+    )
+    manifest = _read_hf_json(STAGING_REPO, manifest_path, token, files)
+    if not manifest:
+        raise HTTPException(status_code=502, detail=f"{manifest_path}: manifest unavailable")
+
+    with tempfile.TemporaryDirectory(prefix="contextecho-redaction-update-") as td:
+        updated_session = Path(td) / "session.redacted.jsonl"
+        stats = apply_scrub_terms_to_file(session_local, updated_session, scrub_terms)
+        if not stats:
+            record = {
+                "redaction_id": f"redaction-{uuid.uuid4().hex[:8]}",
+                "submission_id": submission_id,
+                "submitted_utc": _utc_now(),
+                "status": "no_changes",
+                "terms": sorted(scrub_terms),
+                "note": note,
+            }
+            STATE_DIR.mkdir(parents=True, exist_ok=True)
+            with REDACTION_UPDATES.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(record, sort_keys=True) + "\n")
+            _append_submission_event(
+                "redaction_update_noop",
+                submission_id=submission_id,
+                terms=sorted(scrub_terms),
+            )
+            return {
+                "changed": False,
+                "submission_id": submission_id,
+                "terms": sorted(scrub_terms),
+                "stats": stats,
+                "message": "No additional redaction matches were found.",
+            }
+
+        updated_manifest = dict(manifest)
+        updated_manifest["maintenance_redaction_updated_utc"] = _utc_now()
+        updated_manifest["maintenance_redaction_terms"] = sorted(scrub_terms)
+        updated_manifest["maintenance_redaction_stats"] = stats
+        if note:
+            updated_manifest["maintenance_redaction_note"] = note
+        manifest_data = (json.dumps(updated_manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        try:
+            commit = api.create_commit(
+                repo_id=STAGING_REPO,
+                repo_type="dataset",
+                operations=[
+                    CommitOperationAdd(path_in_repo=session_path, path_or_fileobj=io.BytesIO(updated_session.read_bytes())),
+                    CommitOperationAdd(path_in_repo=manifest_path, path_or_fileobj=io.BytesIO(manifest_data)),
+                ],
+                commit_message=f"Redaction update: {submission_id}",
+                create_pr=True,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Hugging Face redaction update failed: {exc}") from exc
+
+        artifact_hash = _sha256_file(updated_session)
+        _record_seen_hash(artifact_hash, submission_id, updated_manifest)
+        pr_url = getattr(commit, "pr_url", None) or getattr(commit, "commit_url", None)
+        record = {
+            "redaction_id": f"redaction-{uuid.uuid4().hex[:8]}",
+            "submission_id": submission_id,
+            "submitted_utc": _utc_now(),
+            "status": "updated",
+            "terms": sorted(scrub_terms),
+            "note": note,
+            "artifact_hash": artifact_hash,
+            "review_url": pr_url or "",
+            "stats": stats,
+        }
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        with REDACTION_UPDATES.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record, sort_keys=True) + "\n")
+        _append_submission_event(
+            "redaction_updated",
+            submission_id=submission_id,
+            terms=sorted(scrub_terms),
+            artifact_hash=artifact_hash,
+            review_url=pr_url,
+            stats=stats,
+        )
+        return {
+            "changed": True,
+            "submission_id": submission_id,
+            "terms": sorted(scrub_terms),
+            "stats": stats,
+            "artifact_hash": artifact_hash[:12],
+            "review_url": pr_url,
+            "message": "Redaction update submitted for maintainer review.",
+        }
+
+
+def _normalize_scrub_terms(raw_terms: object) -> set[str]:
+    if isinstance(raw_terms, str):
+        items = raw_terms.split(",")
+    elif isinstance(raw_terms, list):
+        items = [str(item) for item in raw_terms]
+    else:
+        items = []
+    return {str(term).strip() for term in items if str(term).strip()}
 
 
 def _resolve_support_request(support_id: str, note: str = "") -> dict:
@@ -1143,6 +1280,15 @@ def admin_resolve_support_request(
     if not support_id:
         raise HTTPException(status_code=400, detail="support_id is required")
     return {"ok": True, **_resolve_support_request(support_id, str(data.get("note") or ""))}
+
+
+@app.post("/api/admin/redaction-updates")
+def admin_redaction_update(
+    payload: Annotated[dict, Body()],
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    return {"ok": True, **_redaction_update_request(payload if isinstance(payload, dict) else {})}
 
 
 @app.get("/api/admin/submissions")

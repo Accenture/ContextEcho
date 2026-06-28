@@ -687,6 +687,72 @@ class RelayServerTests(unittest.TestCase):
         self.assertTrue(row["has_manifest"])
         self.assertTrue(row["has_consent"])
 
+    def test_redaction_update_rewrites_staging_artifact_and_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            state_dir = root / "state"
+            session = root / "session.redacted.jsonl"
+            manifest = root / "manifest.json"
+            session.write_text('{"text":"keep foo and bar"}\n', encoding="utf-8")
+            manifest.write_text(
+                json.dumps({
+                    "session_id": "submission-abc12345",
+                    "agent": "Codex CLI",
+                    "model": "gpt-5",
+                    "domain": "agentic-coding",
+                    "language": "python",
+                    "records": 1,
+                    "turns": 1,
+                    "compactions": 0,
+                    "privacy_tier": "full_redacted",
+                    "allowed_uses": ["research"],
+                    "disallowed_uses": ["reidentification"],
+                    "redacted_file": "session.redacted.jsonl",
+                }),
+                encoding="utf-8",
+            )
+            api = mock.Mock()
+            api.list_repo_files.return_value = [
+                "pending/submission-abc12345/session.redacted.jsonl",
+                "pending/submission-abc12345/manifest.json",
+            ]
+            api.create_commit.return_value = mock.Mock(pr_url="https://huggingface.co/pr/123")
+
+            def fake_download(*, filename: str, **_kwargs: object) -> str:
+                if filename.endswith("session.redacted.jsonl"):
+                    return str(session)
+                if filename.endswith("manifest.json"):
+                    return str(manifest)
+                raise AssertionError(filename)
+
+            with (
+                mock.patch("donate.relay_server.HfApi", return_value=api),
+                mock.patch("donate.relay_server.hf_hub_download", side_effect=fake_download),
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+                mock.patch("donate.relay_server.REDACTION_UPDATES", state_dir / "redaction_updates.jsonl"),
+                mock.patch.dict("donate.relay_server.os.environ", {"HF_STAGING_TOKEN": "hf_test_token"}, clear=False),
+            ):
+                result = relay_server._redaction_update_request({
+                    "submission_id": "submission-abc12345",
+                    "scrub_terms": "foo, bar",
+                    "note": "donor requested more redaction",
+                })
+                self.assertTrue(result["changed"])
+                self.assertEqual(result["submission_id"], "submission-abc12345")
+                self.assertEqual(result["terms"], ["bar", "foo"])
+                self.assertEqual(result["message"], "Redaction update submitted for maintainer review.")
+                commit_ops = api.create_commit.call_args.kwargs["operations"]
+                updated_session = commit_ops[0].path_or_fileobj.getvalue().decode("utf-8")
+                updated_manifest = json.loads(commit_ops[1].path_or_fileobj.getvalue().decode("utf-8"))
+                self.assertIn("<REDACTED>", updated_session)
+                self.assertNotIn("foo", updated_session)
+                self.assertNotIn("bar", updated_session)
+                self.assertEqual(updated_manifest["maintenance_redaction_terms"], ["bar", "foo"])
+                self.assertEqual(updated_manifest["maintenance_redaction_note"], "donor requested more redaction")
+                self.assertEqual(api.create_commit.call_args.kwargs["commit_message"], "Redaction update: submission-abc12345")
+
 
 if __name__ == "__main__":
     unittest.main()

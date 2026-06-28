@@ -134,6 +134,14 @@ class WebTests(unittest.TestCase):
         self.assertIn("/api/admin/support-requests", html)
         self.assertIn("function resolveSupport", html)
         self.assertIn("Mark resolved", html)
+        self.assertIn("/api/admin/redaction-updates", html)
+        self.assertIn("Repair redaction on a submitted item", html)
+        self.assertIn("id=\"redactionSubmission\"", html)
+        self.assertIn("id=\"redactionTerms\"", html)
+        self.assertIn("id=\"redactionNote\"", html)
+        self.assertIn("id=\"applyRedaction\"", html)
+        self.assertIn("function applyRedactionUpdate", html)
+        self.assertIn("data-redact-more", html)
 
     def test_maintainer_pending_view_separates_promoted_from_needs_validation(self):
         html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")

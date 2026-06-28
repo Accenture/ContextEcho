@@ -215,6 +215,18 @@
         <div class="toolbar"><button id="loadPending">Load pending</button><input id="pendingFilter" placeholder="Filter submission, donor, institute"></div>
       </div>
       <div id="pendingStatus" class="status"></div>
+      <div class="card" style="margin-top:14px">
+        <div class="metric-label">Repair redaction on a submitted item</div>
+        <div class="hint">Use this when a donor asks to redact more terms after submission. The relay updates the staged artifact and keeps the old version in repo history.</div>
+        <label for="redactionSubmission">Submission ID</label>
+        <input id="redactionSubmission" placeholder="submission-xxxxxxxx">
+        <label for="redactionTerms">Additional scrub terms</label>
+        <textarea id="redactionTerms" placeholder="comma-separated handles, project names, or other terms"></textarea>
+        <label for="redactionNote">Maintainer note</label>
+        <input id="redactionNote" placeholder="optional note for the update record">
+        <div class="toolbar" style="margin-top:12px"><button class="primary" id="applyRedaction">Redact more</button></div>
+        <div id="redactionStatus" class="status"></div>
+      </div>
       <div id="pendingTable"></div>
     </section>
 
@@ -477,7 +489,7 @@ function renderPending(){
     </div>
   `;
   $('pendingTable').innerHTML = table(
-    ['Submission', 'Review', 'Donor', 'Institute', 'Session', 'Stats', 'Files'],
+    ['Submission', 'Review', 'Donor', 'Institute', 'Session', 'Stats', 'Files', 'Action'],
     rows.map(row => [
       `<code>${escapeHtml(row.submission_id)}</code>`,
       reviewStatusPill(row),
@@ -486,15 +498,51 @@ function renderPending(){
       `${escapeHtml(row.agent || '')}<div class="hint">${escapeHtml(row.model || '')}</div>`,
       `${compact(row.turns)} turns<div class="hint">${compact(row.records)} records · ${compact(row.compactions)} ctx${row.submitted_utc ? ` · ${escapeHtml(formatMinute(row.submitted_utc))}` : ''}</div>`,
       `${filePill(row.has_session, 'session')} ${filePill(row.has_manifest, 'manifest')} ${filePill(row.has_consent, 'consent')}`,
+      `<button data-redact-more="${escapeHtml(row.submission_id || '')}">Redact more</button>`,
     ])
   );
   $('pendingTable').innerHTML = tabs + $('pendingTable').innerHTML;
   document.querySelectorAll('[data-pending-status]').forEach(btn => {
     btn.onclick = () => setPendingStatusFilter(btn.dataset.pendingStatus || 'needs_validation');
   });
+  document.querySelectorAll('[data-redact-more]').forEach(btn => {
+    btn.onclick = () => cueRedactionUpdate(btn.dataset.redactMore || '');
+  });
 }
 function filePill(ok, label){
   return `<span class="pill ${ok ? '' : 'bad'}">${escapeHtml(label)}</span>`;
+}
+
+function cueRedactionUpdate(submissionId){
+  if(!submissionId) return;
+  $('redactionSubmission').value = submissionId;
+  $('redactionSubmission').focus();
+  showTab('pending');
+  status('redactionStatus', `Loaded ${submissionId}. Add extra scrub terms, then apply the redaction update.`);
+}
+
+async function applyRedactionUpdate(){
+  const submission_id = $('redactionSubmission').value.trim();
+  const scrub_terms = $('redactionTerms').value.trim();
+  const note = $('redactionNote').value.trim();
+  if(!submission_id) return status('redactionStatus', 'Enter a submission ID.', 'error');
+  if(!scrub_terms) return status('redactionStatus', 'Enter one or more additional scrub terms.', 'error');
+  if(!confirm(`Apply a maintainer redaction update to ${submission_id}? This updates the staged artifact and keeps repo history.`)) return;
+  status('redactionStatus', `Applying redaction update for ${submission_id}...`);
+  const data = await api('/api/admin/redaction-updates', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({submission_id, scrub_terms, note}),
+  });
+  const terms = (data.terms || []).join(', ');
+  const parts = [data.changed ? `Updated ${submission_id}.` : `No new matches for ${submission_id}.`];
+  if(terms) parts.push(`Terms: ${terms}.`);
+  if(data.review_url) parts.push(`Review: ${data.review_url}.`);
+  status('redactionStatus', parts.join(' '), data.changed ? 'ok' : 'warn');
+  if(state.pending.length) await loadPending();
+  if(state.records.length) await loadRecords();
+  if(state.events.length) await loadEvents();
+  if(state.summary) await loadSummary();
 }
 
 async function loadMetadata(){
@@ -776,6 +824,7 @@ $('supportFilter').oninput = renderSupport;
 $('recordFilter').oninput = renderRecords;
 $('eventFilter').oninput = renderEvents;
 $('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));
+$('applyRedaction').onclick = () => applyRedactionUpdate().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
 $('resetOne').onclick = () => resetOne().catch(e => status('resetStatus', `ERROR: ${e.message}`, 'error'));
 $('backfillBtn').onclick = () => backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error'));
 
