@@ -252,6 +252,21 @@ def _support_request_rows(limit: int = 200) -> list[dict]:
     return _request_log_rows(SUPPORT_REQUESTS, "support_id", limit)
 
 
+def _submission_session_paths(submission_id: str) -> tuple[str, str]:
+    prefix = f"pending/{submission_id}"
+    return f"{prefix}/session.redacted.jsonl", f"{prefix}/manifest.json"
+
+
+def _normalize_scrub_terms(raw_terms: object) -> set[str]:
+    if isinstance(raw_terms, str):
+        items = raw_terms.split(",")
+    elif isinstance(raw_terms, list):
+        items = [str(item) for item in raw_terms]
+    else:
+        items = []
+    return {str(term).strip() for term in items if str(term).strip()}
+
+
 def _redaction_update_request(payload: dict) -> dict:
     submission_id = str(payload.get("submission_id") or "").strip()
     if not re.fullmatch(r"submission-[A-Za-z0-9_-]+", submission_id):
@@ -271,9 +286,7 @@ def _redaction_update_request(payload: dict) -> dict:
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Hugging Face list failed: {exc}") from exc
 
-    prefix = f"pending/{submission_id}"
-    session_path = f"{prefix}/session.redacted.jsonl"
-    manifest_path = f"{prefix}/manifest.json"
+    session_path, manifest_path = _submission_session_paths(submission_id)
     if session_path not in files:
         raise HTTPException(status_code=404, detail="submission redacted session not found")
     if manifest_path not in files:
@@ -376,14 +389,44 @@ def _redaction_update_request(payload: dict) -> dict:
         }
 
 
-def _normalize_scrub_terms(raw_terms: object) -> set[str]:
-    if isinstance(raw_terms, str):
-        items = raw_terms.split(",")
-    elif isinstance(raw_terms, list):
-        items = [str(item) for item in raw_terms]
-    else:
-        items = []
-    return {str(term).strip() for term in items if str(term).strip()}
+def _search_submission_redacted(payload: dict) -> dict:
+    submission_id = str(payload.get("submission_id") or "").strip()
+    if not re.fullmatch(r"submission-[A-Za-z0-9_-]+", submission_id):
+        raise HTTPException(status_code=400, detail="submission_id must look like submission-xxxxxxxx")
+    scrub_terms = _normalize_scrub_terms(payload.get("terms") or payload.get("scrub_terms"))
+    if not scrub_terms:
+        raise HTTPException(status_code=400, detail="terms is required")
+
+    token = os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
+    if not token:
+        raise HTTPException(status_code=500, detail="relay missing HF_STAGING_TOKEN")
+
+    api = HfApi(token=token)
+    try:
+        files = api.list_repo_files(repo_id=STAGING_REPO, repo_type="dataset")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Hugging Face list failed: {exc}") from exc
+
+    session_path, _manifest_path = _submission_session_paths(submission_id)
+    if session_path not in files:
+        raise HTTPException(status_code=404, detail="submission redacted session not found")
+
+    session_local = Path(
+        hf_hub_download(
+            repo_id=STAGING_REPO,
+            repo_type="dataset",
+            filename=session_path,
+            token=token,
+        )
+    )
+    text = session_local.read_text(encoding="utf-8", errors="replace")
+    results = [{"term": term, "count": text.count(term)} for term in sorted(scrub_terms)]
+    return {
+        "ok": True,
+        "submission_id": submission_id,
+        "results": results,
+        "any_hit": any(row["count"] > 0 for row in results),
+    }
 
 
 def _resolve_support_request(support_id: str, note: str = "") -> dict:
@@ -1289,6 +1332,15 @@ def admin_redaction_update(
 ) -> dict:
     _require_admin_token(x_admin_token)
     return {"ok": True, **_redaction_update_request(payload if isinstance(payload, dict) else {})}
+
+
+@app.post("/api/admin/redaction-search")
+def admin_redaction_search(
+    payload: Annotated[dict, Body()],
+    x_admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> dict:
+    _require_admin_token(x_admin_token)
+    return _search_submission_redacted(payload if isinstance(payload, dict) else {})
 
 
 @app.get("/api/admin/submissions")

@@ -224,8 +224,13 @@
         <textarea id="redactionTerms" placeholder="comma-separated handles, project names, or other terms"></textarea>
         <label for="redactionNote">Maintainer note</label>
         <input id="redactionNote" placeholder="optional note for the update record">
-        <div class="toolbar" style="margin-top:12px"><button class="primary" id="applyRedaction">Redact more</button></div>
+        <div class="toolbar" style="margin-top:12px">
+          <button class="primary" id="applyRedaction">Redact more</button>
+          <button id="checkRedactionTerms">Check terms</button>
+        </div>
+        <div class="hint">Check the current staged artifact first to see whether the submitted file still contains the words you care about.</div>
         <div id="redactionStatus" class="status"></div>
+        <pre id="redactionCheckResult" class="mono-block" style="margin-top:12px">{}</pre>
       </div>
       <div id="pendingTable"></div>
     </section>
@@ -545,6 +550,21 @@ async function applyRedactionUpdate(){
   if(state.summary) await loadSummary();
 }
 
+async function checkRedactionTerms(){
+  const submission_id = $('redactionSubmission').value.trim();
+  const terms = $('redactionTerms').value.trim();
+  if(!submission_id) return status('redactionStatus', 'Enter a submission ID.', 'error');
+  if(!terms) return status('redactionStatus', 'Enter one or more terms to check.', 'error');
+  status('redactionStatus', `Checking ${submission_id} for sensitive terms...`);
+  const data = await api('/api/admin/redaction-search', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({submission_id, terms}),
+  });
+  $('redactionCheckResult').textContent = JSON.stringify(data, null, 2);
+  status('redactionStatus', data.any_hit ? `Found matches in ${submission_id}.` : `No matches found in ${submission_id}.`, data.any_hit ? 'warn' : 'ok');
+}
+
 async function loadMetadata(){
   saveSession();
   status('metadataStatus', 'Loading metadata update requests...');
@@ -825,6 +845,7 @@ $('recordFilter').oninput = renderRecords;
 $('eventFilter').oninput = renderEvents;
 $('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));
 $('applyRedaction').onclick = () => applyRedactionUpdate().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
+$('checkRedactionTerms').onclick = () => checkRedactionTerms().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
 $('resetOne').onclick = () => resetOne().catch(e => status('resetStatus', `ERROR: ${e.message}`, 'error'));
 $('backfillBtn').onclick = () => backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error'));
 

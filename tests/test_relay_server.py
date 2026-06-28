@@ -753,6 +753,36 @@ class RelayServerTests(unittest.TestCase):
                 self.assertEqual(updated_manifest["maintenance_redaction_note"], "donor requested more redaction")
                 self.assertEqual(api.create_commit.call_args.kwargs["commit_message"], "Redaction update: submission-abc12345")
 
+    def test_redaction_search_reports_sensitive_word_hits(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            session = root / "session.redacted.jsonl"
+            session.write_text('{"text":"keep foo and bar"}\n', encoding="utf-8")
+            api = mock.Mock()
+            api.list_repo_files.return_value = [
+                "pending/submission-abc12345/session.redacted.jsonl",
+                "pending/submission-abc12345/manifest.json",
+            ]
+
+            def fake_download(*, filename: str, **_kwargs: object) -> str:
+                if filename.endswith("session.redacted.jsonl"):
+                    return str(session)
+                raise AssertionError(filename)
+
+            with (
+                mock.patch("donate.relay_server.HfApi", return_value=api),
+                mock.patch("donate.relay_server.hf_hub_download", side_effect=fake_download),
+                mock.patch.dict("donate.relay_server.os.environ", {"HF_STAGING_TOKEN": "hf_test_token"}, clear=False),
+            ):
+                result = relay_server._search_submission_redacted({
+                    "submission_id": "submission-abc12345",
+                    "terms": "foo, baz",
+                })
+
+        self.assertEqual(result["submission_id"], "submission-abc12345")
+        self.assertTrue(result["any_hit"])
+        self.assertEqual(result["results"], [{"term": "baz", "count": 0}, {"term": "foo", "count": 1}])
+
 
 if __name__ == "__main__":
     unittest.main()
