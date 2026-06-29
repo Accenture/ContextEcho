@@ -1422,6 +1422,7 @@ def backfill_seen_hashes(
 ) -> dict:
     _require_admin_token(x_admin_token)
     result = _backfill_seen_hashes_from_hf()
+    _mark_status_backfill_completed(result)
     return {"ok": True, "repos": BACKFILL_REPOS, **result}
 
 

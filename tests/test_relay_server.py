@@ -490,6 +490,25 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(records[0]["submission_id"], "submission-one")
         backfill.assert_not_called()
 
+    def test_admin_backfill_marks_status_backfill_completed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.ADMIN_TOKEN", "secret"),
+                mock.patch(
+                    "donate.relay_server._backfill_seen_hashes_from_hf",
+                    return_value={"scanned": 19, "added": 19, "refreshed": 0, "errors": []},
+                ) as backfill,
+            ):
+                result = relay_server.backfill_seen_hashes(x_admin_token="secret")
+                completed = relay_server._status_backfill_completed()
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["scanned"], 19)
+        self.assertTrue(completed)
+        backfill.assert_called_once()
+
     def test_remove_seen_records_removes_only_matching_submission(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             state_dir = Path(td)
