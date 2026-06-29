@@ -428,6 +428,68 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(records[0]["submission_id"], "submission-one")
         backfill.assert_called_once()
 
+    def test_status_seen_records_auto_backfills_partial_state_without_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+                mock.patch("donate.relay_server._backfill_seen_hashes_from_hf") as backfill,
+            ):
+                relay_server._append_seen_record({
+                    "artifact_hash": "hash-1",
+                    "submission_id": "submission-one",
+                    "source_session_id": "source-1",
+                    "conversation_fingerprint": "conv-1",
+                    "turns": 100,
+                    "records": 200,
+                })
+
+                def write_missing_record() -> dict:
+                    relay_server._append_seen_record({
+                        "artifact_hash": "hash-2",
+                        "submission_id": "submission-two",
+                        "source_session_id": "source-2",
+                        "conversation_fingerprint": "conv-2",
+                        "turns": 120,
+                        "records": 240,
+                    })
+                    return {"scanned": 2, "added": 1, "refreshed": 0}
+
+                backfill.side_effect = write_missing_record
+                records = relay_server._status_seen_records()
+
+        self.assertEqual(
+            [row["submission_id"] for row in records],
+            ["submission-one", "submission-two"],
+        )
+        backfill.assert_called_once()
+
+    def test_status_seen_records_skips_backfill_after_completed_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td)
+            with (
+                mock.patch("donate.relay_server.STATE_DIR", state_dir),
+                mock.patch("donate.relay_server.SEEN_HASHES", state_dir / "seen_artifact_hashes.jsonl"),
+                mock.patch("donate.relay_server.SUBMISSION_EVENTS", state_dir / "submission_events.jsonl"),
+                mock.patch("donate.relay_server._backfill_seen_hashes_from_hf") as backfill,
+            ):
+                relay_server._append_seen_record({
+                    "artifact_hash": "hash-1",
+                    "submission_id": "submission-one",
+                    "source_session_id": "source-1",
+                    "conversation_fingerprint": "conv-1",
+                    "turns": 100,
+                    "records": 200,
+                })
+                relay_server._mark_status_backfill_completed({"scanned": 1, "added": 0, "refreshed": 0})
+                records = relay_server._status_seen_records()
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["submission_id"], "submission-one")
+        backfill.assert_not_called()
+
     def test_remove_seen_records_removes_only_matching_submission(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             state_dir = Path(td)

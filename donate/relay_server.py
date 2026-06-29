@@ -155,6 +155,37 @@ def _read_jsonl(path: Path, limit: int = 200) -> list[dict]:
     return rows[-max(1, min(limit, 1000)) :]
 
 
+def _status_backfill_marker() -> Path:
+    return STATE_DIR / "status_autobackfill_complete.json"
+
+
+def _status_backfill_completed() -> bool:
+    if _status_backfill_marker().exists():
+        return True
+    return any(row.get("event") == "status_autobackfill_finished" for row in _read_submission_events(limit=1000))
+
+
+def _mark_status_backfill_completed(result: dict) -> None:
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        _status_backfill_marker().write_text(
+            json.dumps(
+                {
+                    "ts": _utc_now(),
+                    "scanned": result.get("scanned", 0),
+                    "added": result.get("added", 0),
+                    "refreshed": result.get("refreshed", 0),
+                    "errors": result.get("errors", [])[:20],
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+
+
 def _metadata_update_request(payload: dict) -> dict:
     submission_id = str(payload.get("submission_id") or "").strip()
     if not re.fullmatch(r"submission-[A-Za-z0-9_-]+", submission_id):
@@ -999,10 +1030,12 @@ def _lineage_status(item: dict, seen_records: list[dict]) -> dict:
 def _status_seen_records() -> list[dict]:
     seen_records = _read_seen_records()
     auto_backfill = os.environ.get("CONTEXTECHO_RELAY_STATUS_AUTOBACKFILL", "1").strip().lower()
-    if seen_records or auto_backfill in {"0", "false", "no", "off"}:
+    if auto_backfill in {"0", "false", "no", "off"}:
+        return seen_records
+    if seen_records and _status_backfill_completed():
         return seen_records
     try:
-        _append_submission_event("status_autobackfill_started")
+        _append_submission_event("status_autobackfill_started", existing_records=len(seen_records))
         result = _backfill_seen_hashes_from_hf()
         _append_submission_event(
             "status_autobackfill_finished",
@@ -1010,6 +1043,7 @@ def _status_seen_records() -> list[dict]:
             added=result.get("added", 0),
             refreshed=result.get("refreshed", 0),
         )
+        _mark_status_backfill_completed(result)
     except Exception as exc:
         _append_submission_event("status_autobackfill_failed", error=str(exc)[:500])
         return seen_records
