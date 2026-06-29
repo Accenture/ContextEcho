@@ -281,26 +281,19 @@ def _redaction_update_request(payload: dict) -> dict:
         raise HTTPException(status_code=500, detail="relay missing HF_STAGING_TOKEN")
 
     api = HfApi(token=token)
-    try:
-        files = api.list_repo_files(repo_id=STAGING_REPO, repo_type="dataset")
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Hugging Face list failed: {exc}") from exc
-
     session_path, manifest_path = _submission_session_paths(submission_id)
-    if session_path not in files:
-        raise HTTPException(status_code=404, detail="submission redacted session not found")
-    if manifest_path not in files:
-        raise HTTPException(status_code=404, detail="submission manifest not found")
-
-    session_local = Path(
-        hf_hub_download(
-            repo_id=STAGING_REPO,
-            repo_type="dataset",
-            filename=session_path,
-            token=token,
+    try:
+        session_local = Path(
+            hf_hub_download(
+                repo_id=STAGING_REPO,
+                repo_type="dataset",
+                filename=session_path,
+                token=token,
+            )
         )
-    )
-    manifest = _read_hf_json(STAGING_REPO, manifest_path, token, files)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail="submission redacted session not found") from exc
+    manifest = _read_hf_json(STAGING_REPO, manifest_path, token)
     if not manifest:
         raise HTTPException(status_code=502, detail=f"{manifest_path}: manifest unavailable")
 
@@ -402,23 +395,18 @@ def _search_submission_redacted(payload: dict) -> dict:
         raise HTTPException(status_code=500, detail="relay missing HF_STAGING_TOKEN")
 
     api = HfApi(token=token)
-    try:
-        files = api.list_repo_files(repo_id=STAGING_REPO, repo_type="dataset")
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Hugging Face list failed: {exc}") from exc
-
     session_path, _manifest_path = _submission_session_paths(submission_id)
-    if session_path not in files:
-        raise HTTPException(status_code=404, detail="submission redacted session not found")
-
-    session_local = Path(
-        hf_hub_download(
-            repo_id=STAGING_REPO,
-            repo_type="dataset",
-            filename=session_path,
-            token=token,
+    try:
+        session_local = Path(
+            hf_hub_download(
+                repo_id=STAGING_REPO,
+                repo_type="dataset",
+                filename=session_path,
+                token=token,
+            )
         )
-    )
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail="submission redacted session not found") from exc
     text = session_local.read_text(encoding="utf-8", errors="replace")
     results = []
     for term in sorted(scrub_terms):
@@ -802,8 +790,8 @@ def _read_hf_file(repo_id: str, filename: str, token: str | None) -> bytes:
     return Path(local_path).read_bytes()
 
 
-def _read_hf_json(repo_id: str, filename: str, token: str | None, files: list[str]) -> dict:
-    if filename not in files:
+def _read_hf_json(repo_id: str, filename: str, token: str | None, files: list[str] | None = None) -> dict:
+    if files is not None and filename not in files:
         return {}
     try:
         data = _read_hf_file(repo_id, filename, token)
