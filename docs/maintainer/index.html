@@ -556,7 +556,7 @@ async function applyRedactionUpdate(){
   const terms = (data.terms || []).join(', ');
   const parts = [data.changed ? `Updated ${submission_id}.` : `No new matches for ${submission_id}.`];
   if(terms) parts.push(`Terms: ${terms}.`);
-  if(data.review_url) parts.push(`Review: ${data.review_url}.`);
+  if(data.update_url || data.review_url) parts.push(`Update: ${data.update_url || data.review_url}.`);
   status('redactionStatus', parts.join(' '), data.changed ? 'ok' : 'warn');
   if(state.pending.length) await loadPending();
   if(state.records.length) await loadRecords();

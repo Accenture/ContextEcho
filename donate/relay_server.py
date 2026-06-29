@@ -372,14 +372,14 @@ def _redaction_update_request(payload: dict) -> dict:
                     CommitOperationAdd(path_in_repo=manifest_path, path_or_fileobj=io.BytesIO(manifest_data)),
                 ],
                 commit_message=f"Redaction update: {submission_id}",
-                create_pr=True,
+                create_pr=False,
             )
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Hugging Face redaction update failed: {exc}") from exc
 
         artifact_hash = _sha256_file(updated_session)
         _record_seen_hash(artifact_hash, submission_id, updated_manifest)
-        pr_url = getattr(commit, "pr_url", None) or getattr(commit, "commit_url", None)
+        update_url = getattr(commit, "commit_url", None) or getattr(commit, "pr_url", None)
         record = {
             "redaction_id": f"redaction-{uuid.uuid4().hex[:8]}",
             "submission_id": submission_id,
@@ -388,7 +388,7 @@ def _redaction_update_request(payload: dict) -> dict:
             "terms": sorted(scrub_terms),
             "note": note,
             "artifact_hash": artifact_hash,
-            "review_url": pr_url or "",
+            "update_url": update_url or "",
             "stats": stats,
         }
         STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -399,7 +399,7 @@ def _redaction_update_request(payload: dict) -> dict:
             submission_id=submission_id,
             terms=sorted(scrub_terms),
             artifact_hash=artifact_hash,
-            review_url=pr_url,
+            update_url=update_url,
             stats=stats,
         )
         return {
@@ -408,8 +408,8 @@ def _redaction_update_request(payload: dict) -> dict:
             "terms": sorted(scrub_terms),
             "stats": stats,
             "artifact_hash": artifact_hash[:12],
-            "review_url": pr_url,
-            "message": "Redaction update submitted for maintainer review.",
+            "update_url": update_url,
+            "message": "Redaction update applied to staging.",
         }
 
 

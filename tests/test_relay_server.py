@@ -797,7 +797,7 @@ class RelayServerTests(unittest.TestCase):
                 "pending/submission-abc12345/session.redacted.jsonl",
                 "pending/submission-abc12345/manifest.json",
             ]
-            api.create_commit.return_value = mock.Mock(pr_url="https://huggingface.co/pr/123")
+            api.create_commit.return_value = mock.Mock(commit_url="https://huggingface.co/commit/123")
 
             def fake_download(*, filename: str, **_kwargs: object) -> str:
                 if filename.endswith("session.redacted.jsonl"):
@@ -823,7 +823,8 @@ class RelayServerTests(unittest.TestCase):
                 self.assertTrue(result["changed"])
                 self.assertEqual(result["submission_id"], "submission-abc12345")
                 self.assertEqual(result["terms"], ["bar", "foo"])
-                self.assertEqual(result["message"], "Redaction update submitted for maintainer review.")
+                self.assertEqual(result["message"], "Redaction update applied to staging.")
+                self.assertEqual(result["update_url"], "https://huggingface.co/commit/123")
                 commit_ops = api.create_commit.call_args.kwargs["operations"]
                 updated_session = commit_ops[0].path_or_fileobj.getvalue().decode("utf-8")
                 updated_manifest = json.loads(commit_ops[1].path_or_fileobj.getvalue().decode("utf-8"))
@@ -833,6 +834,7 @@ class RelayServerTests(unittest.TestCase):
                 self.assertEqual(updated_manifest["maintenance_redaction_terms"], ["bar", "foo"])
                 self.assertEqual(updated_manifest["maintenance_redaction_note"], "donor requested more redaction")
                 self.assertEqual(api.create_commit.call_args.kwargs["commit_message"], "Redaction update: submission-abc12345")
+                self.assertFalse(api.create_commit.call_args.kwargs["create_pr"])
 
     def test_redaction_search_reports_sensitive_word_hits(self) -> None:
         with tempfile.TemporaryDirectory() as td:
