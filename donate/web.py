@@ -2164,9 +2164,14 @@ function mergeRedactionStats(previousStats, nextStats){
 function renderSelectedCard(s, idx){
   const donationInfo = localDonationInfo(s);
   const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
-  const donationPills = donationInfo.supportId
-    ? `<div class="session-chip-row">${donationInfo.updateReady ? `<span class="pill best">update ready · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns</span>` : (donationInfo.donatedBefore ? `<span class="pill donated">donated${donationInfo.newTurns ? ` · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns` : ''}</span>` : '')}${donationInfo.supportId ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>` : ''}</div>`
-    : (donated ? `<div class="session-chip-row"><span class="pill donated">donated</span></div>` : '');
+  const donationStatus = donationInfo.updateReady
+    ? `<span class="pill best">update ready · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns</span>`
+    : (donationInfo.donatedBefore
+      ? `<span class="pill donated">donated${donationInfo.newTurns ? ` · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns` : ''}</span>`
+      : (donated ? '<span class="pill donated">donated</span>' : ''));
+  const donationPills = (donationStatus || donationInfo.supportId)
+    ? `<div class="session-chip-row">${donationStatus}${donationInfo.supportId ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>` : ''}</div>`
+    : '';
   $('selectedCard').innerHTML = `
     <div class="selected-card-layout">
       <div class="selected-card-main">

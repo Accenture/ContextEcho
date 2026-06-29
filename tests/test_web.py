@@ -117,6 +117,8 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("localPathDonated", INDEX_HTML)
         self.assertNotIn("record && !relayChecked", INDEX_HTML)
         self.assertNotIn("What becomes public after maintainer acceptance?", INDEX_HTML)
+        self.assertIn("update ready · +", INDEX_HTML)
+        self.assertIn("donated${donationInfo.newTurns ? ` · +", INDEX_HTML)
 
     def test_maintainer_metadata_updates_can_be_approved(self):
         html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")
