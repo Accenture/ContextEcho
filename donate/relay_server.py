@@ -356,10 +356,25 @@ def _redaction_update_request(payload: dict) -> dict:
                 "message": "No additional redaction matches were found.",
             }
 
+        artifact_hash = _sha256_file(updated_session)
+        redaction_id = f"redaction-{uuid.uuid4().hex[:8]}"
+        updated_utc = _utc_now()
+        redaction_entry = {
+            "redaction_id": redaction_id,
+            "updated_utc": updated_utc,
+            "terms": sorted(scrub_terms),
+            "note": note,
+            "stats": stats,
+            "artifact_hash": artifact_hash,
+        }
+        prior_history = manifest.get("maintenance_redaction_history")
+        if not isinstance(prior_history, list):
+            prior_history = []
         updated_manifest = dict(manifest)
-        updated_manifest["maintenance_redaction_updated_utc"] = _utc_now()
+        updated_manifest["maintenance_redaction_updated_utc"] = updated_utc
         updated_manifest["maintenance_redaction_terms"] = sorted(scrub_terms)
         updated_manifest["maintenance_redaction_stats"] = stats
+        updated_manifest["maintenance_redaction_history"] = [*prior_history, redaction_entry]
         if note:
             updated_manifest["maintenance_redaction_note"] = note
         manifest_data = (json.dumps(updated_manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
@@ -377,13 +392,12 @@ def _redaction_update_request(payload: dict) -> dict:
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Hugging Face redaction update failed: {exc}") from exc
 
-        artifact_hash = _sha256_file(updated_session)
         _record_seen_hash(artifact_hash, submission_id, updated_manifest)
         update_url = getattr(commit, "commit_url", None) or getattr(commit, "pr_url", None)
         record = {
-            "redaction_id": f"redaction-{uuid.uuid4().hex[:8]}",
+            "redaction_id": redaction_id,
             "submission_id": submission_id,
-            "submitted_utc": _utc_now(),
+            "submitted_utc": updated_utc,
             "status": "updated",
             "terms": sorted(scrub_terms),
             "note": note,
@@ -807,6 +821,11 @@ def _pending_submissions_from_hf() -> dict:
             "compactions": manifest.get("compactions", 0),
             "source_session_id": manifest.get("source_session_id", ""),
             "conversation_fingerprint": manifest.get("conversation_fingerprint", ""),
+            "maintenance_redaction_updated_utc": manifest.get("maintenance_redaction_updated_utc", ""),
+            "maintenance_redaction_terms": manifest.get("maintenance_redaction_terms", []),
+            "maintenance_redaction_stats": manifest.get("maintenance_redaction_stats", {}),
+            "maintenance_redaction_note": manifest.get("maintenance_redaction_note", ""),
+            "maintenance_redaction_history": manifest.get("maintenance_redaction_history", []),
             "contributor": manifest.get("credit_name") or manifest.get("contributor") or "",
             "email": manifest.get("contributor_email", ""),
             "institute": manifest.get("contributor_institute", ""),

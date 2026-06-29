@@ -497,6 +497,39 @@ function reviewStatusPill(row){
   }
   return '<span class="pill warn">needs validation</span><div class="hint">Run maintainer intake locally</div>';
 }
+function redactionTermCount(stats, term){
+  if(!stats || !term) return 0;
+  return Number(stats[`private_word:${term}`] || 0);
+}
+function termsSummary(terms, stats){
+  const values = Array.isArray(terms) ? terms : [];
+  if(!values.length) return '';
+  return values.map(term => {
+    const count = redactionTermCount(stats, term);
+    return `${term}${count ? ` (${compact(count)})` : ''}`;
+  }).join(', ');
+}
+function submissionHistory(row){
+  const entries = Array.isArray(row.maintenance_redaction_history) ? row.maintenance_redaction_history.slice() : [];
+  if(!entries.length && row.maintenance_redaction_updated_utc){
+    entries.push({
+      updated_utc: row.maintenance_redaction_updated_utc,
+      terms: row.maintenance_redaction_terms || [],
+      stats: row.maintenance_redaction_stats || {},
+      note: row.maintenance_redaction_note || '',
+    });
+  }
+  if(!entries.length) return '<span class="hint">No maintainer actions</span>';
+  return entries.slice(-2).reverse().map(entry => {
+    const terms = termsSummary(entry.terms, entry.stats);
+    const when = entry.updated_utc ? formatMinute(entry.updated_utc) : '';
+    const note = entry.note ? ` · ${entry.note}` : '';
+    return `
+      <div><span class="pill">redaction</span> ${escapeHtml(terms || 'terms updated')}</div>
+      <div class="hint">${escapeHtml(`${when}${note}`.trim())}</div>
+    `;
+  }).join('');
+}
 function renderPending(){
   const rows = pendingRows();
   const counts = pendingReviewCounts();
@@ -508,7 +541,7 @@ function renderPending(){
     </div>
   `;
   $('pendingTable').innerHTML = table(
-    ['Submission', 'Review', 'Donor', 'Institute', 'Session', 'Stats', 'Files', 'Action'],
+    ['Submission', 'Review', 'Donor', 'Institute', 'Session', 'Stats', 'Files', 'History', 'Action'],
     rows.map(row => [
       `<code>${escapeHtml(row.submission_id)}</code>`,
       reviewStatusPill(row),
@@ -517,6 +550,7 @@ function renderPending(){
       `${escapeHtml(row.agent || '')}<div class="hint">${escapeHtml(row.model || '')}</div>`,
       `${compact(row.turns)} turns<div class="hint">${compact(row.records)} records · ${compact(row.compactions)} ctx${row.submitted_utc ? ` · ${escapeHtml(formatMinute(row.submitted_utc))}` : ''}</div>`,
       `${filePill(row.has_session, 'session')} ${filePill(row.has_manifest, 'manifest')} ${filePill(row.has_consent, 'consent')}`,
+      submissionHistory(row),
       `<button data-redact-more="${escapeHtml(row.submission_id || '')}">Redact more</button>`,
     ])
   );

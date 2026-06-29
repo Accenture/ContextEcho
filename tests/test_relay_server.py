@@ -737,6 +737,10 @@ class RelayServerTests(unittest.TestCase):
                     "contributor_email": "donor@example.com",
                     "contributor_institute": "Institute",
                     "privacy_tier": "full_redacted",
+                    "maintenance_redaction_updated_utc": "2026-06-29T22:00:00Z",
+                    "maintenance_redaction_terms": ["Accenture"],
+                    "maintenance_redaction_stats": {"private_word:Accenture": 2284},
+                    "maintenance_redaction_note": "donor requested extra scrub",
                 }),
                 encoding="utf-8",
             )
@@ -767,6 +771,9 @@ class RelayServerTests(unittest.TestCase):
         self.assertTrue(row["has_session"])
         self.assertTrue(row["has_manifest"])
         self.assertTrue(row["has_consent"])
+        self.assertEqual(row["maintenance_redaction_terms"], ["Accenture"])
+        self.assertEqual(row["maintenance_redaction_stats"], {"private_word:Accenture": 2284})
+        self.assertEqual(row["maintenance_redaction_note"], "donor requested extra scrub")
 
     def test_redaction_update_rewrites_staging_artifact_and_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -833,6 +840,9 @@ class RelayServerTests(unittest.TestCase):
                 self.assertNotIn("bar", updated_session)
                 self.assertEqual(updated_manifest["maintenance_redaction_terms"], ["bar", "foo"])
                 self.assertEqual(updated_manifest["maintenance_redaction_note"], "donor requested more redaction")
+                self.assertEqual(updated_manifest["maintenance_redaction_history"][0]["terms"], ["bar", "foo"])
+                self.assertEqual(updated_manifest["maintenance_redaction_history"][0]["note"], "donor requested more redaction")
+                self.assertEqual(updated_manifest["maintenance_redaction_history"][0]["stats"], result["stats"])
                 self.assertEqual(api.create_commit.call_args.kwargs["commit_message"], "Redaction update: submission-abc12345")
                 self.assertFalse(api.create_commit.call_args.kwargs["create_pr"])
 

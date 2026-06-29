@@ -147,6 +147,9 @@ class WebTests(unittest.TestCase):
         self.assertIn("function applyRedactionUpdate", html)
         self.assertIn("function checkRedactionTerms", html)
         self.assertIn("data-redact-more", html)
+        self.assertIn("function submissionHistory", html)
+        self.assertIn("maintenance_redaction_terms", html)
+        self.assertIn("'History'", html)
 
     def test_maintainer_pending_view_separates_promoted_from_needs_validation(self):
         html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")
