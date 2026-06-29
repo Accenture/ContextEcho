@@ -81,6 +81,14 @@
     .pill { display:inline-flex; align-items:center; border-radius:999px; padding:4px 8px; font-size:12px; font-weight:900; background:#dff2da; color:#13552f; }
     .pill.warn { background:#fff0d8; color:var(--warn); }
     .pill.bad { background:#f7dedb; color:var(--danger); }
+    .check-result { margin-top:12px; border:1px solid #d8e3d2; border-radius:14px; background:#f9fdf4; padding:16px 16px 14px; }
+    .check-result.bad { border-color:#efc2be; background:#fff8f7; }
+    .check-result-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+    .check-result-copy { margin:0 0 14px; color:#5b6861; font-size:15px; line-height:1.45; }
+    .check-result-metrics { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+    .check-metric { display:inline-flex; align-items:center; gap:8px; border:1px solid #d8e3d2; border-radius:999px; background:#eef6e9; color:#12231c; padding:10px 14px; font-size:14px; font-weight:850; }
+    .check-result.bad .check-metric { background:#fff0ef; border-color:#efc2be; }
+    .check-result-actions { margin-top:2px; }
     .two-col { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:16px; }
     .danger-zone { border-color:#efc2be; background:#fff8f7; }
     .mono-block { white-space:pre-wrap; overflow:auto; max-height:360px; border:1px solid var(--line); background:#111b18; color:#fffef8; border-radius:12px; padding:14px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; line-height:1.45; }
@@ -230,7 +238,9 @@
         </div>
         <div class="hint">Check the current staged artifact first to see whether the submitted file still contains the words you care about.</div>
         <div id="redactionStatus" class="status"></div>
-        <pre id="redactionCheckResult" class="mono-block" style="margin-top:12px">{}</pre>
+        <div id="redactionCheckResult" class="check-result" style="margin-top:12px">
+          <div class="hint">Run <strong>Check terms</strong> to inspect the staged file.</div>
+        </div>
       </div>
       <div id="pendingTable"></div>
     </section>
@@ -556,13 +566,45 @@ async function checkRedactionTerms(){
   if(!submission_id) return status('redactionStatus', 'Enter a submission ID.', 'error');
   if(!terms) return status('redactionStatus', 'Enter one or more terms to check.', 'error');
   status('redactionStatus', `Checking ${submission_id} for sensitive terms...`);
-  const data = await api('/api/admin/redaction-search', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({submission_id, terms}),
-  });
-  $('redactionCheckResult').textContent = JSON.stringify(data, null, 2);
-  status('redactionStatus', data.any_hit ? `Found matches in ${submission_id}.` : `No matches found in ${submission_id}.`, data.any_hit ? 'warn' : 'ok');
+  try {
+    const data = await api('/api/admin/redaction-search', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({submission_id, terms}),
+    });
+    renderRedactionCheckResult(data);
+    status('redactionStatus', data.any_hit ? `Found matches in ${submission_id}.` : `No matches found in ${submission_id}.`, data.any_hit ? 'warn' : 'ok');
+  } catch (e) {
+    $('redactionCheckResult').innerHTML = `<div class="check-result bad"><div class="check-result-head"><span class="pill bad">Error</span></div><div class="check-result-copy">${escapeHtml(e.message)}</div></div>`;
+    status('redactionStatus', `ERROR: ${e.message}`, 'error');
+  }
+}
+
+function renderRedactionCheckResult(data){
+  const hits = Array.isArray(data.results) ? data.results : [];
+  const anyHit = Boolean(data.any_hit) || hits.some(hit => Number(hit.count || 0) > 0);
+  const label = anyHit ? 'Still present' : 'Not found';
+  const message = anyHit
+    ? 'Run Redact and Verify Again for the matched term(s), then this check will refresh.'
+    : 'The checked term(s) were not found in the staged file.';
+  const metrics = hits.length
+    ? hits.map(hit => `<span class="check-metric">${escapeHtml(String(hit.term || '').trim() || 'term')}: <strong>${Number(hit.count || 0)}</strong></span>`).join('')
+    : '<span class="check-metric">No terms entered</span>';
+  $('redactionCheckResult').className = `check-result${anyHit ? ' bad' : ''}`;
+  $('redactionCheckResult').innerHTML = `
+    <div class="check-result-head">
+      <span class="pill ${anyHit ? 'bad' : ''}">${label}</span>
+    </div>
+    <div class="check-result-copy">${message}</div>
+    <div class="check-result-metrics">${metrics}</div>
+    <div class="toolbar check-result-actions">
+      <button class="primary" id="redactionCheckAgain">Redact and Verify Again</button>
+    </div>
+  `;
+  $('redactionCheckAgain').onclick = async () => {
+    await applyRedactionUpdate();
+    await checkRedactionTerms();
+  };
 }
 
 async function loadMetadata(){
