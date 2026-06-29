@@ -2162,6 +2162,11 @@ function mergeRedactionStats(previousStats, nextStats){
   return merged;
 }
 function renderSelectedCard(s, idx){
+  const donationInfo = localDonationInfo(s);
+  const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
+  const donationPills = donationInfo.supportId
+    ? `<div class="session-chip-row">${donationInfo.updateReady ? `<span class="pill best">update ready · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns</span>` : (donationInfo.donatedBefore ? `<span class="pill donated">donated${donationInfo.newTurns ? ` · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns` : ''}</span>` : '')}${donationInfo.supportId ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>` : ''}</div>`
+    : (donated ? `<div class="session-chip-row"><span class="pill donated">donated</span></div>` : '');
   $('selectedCard').innerHTML = `
     <div class="selected-card-layout">
       <div class="selected-card-main">
@@ -2169,6 +2174,7 @@ function renderSelectedCard(s, idx){
           <div><strong>Selected #${idx + 1}: ${escapeHtml(s.project || 'unknown project')}</strong></div>
           <span class="pill ${fit(s)}">${fit(s).charAt(0).toUpperCase() + fit(s).slice(1)}</span>
         </div>
+        ${donationPills}
         <div class="metrics">
           <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
           <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
@@ -3103,11 +3109,19 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     $('reviewConfirm').checked = false;
     renderRedactResult(redacted);
     status('redactStatus', redacted.verify_passed ? 'Review the result above. If a private word remains, use Check File to redact it. Otherwise check the review box to continue.' : verifyFailureSummary(redacted));
+    requestAnimationFrame(() => $('redactResult')?.scrollIntoView({behavior:'smooth', block:'start'}));
     refreshButtons();
   } catch(e) { status('redactStatus','ERROR: '+friendlyRequestError(e, 'redaction and verification')); }
   finally {
     if(progressTimers[progressId]) showTiming(progressTimingText ? 'Completed in' : 'Stopped after');
-    setBusy(progressId, false, 35, {keepTime:!!progressTimingText, finalText:progressTimingText});
+    const keepRedactProgress = !opts.fromSearch && progressId === 'redactProgress' && !!redacted;
+    setBusy(progressId, false, 35, {keepTime:!!progressTimingText || keepRedactProgress, finalText:progressTimingText || 'Completed'});
+    if(keepRedactProgress){
+      const el = $(progressId);
+      el.style.display = 'block';
+      el.firstElementChild.style.width = '100%';
+      updateProgressTime(progressId, progressTimingText || 'Completed', {keep:true, percent:100});
+    }
     setUiProcessing(false);
     refreshButtons();
   }
