@@ -757,7 +757,7 @@ class RelayServerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             session = root / "session.redacted.jsonl"
-            session.write_text('{"text":"keep foo and bar"}\n', encoding="utf-8")
+            session.write_text('{"text":"keep foo and Foo and BAR"}\n', encoding="utf-8")
             api = mock.Mock()
             api.list_repo_files.return_value = [
                 "pending/submission-abc12345/session.redacted.jsonl",
@@ -776,12 +776,19 @@ class RelayServerTests(unittest.TestCase):
             ):
                 result = relay_server._search_submission_redacted({
                     "submission_id": "submission-abc12345",
-                    "terms": "foo, baz",
+                    "terms": "foo, bar, baz",
                 })
 
         self.assertEqual(result["submission_id"], "submission-abc12345")
         self.assertTrue(result["any_hit"])
-        self.assertEqual(result["results"], [{"term": "baz", "count": 0}, {"term": "foo", "count": 1}])
+        self.assertEqual(
+            result["results"],
+            [
+                {"term": "bar", "count": 1, "variants": [{"value": "BAR", "count": 1}]},
+                {"term": "baz", "count": 0, "variants": []},
+                {"term": "foo", "count": 2, "variants": [{"value": "Foo", "count": 1}, {"value": "foo", "count": 1}]},
+            ],
+        )
 
 
 if __name__ == "__main__":

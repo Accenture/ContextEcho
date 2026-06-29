@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 
 from donate.adapters.base import conversation_fingerprint
-from donate.redact import apply_scrub_terms_to_file
+from donate.redact import apply_scrub_terms_to_file, _literal_case_insensitive_counts
 
 STAGING_REPO = os.environ.get("CONTEXTECHO_STAGING_REPO", "contextecho2026/persona-drift-staging")
 MAX_SESSION_BYTES = int(os.environ.get("CONTEXTECHO_RELAY_MAX_SESSION_BYTES", str(1024 * 1024 * 1024)))
@@ -420,7 +420,19 @@ def _search_submission_redacted(payload: dict) -> dict:
         )
     )
     text = session_local.read_text(encoding="utf-8", errors="replace")
-    results = [{"term": term, "count": text.count(term)} for term in sorted(scrub_terms)]
+    results = []
+    for term in sorted(scrub_terms):
+        variant_counts = _literal_case_insensitive_counts(text, term)
+        results.append(
+            {
+                "term": term,
+                "count": sum(variant_counts.values()),
+                "variants": [
+                    {"value": variant, "count": count}
+                    for variant, count in sorted(variant_counts.items(), key=lambda item: (item[0].casefold(), item[0]))
+                ],
+            }
+        )
     return {
         "ok": True,
         "submission_id": submission_id,

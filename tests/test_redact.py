@@ -128,6 +128,25 @@ class RedactTests(unittest.TestCase):
         self.assertNotIn("abc123", text)
         self.assertGreaterEqual(stats.get("api_key", 0), 1)
 
+    def test_fast_scrub_repair_is_case_insensitive_and_tracks_variants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "session.redacted.jsonl"
+            path.write_text(
+                '{"text":"accenture Accenture ACCENTURE"}\n',
+                encoding="utf-8",
+            )
+
+            stats = apply_scrub_terms_to_file(path, path, {"accenture"})
+            text = path.read_text(encoding="utf-8")
+
+        self.assertNotIn("accenture", text.lower())
+        self.assertGreaterEqual(stats.get("scrub_term", 0), 3)
+        self.assertGreaterEqual(stats.get("private_word:accenture", 0), 3)
+        self.assertGreaterEqual(stats.get("private_word_variant:accenture:accenture", 0), 1)
+        self.assertGreaterEqual(stats.get("private_word_variant:accenture:Accenture", 0), 1)
+        self.assertGreaterEqual(stats.get("private_word_variant:accenture:ACCENTURE", 0), 1)
+
     def test_redact_text_removes_basic_auth_credentials(self) -> None:
         class NoopAnonymizer:
             @property

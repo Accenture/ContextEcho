@@ -88,6 +88,10 @@
     .check-result-metrics { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
     .check-metric { display:inline-flex; align-items:center; gap:8px; border:1px solid #d8e3d2; border-radius:999px; background:#eef6e9; color:#12231c; padding:10px 14px; font-size:14px; font-weight:850; }
     .check-result.bad .check-metric { background:#fff0ef; border-color:#efc2be; }
+    .check-term-row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+    .check-term-variants { display:flex; flex-wrap:wrap; gap:8px; }
+    .check-variant { display:inline-flex; align-items:center; gap:8px; border:1px solid #d8e3d2; border-radius:999px; background:white; color:#4c5b54; padding:8px 12px; font-size:13px; font-weight:800; }
+    .check-result.bad .check-variant { border-color:#efc2be; background:#fffafa; }
     .check-result-actions { margin-top:2px; }
     .two-col { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:16px; }
     .danger-zone { border-color:#efc2be; background:#fff8f7; }
@@ -588,7 +592,18 @@ function renderRedactionCheckResult(data){
     ? 'Run Redact and Verify Again for the matched term(s), then this check will refresh.'
     : 'The checked term(s) were not found in the staged file.';
   const metrics = hits.length
-    ? hits.map(hit => `<span class="check-metric">${escapeHtml(String(hit.term || '').trim() || 'term')}: <strong>${Number(hit.count || 0)}</strong></span>`).join('')
+    ? hits.map(hit => {
+        const variants = Array.isArray(hit.variants) ? hit.variants : [];
+        const variantMarkup = variants.length
+          ? `<div class="check-term-variants">${variants.map(v => `<span class="check-variant">${escapeHtml(String(v.value || '').trim() || 'variant')}: <strong>${Number(v.count || 0)}</strong></span>`).join('')}</div>`
+          : '';
+        return `
+          <div class="check-term-row">
+            <span class="check-metric">${escapeHtml(String(hit.term || '').trim() || 'term')}: <strong>${Number(hit.count || 0)}</strong></span>
+            ${variantMarkup}
+          </div>
+        `;
+      }).join('')
     : '<span class="check-metric">No terms entered</span>';
   $('redactionCheckResult').className = `check-result${anyHit ? ' bad' : ''}`;
   $('redactionCheckResult').innerHTML = `

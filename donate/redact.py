@@ -77,6 +77,34 @@ def pseudonym(name: str) -> str:
     return f"<USER_{h}>"
 
 
+def _literal_case_insensitive_counts(text: str, term: str) -> dict[str, int]:
+    """Count exact casing variants for a literal term, case-insensitively."""
+    counts: dict[str, int] = {}
+    if not term:
+        return counts
+    rx = re.compile(re.escape(term), re.IGNORECASE)
+    for match in rx.finditer(text):
+        variant = match.group(0)
+        counts[variant] = counts.get(variant, 0) + 1
+    return counts
+
+
+def _replace_literal_case_insensitive(text: str, term: str, replacement: str) -> tuple[str, int, dict[str, int]]:
+    """Replace a literal term case-insensitively while preserving variant counts."""
+    variant_counts: dict[str, int] = {}
+    if not term:
+        return text, 0, variant_counts
+    rx = re.compile(re.escape(term), re.IGNORECASE)
+
+    def repl(match: re.Match[str]) -> str:
+        variant = match.group(0)
+        variant_counts[variant] = variant_counts.get(variant, 0) + 1
+        return replacement
+
+    redacted_text, count = rx.subn(repl, text)
+    return redacted_text, count, variant_counts
+
+
 # ---------------------------------------------------------------------------
 # Presidio engine (lazy import so --help works without the heavy deps)
 # ---------------------------------------------------------------------------
@@ -201,13 +229,12 @@ def redact_text(
 
     # 2. Contributor-supplied scrub terms (local-only safety valve).
     for term in sorted(scrub_terms, key=len, reverse=True):
-        if not term:
-            continue
-        n = text.count(term)
+        text, n, variant_counts = _replace_literal_case_insensitive(text, term, "<REDACTED>")
         if n:
-            text = text.replace(term, "<REDACTED>")
             stats["scrub_term"] = stats.get("scrub_term", 0) + n
             stats[f"private_word:{term}"] = stats.get(f"private_word:{term}", 0) + n
+            for variant, variant_count in variant_counts.items():
+                stats[f"private_word_variant:{term}:{variant}"] = stats.get(f"private_word_variant:{term}:{variant}", 0) + variant_count
 
     # 3. Home-path prefixes left over -> generic (slash and dash-slug forms).
     text, n = HOME_PATH_RE.subn(lambda m: m.group("prefix") + "<USER>", text)
@@ -287,11 +314,12 @@ def apply_scrub_terms_to_file(src: Path, dst: Path, scrub_terms: set[str]) -> di
     terms = expanded_scrub_terms(scrub_terms)
     text = src.read_text(encoding="utf-8", errors="replace")
     for term in sorted(terms, key=len, reverse=True):
-        n = text.count(term)
+        text, n, variant_counts = _replace_literal_case_insensitive(text, term, "<REDACTED>")
         if n:
-            text = text.replace(term, "<REDACTED>")
             stats["scrub_term"] = stats.get("scrub_term", 0) + n
             stats[f"private_word:{term}"] = stats.get(f"private_word:{term}", 0) + n
+            for variant, variant_count in variant_counts.items():
+                stats[f"private_word_variant:{term}:{variant}"] = stats.get(f"private_word_variant:{term}:{variant}", 0) + variant_count
     # Re-apply deterministic path cleanup in case the added term exposed a
     # path-shaped residue without paying the full Presidio/NER cost again.
     text, n = HOME_PATH_RE.subn(lambda m: m.group("prefix") + "<USER>", text)
