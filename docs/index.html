@@ -206,7 +206,7 @@
       border-radius:8px;
       background:#101816;
     }
-    .demo-more {
+    .foldout {
       margin-top:16px;
       border:1px solid #cfe2f7;
       border-radius:8px;
@@ -215,16 +215,16 @@
       padding:0;
       line-height:1.5;
     }
-    .demo-more summary {
+    .foldout summary {
       cursor:pointer;
       padding:14px 16px;
       font-weight:950;
       color:#123a5d;
     }
-    .demo-more-body {
+    .foldout-body {
       padding:0 16px 16px;
     }
-    .demo-more-body p {
+    .foldout-body p {
       margin:0 0 12px;
     }
     .band {
@@ -561,9 +561,9 @@
         <div class="actions" style="justify-content:flex-start;margin-left:0;">
           <a class="button primary" href="https://github.com/Accenture/ContextEcho/tree/main/demo_live">Run Interactive Demo Locally</a>
         </div>
-        <details class="demo-more">
+        <details class="foldout">
           <summary>Local demo command and notes</summary>
-          <div class="demo-more-body">
+          <div class="foldout-body">
             <p>The public page shows a recorded demo. The interactive version streams fresh probes locally with your own API key.</p>
             <pre class="code-block"><code>python -m demo_live.server
 # then open http://localhost:8765</code></pre>
@@ -685,11 +685,16 @@
           <h2>Every paper artifact has a command</h2>
           <p class="section-copy">The repository includes a claim-by-claim reproduction document, plotting scripts, analysis scripts, and idempotent experiment runners for recollecting cells when provider access is available.</p>
         </div>
-        <pre class="code-block"><code>make setup
+        <details class="foldout">
+          <summary>Show reproduction commands</summary>
+          <div class="foldout-body">
+            <pre class="code-block"><code>make setup
 make verify-pii
 make fig2-forest
 make figs-body
 make figs-app</code></pre>
+          </div>
+        </details>
       </div>
     </section>
 
@@ -718,12 +723,17 @@ make figs-app</code></pre>
       <div class="inner">
         <p class="eyebrow">BibTeX</p>
         <h2>Citation</h2>
-        <pre class="code-block" style="margin-top:18px;"><code>@article{ding2026contextecho,
+        <details class="foldout">
+          <summary>Show BibTeX</summary>
+          <div class="foldout-body">
+            <pre class="code-block"><code>@article{ding2026contextecho,
   title={ContextEcho: A Benchmark for Persona Drift in Long Agentic-Coding Sessions},
   author={Ding, Xianzhong and Yu, Yangyang and Liu, Changwei and Zhao, Bill},
   journal={arXiv preprint arXiv:2605.24279},
   year={2026}
 }</code></pre>
+          </div>
+        </details>
       </div>
     </section>
   </main>
