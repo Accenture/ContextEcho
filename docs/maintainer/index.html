@@ -664,6 +664,22 @@ async function postRedactionUpdate(submission_id, scrub_terms, note){
     body:JSON.stringify({submission_id, scrub_terms, note}),
   });
 }
+async function postRedactionSearch(submission_id, terms){
+  return api('/api/admin/redaction-search', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({submission_id, terms}),
+  });
+}
+function redactionSearchHasHits(data){
+  const hits = Array.isArray(data?.results) ? data.results : [];
+  return Boolean(data?.any_hit) || hits.some(hit => Number(hit.count || 0) > 0);
+}
+function redactionSearchSummary(data){
+  const hits = Array.isArray(data?.results) ? data.results : [];
+  if(!hits.length) return 'No terms checked';
+  return hits.map(hit => `${String(hit.term || '').trim() || 'term'}: ${compact(hit.count || 0)}`).join(', ');
+}
 function redactionResultParts(submission_id, data){
   const terms = (data.terms || []).join(', ');
   const parts = [data.changed ? `Updated ${submission_id}.` : `No new matches for ${submission_id}.`];
@@ -690,23 +706,36 @@ async function applyRedactionUpdate(){
   await refreshAfterRedaction();
 }
 
-function renderBatchRedactionSummary(results, failures){
-  const changed = results.filter(item => item.data.changed).length;
-  const unchanged = results.length - changed;
-  const outcome = failures.length ? 'Finished with errors' : 'Finished';
-  const resultRows = results.map(item => `
-    <div><span class="pill ${item.data.changed ? '' : 'warn'}">${item.data.changed ? 'updated' : 'no matches'}</span> <code>${escapeHtml(item.submission_id)}</code></div>
+function renderBatchRedactionProgress(items, complete=false){
+  const changed = items.filter(item => item.status === 'updated').length;
+  const unchanged = items.filter(item => item.status === 'no_matches').length;
+  const failures = items.filter(item => item.status === 'failed').length;
+  const processed = changed + unchanged + failures;
+  const outcome = complete ? (failures ? 'Finished with errors' : 'Finished') : 'Batch redaction running';
+  const statusClass = item => item.status === 'failed' ? 'bad' : item.status === 'updated' ? '' : item.status === 'no_matches' ? 'warn' : 'warn';
+  const statusLabel = item => ({
+    queued: 'queued',
+    checking: 'checking',
+    redacting: 'redacting',
+    updated: 'updated',
+    no_matches: 'no matches',
+    failed: 'failed',
+  })[item.status] || item.status;
+  const rows = items.map(item => `
+    <div>
+      <span class="pill ${statusClass(item)}">${escapeHtml(statusLabel(item))}</span>
+      <code>${escapeHtml(item.submission_id)}</code>
+      <div class="hint">Before: ${escapeHtml(item.search ? redactionSearchSummary(item.search) : 'waiting to check')}</div>
+      ${item.error ? `<div class="hint">${escapeHtml(item.error)}</div>` : ''}
+    </div>
   `).join('');
-  const failureRows = failures.map(item => `
-    <div><span class="pill bad">failed</span> <code>${escapeHtml(item.submission_id)}</code><div class="hint">${escapeHtml(item.error)}</div></div>
-  `).join('');
-  $('redactionCheckResult').className = `check-result${failures.length ? ' bad' : ''}`;
+  $('redactionCheckResult').className = `check-result${failures ? ' bad' : ''}`;
   $('redactionCheckResult').innerHTML = `
     <div class="check-result-head">
-      <span class="pill ${failures.length ? 'bad' : ''}">${outcome}</span>
+      <span class="pill ${failures ? 'bad' : ''}">${outcome}</span>
     </div>
-    <div class="check-result-copy">Processed ${compact(results.length + failures.length)} selected submission${results.length + failures.length === 1 ? '' : 's'} one by one: ${compact(changed)} updated, ${compact(unchanged)} with no new matches, ${compact(failures.length)} failed.</div>
-    <div class="check-result-metrics">${resultRows}${failureRows}</div>
+    <div class="check-result-copy">Processed ${compact(processed)}/${compact(items.length)} selected submission${items.length === 1 ? '' : 's'}: ${compact(changed)} updated, ${compact(unchanged)} with no matches, ${compact(failures)} failed.</div>
+    <div class="check-result-metrics">${rows}</div>
   `;
 }
 
@@ -719,30 +748,48 @@ async function applySelectedRedactionUpdates(){
   if(!confirm(`Apply the same maintainer redaction update to ${submissionIds.length} selected submissions one by one? This updates staged artifacts and keeps repo history.`)) return;
   const buttons = [$('applyRedaction'), $('applySelectedRedactions'), $('checkRedactionTerms')].filter(Boolean);
   buttons.forEach(btn => btn.disabled = true);
-  const results = [];
-  const failures = [];
+  const items = submissionIds.map(submission_id => ({submission_id, status:'queued', search:null, error:''}));
+  renderBatchRedactionProgress(items);
   try {
-    for(let i = 0; i < submissionIds.length; i += 1){
-      const submission_id = submissionIds[i];
-      status('redactionStatus', `Applying redaction ${i + 1}/${submissionIds.length}: ${submission_id}...`);
+    for(let i = 0; i < items.length; i += 1){
+      const item = items[i];
+      const submission_id = item.submission_id;
+      status('redactionStatus', `Checking redaction ${i + 1}/${items.length}: ${submission_id}...`);
       try {
+        item.status = 'checking';
+        renderBatchRedactionProgress(items);
+        const search = await postRedactionSearch(submission_id, scrub_terms);
+        item.search = search;
+        if(!redactionSearchHasHits(search)){
+          item.status = 'no_matches';
+          state.selectedRedactionSubmissions.delete(submission_id);
+          renderBatchRedactionProgress(items);
+          continue;
+        }
+        item.status = 'redacting';
+        status('redactionStatus', `Applying redaction ${i + 1}/${items.length}: ${submission_id}...`);
+        renderBatchRedactionProgress(items);
         const data = await postRedactionUpdate(submission_id, scrub_terms, note);
-        results.push({submission_id, data});
+        item.status = data.changed ? 'updated' : 'no_matches';
         state.selectedRedactionSubmissions.delete(submission_id);
+        renderBatchRedactionProgress(items);
       } catch (e) {
-        failures.push({submission_id, error:e.message || String(e)});
+        item.status = 'failed';
+        item.error = e.message || String(e);
+        renderBatchRedactionProgress(items);
       }
     }
   } finally {
     buttons.forEach(btn => btn.disabled = false);
     updateBatchRedactionControls();
   }
-  renderBatchRedactionSummary(results, failures);
+  renderBatchRedactionProgress(items, true);
   await refreshAfterRedaction();
-  const changed = results.filter(item => item.data.changed).length;
-  const unchanged = results.length - changed;
-  const message = `Finished selected redactions: ${changed} updated, ${unchanged} with no new matches, ${failures.length} failed.`;
-  status('redactionStatus', message, failures.length ? 'warn' : 'ok');
+  const changed = items.filter(item => item.status === 'updated').length;
+  const unchanged = items.filter(item => item.status === 'no_matches').length;
+  const failures = items.filter(item => item.status === 'failed').length;
+  const message = `Finished selected redactions: ${changed} updated, ${unchanged} with no matches, ${failures} failed.`;
+  status('redactionStatus', message, failures ? 'warn' : 'ok');
 }
 
 async function checkRedactionTerms(){
@@ -752,11 +799,7 @@ async function checkRedactionTerms(){
   if(!terms) return status('redactionStatus', 'Enter one or more terms to check.', 'error');
   status('redactionStatus', `Checking ${submission_id} for sensitive terms...`);
   try {
-    const data = await api('/api/admin/redaction-search', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({submission_id, terms}),
-    });
+    const data = await postRedactionSearch(submission_id, terms);
     renderRedactionCheckResult(data);
     status('redactionStatus', data.any_hit ? `Found matches in ${submission_id}.` : `No matches found in ${submission_id}.`, data.any_hit ? 'warn' : 'ok');
   } catch (e) {
