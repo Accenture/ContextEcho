@@ -240,21 +240,21 @@
         <div class="hint">Use this when a donor asks to redact more terms after submission. The relay updates the staged artifact and keeps the old version in repo history.</div>
         <label for="redactionSubmission">Single submission ID</label>
         <input id="redactionSubmission" placeholder="submission-xxxxxxxx">
-        <div class="hint">Used by <strong>Redact more</strong> and <strong>Check terms</strong>. Batch redaction uses the selected rows in the table.</div>
+        <div class="hint">Used by <strong>Redact single</strong> and <strong>Check single ID</strong>. Batch redaction uses the selected rows in the table.</div>
         <label for="redactionTerms">Additional scrub terms</label>
         <textarea id="redactionTerms" placeholder="comma-separated handles, project names, or other terms"></textarea>
         <label for="redactionNote">Maintainer note</label>
         <input id="redactionNote" placeholder="optional note for the update record">
         <div class="toolbar" style="margin-top:12px">
-          <button class="primary" id="applyRedaction">Redact more</button>
+          <button class="primary" id="applyRedaction">Redact single</button>
           <button class="primary" id="applySelectedRedactions" disabled>Redact selected (0)</button>
-          <button id="checkRedactionTerms">Check terms</button>
+          <button id="checkRedactionTerms">Check single ID</button>
         </div>
         <div id="selectedRedactionSummary" class="selected-redactions hint">No submissions selected for batch redaction.</div>
         <div class="hint">Check the current staged artifact first to see whether the submitted file still contains the words you care about.</div>
         <div id="redactionStatus" class="status"></div>
         <div id="redactionCheckResult" class="check-result" style="margin-top:12px">
-          <div class="hint">Run <strong>Check terms</strong> to inspect the staged file.</div>
+          <div class="hint">Run <strong>Check single ID</strong> to inspect the staged file.</div>
         </div>
       </div>
       <div id="pendingTable"></div>
@@ -768,9 +768,10 @@ async function checkRedactionTerms(){
 function renderRedactionCheckResult(data){
   const hits = Array.isArray(data.results) ? data.results : [];
   const anyHit = Boolean(data.any_hit) || hits.some(hit => Number(hit.count || 0) > 0);
+  const selectedCount = selectedRedactionIds().length;
   const label = anyHit ? 'Still present' : 'Not found';
   const message = anyHit
-    ? 'Run Redact and Verify Again for the matched term(s), then this check will refresh.'
+    ? 'Use Redact single for the checked submission, or Redact selected for the selected table rows.'
     : 'The checked term(s) were not found in the staged file.';
   const metrics = hits.length
     ? hits.map(hit => {
@@ -786,6 +787,12 @@ function renderRedactionCheckResult(data){
         `;
       }).join('')
     : '<span class="check-metric">No terms entered</span>';
+  const actionMarkup = anyHit
+    ? `<div class="toolbar check-result-actions">
+        <button class="primary" id="redactionCheckAgain">Redact single and check again</button>
+        ${selectedCount ? `<button class="primary" id="redactionCheckBatch">Redact selected (${selectedCount})</button>` : ''}
+      </div>`
+    : '';
   $('redactionCheckResult').className = `check-result${anyHit ? ' bad' : ''}`;
   $('redactionCheckResult').innerHTML = `
     <div class="check-result-head">
@@ -793,14 +800,17 @@ function renderRedactionCheckResult(data){
     </div>
     <div class="check-result-copy">${message}</div>
     <div class="check-result-metrics">${metrics}</div>
-    <div class="toolbar check-result-actions">
-      <button class="primary" id="redactionCheckAgain">Redact and Verify Again</button>
-    </div>
+    ${actionMarkup}
   `;
-  $('redactionCheckAgain').onclick = async () => {
-    await applyRedactionUpdate();
-    await checkRedactionTerms();
-  };
+  if($('redactionCheckAgain')){
+    $('redactionCheckAgain').onclick = async () => {
+      await applyRedactionUpdate();
+      await checkRedactionTerms();
+    };
+  }
+  if($('redactionCheckBatch')){
+    $('redactionCheckBatch').onclick = () => applySelectedRedactionUpdates().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
+  }
 }
 
 async function loadMetadata(){
