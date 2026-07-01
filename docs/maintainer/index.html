@@ -38,6 +38,7 @@
     .connection-footer .toolbar { margin:0; }
     label { display:block; font-weight:900; margin-bottom:6px; }
     input, textarea { width:100%; border:1px solid #d9e0d7; border-radius:10px; padding:11px 12px; font:inherit; background:white; color:var(--ink); }
+    input[type="checkbox"] { width:auto; accent-color:var(--green); }
     textarea { min-height:110px; resize:vertical; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; }
     .hint { color:var(--muted); font-size:13px; line-height:1.4; margin-top:6px; }
     .status { margin-top:14px; color:var(--muted); font-size:14px; min-height:20px; }
@@ -73,6 +74,11 @@
     .status-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
     .status-tab { background:white; border-color:#dce4df; color:#415148; }
     .status-tab.active { background:#10211a; color:white; }
+    .batch-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 14px; padding:10px 12px; border:1px solid #dce4df; border-radius:12px; background:#fbfdf8; }
+    .selection-count { font-weight:900; color:#314139; }
+    .row-select { display:inline-flex; align-items:center; justify-content:center; margin:0; min-width:24px; }
+    .row-select input { width:18px; height:18px; padding:0; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
     table { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     th, td { text-align:left; padding:11px 12px; border-bottom:1px solid #edf1e9; vertical-align:top; font-size:14px; }
     th { background:#f3f6ef; color:#4e5b54; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
@@ -238,6 +244,7 @@
         <input id="redactionNote" placeholder="optional note for the update record">
         <div class="toolbar" style="margin-top:12px">
           <button class="primary" id="applyRedaction">Redact more</button>
+          <button class="primary" id="applySelectedRedactions" disabled>Redact selected (0)</button>
           <button id="checkRedactionTerms">Check terms</button>
         </div>
         <div class="hint">Check the current staged artifact first to see whether the submitted file still contains the words you care about.</div>
@@ -331,7 +338,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', metadataUpdates:[], supportRequests:[], records:[], events:[] };
+const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -486,6 +493,49 @@ function pendingRows(){
     return !q || JSON.stringify(row).toLowerCase().includes(q);
   });
 }
+function selectedRedactionIds(){
+  const selected = state.selectedRedactionSubmissions;
+  const ordered = state.pending
+    .map(row => String(row.submission_id || '').trim())
+    .filter(id => id && selected.has(id));
+  const extras = Array.from(selected).filter(id => !ordered.includes(id)).sort();
+  return [...ordered, ...extras];
+}
+function pruneSelectedRedactions(){
+  const available = new Set(state.pending.map(row => String(row.submission_id || '').trim()).filter(Boolean));
+  state.selectedRedactionSubmissions.forEach(id => {
+    if(!available.has(id)) state.selectedRedactionSubmissions.delete(id);
+  });
+}
+function updateBatchRedactionControls(){
+  const ids = selectedRedactionIds();
+  const count = ids.length;
+  const label = `${count} selected`;
+  if($('selectedRedactionCount')) $('selectedRedactionCount').textContent = label;
+  if($('applySelectedRedactions')){
+    $('applySelectedRedactions').disabled = count === 0;
+    $('applySelectedRedactions').textContent = `Redact selected (${count})`;
+  }
+  if($('clearSelectedRedactions')) $('clearSelectedRedactions').disabled = count === 0;
+  if($('selectVisibleRedactions')) $('selectVisibleRedactions').disabled = pendingRows().length === 0;
+}
+function setRedactionSelected(submissionId, selected){
+  if(!submissionId) return;
+  if(selected) state.selectedRedactionSubmissions.add(submissionId);
+  else state.selectedRedactionSubmissions.delete(submissionId);
+  updateBatchRedactionControls();
+}
+function selectVisibleRedactions(){
+  pendingRows().forEach(row => {
+    const id = String(row.submission_id || '').trim();
+    if(id) state.selectedRedactionSubmissions.add(id);
+  });
+  renderPending();
+}
+function clearSelectedRedactions(){
+  state.selectedRedactionSubmissions.clear();
+  renderPending();
+}
 function setPendingStatusFilter(value){
   state.pendingStatusFilter = value;
   renderPending();
@@ -531,6 +581,7 @@ function submissionHistory(row){
   }).join('');
 }
 function renderPending(){
+  pruneSelectedRedactions();
   const rows = pendingRows();
   const counts = pendingReviewCounts();
   const tabs = `
@@ -540,9 +591,22 @@ function renderPending(){
       <button class="status-tab ${state.pendingStatusFilter === 'all' ? 'active' : ''}" data-pending-status="all">All staging (${compact(counts.all)})</button>
     </div>
   `;
+  const batchTools = `
+    <div class="batch-tools" aria-label="Selected redaction controls">
+      <div>
+        <span id="selectedRedactionCount" class="selection-count">0 selected</span>
+        <div class="hint">Selected rows use the scrub terms and maintainer note above.</div>
+      </div>
+      <div class="toolbar">
+        <button id="selectVisibleRedactions" type="button">Select visible</button>
+        <button id="clearSelectedRedactions" type="button">Clear selection</button>
+      </div>
+    </div>
+  `;
   $('pendingTable').innerHTML = table(
-    ['Submission', 'Review', 'Donor', 'Institute', 'Session', 'Stats', 'Files', 'History', 'Action'],
+    ['Select', 'Submission', 'Review', 'Donor', 'Institute', 'Session', 'Stats', 'Files', 'History', 'Action'],
     rows.map(row => [
+      `<label class="row-select"><input type="checkbox" data-redaction-select="${escapeHtml(row.submission_id || '')}" ${state.selectedRedactionSubmissions.has(row.submission_id || '') ? 'checked' : ''}><span class="sr-only">Select ${escapeHtml(row.submission_id || '')}</span></label>`,
       `<code>${escapeHtml(row.submission_id)}</code>`,
       reviewStatusPill(row),
       `${escapeHtml(row.contributor || '')}<div class="hint">${escapeHtml(row.email || '')}</div>`,
@@ -554,13 +618,19 @@ function renderPending(){
       `<button data-redact-more="${escapeHtml(row.submission_id || '')}">Redact more</button>`,
     ])
   );
-  $('pendingTable').innerHTML = tabs + $('pendingTable').innerHTML;
+  $('pendingTable').innerHTML = tabs + batchTools + $('pendingTable').innerHTML;
   document.querySelectorAll('[data-pending-status]').forEach(btn => {
     btn.onclick = () => setPendingStatusFilter(btn.dataset.pendingStatus || 'needs_validation');
   });
+  document.querySelectorAll('[data-redaction-select]').forEach(box => {
+    box.onchange = () => setRedactionSelected(box.dataset.redactionSelect || '', box.checked);
+  });
+  $('selectVisibleRedactions').onclick = selectVisibleRedactions;
+  $('clearSelectedRedactions').onclick = clearSelectedRedactions;
   document.querySelectorAll('[data-redact-more]').forEach(btn => {
     btn.onclick = () => cueRedactionUpdate(btn.dataset.redactMore || '');
   });
+  updateBatchRedactionControls();
 }
 function filePill(ok, label){
   return `<span class="pill ${ok ? '' : 'bad'}">${escapeHtml(label)}</span>`;
@@ -574,6 +644,26 @@ function cueRedactionUpdate(submissionId){
   status('redactionStatus', `Loaded ${submissionId}. Add extra scrub terms, then apply the redaction update.`);
 }
 
+async function postRedactionUpdate(submission_id, scrub_terms, note){
+  return api('/api/admin/redaction-updates', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({submission_id, scrub_terms, note}),
+  });
+}
+function redactionResultParts(submission_id, data){
+  const terms = (data.terms || []).join(', ');
+  const parts = [data.changed ? `Updated ${submission_id}.` : `No new matches for ${submission_id}.`];
+  if(terms) parts.push(`Terms: ${terms}.`);
+  if(data.update_url || data.review_url) parts.push(`Update: ${data.update_url || data.review_url}.`);
+  return parts;
+}
+async function refreshAfterRedaction(){
+  if(state.pending.length) await loadPending();
+  if(state.records.length) await loadRecords();
+  if(state.events.length) await loadEvents();
+  if(state.summary) await loadSummary();
+}
 async function applyRedactionUpdate(){
   const submission_id = $('redactionSubmission').value.trim();
   const scrub_terms = $('redactionTerms').value.trim();
@@ -582,20 +672,64 @@ async function applyRedactionUpdate(){
   if(!scrub_terms) return status('redactionStatus', 'Enter one or more additional scrub terms.', 'error');
   if(!confirm(`Apply a maintainer redaction update to ${submission_id}? This updates the staged artifact and keeps repo history.`)) return;
   status('redactionStatus', `Applying redaction update for ${submission_id}...`);
-  const data = await api('/api/admin/redaction-updates', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({submission_id, scrub_terms, note}),
-  });
-  const terms = (data.terms || []).join(', ');
-  const parts = [data.changed ? `Updated ${submission_id}.` : `No new matches for ${submission_id}.`];
-  if(terms) parts.push(`Terms: ${terms}.`);
-  if(data.update_url || data.review_url) parts.push(`Update: ${data.update_url || data.review_url}.`);
-  status('redactionStatus', parts.join(' '), data.changed ? 'ok' : 'warn');
-  if(state.pending.length) await loadPending();
-  if(state.records.length) await loadRecords();
-  if(state.events.length) await loadEvents();
-  if(state.summary) await loadSummary();
+  const data = await postRedactionUpdate(submission_id, scrub_terms, note);
+  status('redactionStatus', redactionResultParts(submission_id, data).join(' '), data.changed ? 'ok' : 'warn');
+  await refreshAfterRedaction();
+}
+
+function renderBatchRedactionSummary(results, failures){
+  const changed = results.filter(item => item.data.changed).length;
+  const unchanged = results.length - changed;
+  const outcome = failures.length ? 'Finished with errors' : 'Finished';
+  const resultRows = results.map(item => `
+    <div><span class="pill ${item.data.changed ? '' : 'warn'}">${item.data.changed ? 'updated' : 'no matches'}</span> <code>${escapeHtml(item.submission_id)}</code></div>
+  `).join('');
+  const failureRows = failures.map(item => `
+    <div><span class="pill bad">failed</span> <code>${escapeHtml(item.submission_id)}</code><div class="hint">${escapeHtml(item.error)}</div></div>
+  `).join('');
+  $('redactionCheckResult').className = `check-result${failures.length ? ' bad' : ''}`;
+  $('redactionCheckResult').innerHTML = `
+    <div class="check-result-head">
+      <span class="pill ${failures.length ? 'bad' : ''}">${outcome}</span>
+    </div>
+    <div class="check-result-copy">Processed ${compact(results.length + failures.length)} selected submission${results.length + failures.length === 1 ? '' : 's'} one by one: ${compact(changed)} updated, ${compact(unchanged)} with no new matches, ${compact(failures.length)} failed.</div>
+    <div class="check-result-metrics">${resultRows}${failureRows}</div>
+  `;
+}
+
+async function applySelectedRedactionUpdates(){
+  const submissionIds = selectedRedactionIds();
+  const scrub_terms = $('redactionTerms').value.trim();
+  const note = $('redactionNote').value.trim();
+  if(!submissionIds.length) return status('redactionStatus', 'Select one or more staging submissions first.', 'error');
+  if(!scrub_terms) return status('redactionStatus', 'Enter one or more additional scrub terms.', 'error');
+  if(!confirm(`Apply the same maintainer redaction update to ${submissionIds.length} selected submissions one by one? This updates staged artifacts and keeps repo history.`)) return;
+  const buttons = [$('applyRedaction'), $('applySelectedRedactions'), $('checkRedactionTerms')].filter(Boolean);
+  buttons.forEach(btn => btn.disabled = true);
+  const results = [];
+  const failures = [];
+  try {
+    for(let i = 0; i < submissionIds.length; i += 1){
+      const submission_id = submissionIds[i];
+      status('redactionStatus', `Applying redaction ${i + 1}/${submissionIds.length}: ${submission_id}...`);
+      try {
+        const data = await postRedactionUpdate(submission_id, scrub_terms, note);
+        results.push({submission_id, data});
+        state.selectedRedactionSubmissions.delete(submission_id);
+      } catch (e) {
+        failures.push({submission_id, error:e.message || String(e)});
+      }
+    }
+  } finally {
+    buttons.forEach(btn => btn.disabled = false);
+    updateBatchRedactionControls();
+  }
+  renderBatchRedactionSummary(results, failures);
+  await refreshAfterRedaction();
+  const changed = results.filter(item => item.data.changed).length;
+  const unchanged = results.length - changed;
+  const message = `Finished selected redactions: ${changed} updated, ${unchanged} with no new matches, ${failures.length} failed.`;
+  status('redactionStatus', message, failures.length ? 'warn' : 'ok');
 }
 
 async function checkRedactionTerms(){
@@ -936,6 +1070,7 @@ $('recordFilter').oninput = renderRecords;
 $('eventFilter').oninput = renderEvents;
 $('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));
 $('applyRedaction').onclick = () => applyRedactionUpdate().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
+$('applySelectedRedactions').onclick = () => applySelectedRedactionUpdates().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
 $('checkRedactionTerms').onclick = () => checkRedactionTerms().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
 $('resetOne').onclick = () => resetOne().catch(e => status('resetStatus', `ERROR: ${e.message}`, 'error'));
 $('backfillBtn').onclick = () => backfill().catch(e => status('backfillStatus', `ERROR: ${e.message}`, 'error'));
