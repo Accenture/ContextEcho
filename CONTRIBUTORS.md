@@ -38,8 +38,12 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | 17 | Xianzhong Ding | 1 | 87 | Claude Code | claude-opus-4-5.x (mixed) | 5 |
 | 18 | Anonymous donor 86ff44fe | 1 | 61 | Claude Code | claude-sonnet-4-6 | 5 |
 | 19 | Anonymous donor 297da79a | 1 | 53 | Claude Code | claude-sonnet-4.x (mixed) | 5 |
+| 20 | Anonymous donor a997ebe1 | 1 | 81 | Claude Code | claude-opus-4-8 | 4 |
+| 21 | Anonymous donor 709bb557 | 1 | 70 | Claude Code | claude-opus-4.x (mixed) | 4 |
+| 22 | Anonymous donor cb9b3ae7 | 1 | 60 | Claude Code | claude-opus-4.x (mixed) | 4 |
+| 23 | Anonymous donor 6ad76f41 | 1 | 53 | Claude Code | claude-opus-4.x (mixed) | 4 |
 
-*Corpus total: **19 sessions · 26,248 user turns**.*
+*Corpus total: **23 sessions · 26,512 user turns**.*
 
 > Anonymous donors are assigned stable session nicknames unless they provide
 > name, email, and institute. Contributions are merged only when all three
@@ -76,6 +80,10 @@ per contributor counts toward points.
 | S17 | Anonymous donor 297da79a | Claude Code | claude-sonnet-4.x (mixed) | Anthropic | agentic-coding | mixed | 53 | 2 | 5 | v2 |
 | S18 | Anonymous donor 37744e94 | Codex CLI | gpt-5.3-codex | OpenAI | agentic-coding | mixed | 101 | 0 | 5 | v2 |
 | S19 | Anonymous donor 86ff44fe | Claude Code | claude-sonnet-4-6 | Anthropic | agentic-coding | mixed | 61 | 1 | 5 | v2 |
+| S20 | Anonymous donor 6ad76f41 | Claude Code | claude-opus-4.x (mixed) | Anthropic | agentic-coding | mixed | 53 | 0 | 4 | v2 |
+| S21 | Anonymous donor 709bb557 | Claude Code | claude-opus-4.x (mixed) | Anthropic | agentic-coding | mixed | 70 | 0 | 4 | v2 |
+| S22 | Anonymous donor a997ebe1 | Claude Code | claude-opus-4-8 | Anthropic | agentic-coding | mixed | 81 | 0 | 4 | v2 |
+| S23 | Anonymous donor cb9b3ae7 | Claude Code | claude-opus-4.x (mixed) | Anthropic | agentic-coding | mixed | 60 | 0 | 4 | v2 |
 
 ---
 
@@ -87,7 +95,7 @@ new coverage gap can earn a novelty bonus.
 | Axis | Covered so far | Wanted |
 |------|----------------|--------|
 | **Agent / harness** | Claude Code · Codex CLI | Cursor · Aider · Windsurf · Cline · Continue · custom harnesses |
-| **Model** | Opus 4.x (mixed) · claude-opus-4-5.x (mixed) · +6 | Gemini · DeepSeek · Llama · Qwen · Mistral · Kimi · any frontier model |
+| **Model** | Opus 4.x (mixed) · claude-opus-4-5.x (mixed) · +7 | Gemini · DeepSeek · Llama · Qwen · Mistral · Kimi · any frontier model |
 | **Organization** | Anthropic · OpenAI | Google · Meta · DeepSeek · Alibaba · Mistral · Cohere · NVIDIA · Moonshot |
 | **Domain** | Agentic Coding · Manuscript Writing · +2 | data science · web/frontend · infra/DevOps · debugging · research · refactoring |
 | **Language** | Python · mixed | TypeScript/JS · Rust · Go · Java · C++ · SQL · non-English natural language |
