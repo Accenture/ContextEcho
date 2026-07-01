@@ -84,6 +84,10 @@
     table { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
     th, td { text-align:left; padding:11px 12px; border-bottom:1px solid #edf1e9; vertical-align:top; font-size:14px; }
     th { background:#f3f6ef; color:#4e5b54; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    .sort-header { width:100%; justify-content:flex-start; gap:6px; border:0; border-radius:6px; padding:0; background:transparent; color:inherit; box-shadow:none; font:inherit; text-transform:inherit; letter-spacing:inherit; }
+    .sort-header:hover, .sort-header:focus { color:var(--green); text-decoration:none; }
+    .sort-mark { color:#819087; font-size:11px; }
+    .sort-header.active .sort-mark { color:var(--green); }
     tr:last-child td { border-bottom:0; }
     code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.92em; background:#eef3e9; border-radius:6px; padding:2px 5px; }
     .pill { display:inline-flex; align-items:center; border-radius:999px; padding:4px 8px; font-size:12px; font-weight:900; background:#dff2da; color:#13552f; }
@@ -342,7 +346,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
+const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', pendingSortKey:'submitted_utc', pendingSortDir:'desc', selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -488,6 +492,39 @@ function pendingStatusText(extra=''){
   const counts = pendingReviewCounts();
   return `Loaded ${counts.all} staging submission${counts.all === 1 ? '' : 's'}: ${counts.needs_validation} need validation, ${counts.promoted} promoted${extra}.`;
 }
+function latestRedactionUtc(row){
+  const history = Array.isArray(row.maintenance_redaction_history) ? row.maintenance_redaction_history : [];
+  const latest = history.length ? history[history.length - 1] : {};
+  return latest.updated_utc || row.maintenance_redaction_updated_utc || '';
+}
+function pendingSortValue(row, key){
+  const promoted = row.review_status === 'promoted' || row.promoted;
+  const values = {
+    submission: row.submission_id || '',
+    review: promoted ? `1 ${row.review_decision || ''}` : `0 ${row.review_decision || ''}`,
+    donor: `${row.contributor || ''} ${row.email || ''}`,
+    institute: row.institute || '',
+    session: `${row.agent || ''} ${row.model || ''}`,
+    submitted_utc: Date.parse(row.submitted_utc || '') || 0,
+    history: Date.parse(latestRedactionUtc(row)) || 0,
+  };
+  return values[key] ?? '';
+}
+function comparePendingRows(a, b){
+  const key = state.pendingSortKey || 'submitted_utc';
+  const av = pendingSortValue(a, key);
+  const bv = pendingSortValue(b, key);
+  let cmp = 0;
+  if(typeof av === 'number' || typeof bv === 'number'){
+    cmp = Number(av || 0) - Number(bv || 0);
+  } else {
+    cmp = String(av || '').localeCompare(String(bv || ''), undefined, {numeric:true, sensitivity:'base'});
+  }
+  if(cmp === 0){
+    cmp = String(a.submission_id || '').localeCompare(String(b.submission_id || ''), undefined, {numeric:true, sensitivity:'base'});
+  }
+  return state.pendingSortDir === 'asc' ? cmp : -cmp;
+}
 function pendingRows(){
   const q = $('pendingFilter').value.toLowerCase().trim();
   return state.pending.filter(row => {
@@ -495,7 +532,7 @@ function pendingRows(){
     if(state.pendingStatusFilter === 'needs_validation' && promoted) return false;
     if(state.pendingStatusFilter === 'promoted' && !promoted) return false;
     return !q || JSON.stringify(row).toLowerCase().includes(q);
-  });
+  }).sort(comparePendingRows);
 }
 function selectedRedactionIds(){
   const selected = state.selectedRedactionSubmissions;
@@ -552,6 +589,23 @@ function clearSelectedRedactions(){
 function setPendingStatusFilter(value){
   state.pendingStatusFilter = value;
   renderPending();
+}
+function setPendingSort(key){
+  if(state.pendingSortKey === key){
+    state.pendingSortDir = state.pendingSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    state.pendingSortKey = key;
+    state.pendingSortDir = key === 'submitted_utc' || key === 'history' ? 'desc' : 'asc';
+  }
+  renderPending();
+}
+function sortHeader(label, key){
+  const active = state.pendingSortKey === key;
+  const mark = active ? (state.pendingSortDir === 'asc' ? '▲' : '▼') : '↕';
+  const direction = active ? (state.pendingSortDir === 'asc' ? 'ascending' : 'descending') : 'not sorted';
+  return {
+    html: `<button class="sort-header ${active ? 'active' : ''}" type="button" data-pending-sort="${escapeHtml(key)}" aria-label="Sort by ${escapeHtml(label)}, currently ${direction}">${escapeHtml(label)} <span class="sort-mark" aria-hidden="true">${mark}</span></button>`,
+  };
 }
 function reviewStatusPill(row){
   if(row.review_status === 'promoted' || row.promoted){
@@ -617,7 +671,7 @@ function renderPending(){
     </div>
   `;
   $('pendingTable').innerHTML = table(
-    ['Select', 'Submission', 'Review', 'Donor', 'Institute', 'Session', 'Stats', 'Files', 'History', 'Action'],
+    ['Select', sortHeader('Submission', 'submission'), sortHeader('Review', 'review'), sortHeader('Donor', 'donor'), sortHeader('Institute', 'institute'), sortHeader('Session', 'session'), sortHeader('Stats', 'submitted_utc'), 'Files', sortHeader('History', 'history'), 'Action'],
     rows.map(row => [
       `<label class="row-select"><input type="checkbox" data-redaction-select="${escapeHtml(row.submission_id || '')}" ${state.selectedRedactionSubmissions.has(row.submission_id || '') ? 'checked' : ''}><span class="sr-only">Select ${escapeHtml(row.submission_id || '')}</span></label>`,
       `<code>${escapeHtml(row.submission_id)}</code>`,
@@ -634,6 +688,9 @@ function renderPending(){
   $('pendingTable').innerHTML = tabs + batchTools + $('pendingTable').innerHTML;
   document.querySelectorAll('[data-pending-status]').forEach(btn => {
     btn.onclick = () => setPendingStatusFilter(btn.dataset.pendingStatus || 'needs_validation');
+  });
+  document.querySelectorAll('[data-pending-sort]').forEach(btn => {
+    btn.onclick = () => setPendingSort(btn.dataset.pendingSort || 'submitted_utc');
   });
   document.querySelectorAll('[data-redaction-select]').forEach(box => {
     box.onchange = () => setRedactionSelected(box.dataset.redactionSelect || '', box.checked);
@@ -1051,7 +1108,8 @@ function renderEvents(){
 }
 function table(heads, rows){
   if(!rows.length) return '<div class="card"><div class="hint">No rows found.</div></div>';
-  return `<table><thead><tr>${heads.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const headMarkup = heads.map(h => `<th>${h && typeof h === 'object' && h.html ? h.html : escapeHtml(h)}</th>`).join('');
+  return `<table><thead><tr>${headMarkup}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 
 async function runLineage(){

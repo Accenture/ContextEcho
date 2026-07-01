@@ -170,6 +170,13 @@ class WebTests(unittest.TestCase):
         self.assertIn("function submissionHistory", html)
         self.assertIn("maintenance_redaction_terms", html)
         self.assertIn("'History'", html)
+        self.assertIn("pendingSortKey:'submitted_utc'", html)
+        self.assertIn("pendingSortDir:'desc'", html)
+        self.assertIn("function setPendingSort", html)
+        self.assertIn("function sortHeader", html)
+        self.assertIn("data-pending-sort", html)
+        self.assertIn("sortHeader('Institute', 'institute')", html)
+        self.assertIn("sort(comparePendingRows)", html)
 
     def test_maintainer_pending_view_separates_promoted_from_needs_validation(self):
         html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")
