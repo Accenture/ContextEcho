@@ -76,6 +76,8 @@
     .status-tab.active { background:#10211a; color:white; }
     .batch-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 14px; padding:10px 12px; border:1px solid #dce4df; border-radius:12px; background:#fbfdf8; }
     .selection-count { font-weight:900; color:#314139; }
+    .selected-redactions { margin-top:10px; padding:10px 12px; border:1px solid #dce4df; border-radius:10px; background:#fbfdf8; }
+    .selected-redactions code { margin:4px 4px 0 0; display:inline-block; }
     .row-select { display:inline-flex; align-items:center; justify-content:center; margin:0; min-width:24px; }
     .row-select input { width:18px; height:18px; padding:0; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
@@ -236,8 +238,9 @@
       <div class="card" style="margin-top:14px">
         <div class="metric-label">Repair redaction on a submitted item</div>
         <div class="hint">Use this when a donor asks to redact more terms after submission. The relay updates the staged artifact and keeps the old version in repo history.</div>
-        <label for="redactionSubmission">Submission ID</label>
+        <label for="redactionSubmission">Single submission ID</label>
         <input id="redactionSubmission" placeholder="submission-xxxxxxxx">
+        <div class="hint">Used by <strong>Redact more</strong> and <strong>Check terms</strong>. Batch redaction uses the selected rows in the table.</div>
         <label for="redactionTerms">Additional scrub terms</label>
         <textarea id="redactionTerms" placeholder="comma-separated handles, project names, or other terms"></textarea>
         <label for="redactionNote">Maintainer note</label>
@@ -247,6 +250,7 @@
           <button class="primary" id="applySelectedRedactions" disabled>Redact selected (0)</button>
           <button id="checkRedactionTerms">Check terms</button>
         </div>
+        <div id="selectedRedactionSummary" class="selected-redactions hint">No submissions selected for batch redaction.</div>
         <div class="hint">Check the current staged artifact first to see whether the submitted file still contains the words you care about.</div>
         <div id="redactionStatus" class="status"></div>
         <div id="redactionCheckResult" class="check-result" style="margin-top:12px">
@@ -512,6 +516,15 @@ function updateBatchRedactionControls(){
   const count = ids.length;
   const label = `${count} selected`;
   if($('selectedRedactionCount')) $('selectedRedactionCount').textContent = label;
+  if($('selectedRedactionSummary')){
+    if(count){
+      const shown = ids.slice(0, 8).map(id => `<code>${escapeHtml(id)}</code>`).join(' ');
+      const extra = count > 8 ? ` <span class="hint">+${compact(count - 8)} more</span>` : '';
+      $('selectedRedactionSummary').innerHTML = `<strong>Selected for batch:</strong> ${shown}${extra}`;
+    } else {
+      $('selectedRedactionSummary').textContent = 'No submissions selected for batch redaction.';
+    }
+  }
   if($('applySelectedRedactions')){
     $('applySelectedRedactions').disabled = count === 0;
     $('applySelectedRedactions').textContent = `Redact selected (${count})`;
