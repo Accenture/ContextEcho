@@ -10,7 +10,7 @@ from scripts.update_contributors import (
 
 
 class UpdateContributorsTests(unittest.TestCase):
-    def test_anonymous_sessions_do_not_merge(self):
+    def test_anonymous_sessions_without_private_identity_do_not_merge(self):
         sessions = [
             SessionEntry(sid="S4", contributor="Anonymous donor S4", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="a"),
             SessionEntry(sid="S5", contributor="Anonymous donor S5", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="b"),
@@ -19,6 +19,18 @@ class UpdateContributorsTests(unittest.TestCase):
         contributors = group_contributors(sessions)
         self.assertEqual(len(contributors), 2)
         self.assertEqual({c.name for c in contributors}, {"Anonymous donor S4", "Anonymous donor S5"})
+
+    def test_public_anonymous_sessions_with_same_private_identity_merge(self):
+        sessions = [
+            SessionEntry(sid="S4", contributor="Anonymous donor S4", identity_name="Dana Contributor", email="d@example.com", institute="Lab", public_anonymous=True, agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="a"),
+            SessionEntry(sid="S5", contributor="Anonymous donor S5", identity_name="Dana Contributor", email="d@example.com", institute="Lab", public_anonymous=True, agent="Claude", model="opus", org="Anthropic", domain="docs", language="mixed", turns=200, compactions=1, source_key="b"),
+        ]
+        score_sessions(sessions)
+        contributors = group_contributors(sessions)
+        self.assertEqual(len(contributors), 1)
+        self.assertEqual(contributors[0].name, "Anonymous donor S4")
+        self.assertEqual(len(contributors[0].counted_sessions), 2)
+        self.assertGreater(contributors[0].points, 5)
 
     def test_future_anonymous_donor_uses_submission_id(self):
         fallback = anonymous_ledger_name({"submission_id": "submission-d51e3f33"}, "S4")
@@ -30,8 +42,8 @@ class UpdateContributorsTests(unittest.TestCase):
 
     def test_matching_name_email_and_institute_merge(self):
         sessions = [
-            SessionEntry(sid="S4", contributor="Donor", email="d@example.com", institute="Lab", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="a"),
-            SessionEntry(sid="S5", contributor="Donor", email="d@example.com", institute="Lab", agent="Claude", model="opus", org="Anthropic", domain="docs", language="mixed", turns=200, compactions=1, source_key="b"),
+            SessionEntry(sid="S4", contributor="Dana Contributor", email="d@example.com", institute="Lab", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="a"),
+            SessionEntry(sid="S5", contributor="Dana Contributor", email="d@example.com", institute="Lab", agent="Claude", model="opus", org="Anthropic", domain="docs", language="mixed", turns=200, compactions=1, source_key="b"),
         ]
         score_sessions(sessions)
         contributors = group_contributors(sessions)
@@ -40,8 +52,8 @@ class UpdateContributorsTests(unittest.TestCase):
 
     def test_duplicate_source_variant_does_not_double_count_even_with_different_identity(self):
         sessions = [
-            SessionEntry(sid="S4", contributor="Donor", email="d@example.com", institute="Lab", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="same"),
-            SessionEntry(sid="S5", contributor="Donor", email="other@example.com", institute="Lab", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="same"),
+            SessionEntry(sid="S4", contributor="Dana Contributor", email="d@example.com", institute="Lab", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="same"),
+            SessionEntry(sid="S5", contributor="Dana Contributor", email="other@example.com", institute="Lab", agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="same"),
         ]
         score_sessions(sessions)
         contributors = group_contributors(sessions)

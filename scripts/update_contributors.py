@@ -15,8 +15,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 class SessionEntry:
     sid: str
     contributor: str
+    identity_name: str = ""
     email: str = ""
     institute: str = ""
+    public_anonymous: bool = False
     agent: str = ""
     model: str = ""
     org: str = ""
@@ -143,11 +145,15 @@ def anonymous_ledger_name(row: dict[str, Any], sid: str) -> str:
     return f"Anonymous donor {sid}"
 
 
-def merge_key(name: str, email: str, institute: str, unique: str) -> tuple[str, ...]:
-    """Merge only when name, email, and institute are all present and equal."""
-    if name and email and institute and not name.lower().startswith("anonymous donor"):
-        return ("identified", name.lower(), email.lower(), institute.lower())
-    return ("unique", unique)
+def merge_key(session: SessionEntry) -> tuple[str, ...]:
+    """Merge when maintainer-known identity fields match; render names separately."""
+    identity_name = norm(session.identity_name or session.contributor).lower()
+    email = norm(session.email).lower()
+    institute = norm(session.institute).lower()
+    if identity_name and email and institute and identity_name not in {"anonymous", "anon", "donor"}:
+        kind = "anonymous-identity" if session.public_anonymous else "identified"
+        return (kind, identity_name, email, institute)
+    return ("unique", session.sid)
 
 
 def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
@@ -166,6 +172,7 @@ def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
         if manifest.get("public_anonymous"):
             public_record["public_anonymous"] = True
         name = display_name(public_record, anonymous_ledger_name(row, sid))
+        identity_name = norm(row.get("credit_name") or row.get("contributor") or manifest.get("credit_name") or manifest.get("contributor"))
         email = norm(manifest.get("contributor_email") or row.get("contributor_email"))
         institute = norm(row.get("institute") or manifest.get("contributor_institute"))
         source_key = norm(manifest.get("redacted_file")) or norm(row.get("session_sha256")) or norm(row.get("submission_id"))
@@ -173,8 +180,10 @@ def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
             SessionEntry(
                 sid=sid,
                 contributor=name,
+                identity_name=identity_name,
                 email=email,
                 institute=institute,
+                public_anonymous=bool(public_record.get("public_anonymous")),
                 agent=norm(row.get("agent")),
                 model=norm(row.get("model")),
                 org=norm(row.get("org")),
@@ -226,7 +235,7 @@ def score_sessions(sessions: list[SessionEntry]) -> None:
 def group_contributors(sessions: list[SessionEntry]) -> list[Contributor]:
     grouped: dict[tuple[str, ...], Contributor] = {}
     for session in sessions:
-        key = merge_key(session.contributor, session.email, session.institute, session.sid)
+        key = merge_key(session)
         if key not in grouped:
             grouped[key] = Contributor(key=key, name=session.contributor, email=session.email, institute=session.institute)
         grouped[key].sessions.append(session)
@@ -313,9 +322,9 @@ def render_contributors(contributors: list[Contributor], sessions: list[SessionE
         "",
         f"*Corpus total: **{total_sessions} sessions · {total_turns:,} user turns**.*",
         "",
-        "> Anonymous donors are assigned stable session nicknames unless they provide",
-        "> name, email, and institute. Contributions are merged only when all three",
-        "> identity fields match exactly after normalization.",
+        "> Public-anonymous donors are grouped under a stable anonymous alias when",
+        "> maintainer-known identity fields match exactly after normalization.",
+        "> Anonymous sessions without a complete private identity remain separate.",
         "",
         "---",
         "",
