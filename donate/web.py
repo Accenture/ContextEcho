@@ -1503,7 +1503,7 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
-        <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Click discover to scan Claude/Codex sessions on this machine.</div>
+        <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Scanning starts automatically. Use Discover Sessions to rerun the scan.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
       </div>
       <div class="pick-column-right">
@@ -1530,7 +1530,7 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <div id="sessionList" class="session-list">
           <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs.">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
-            <div class="empty-sessions">Click Discover Sessions to find local Claude/Codex sessions.</div>
+            <div class="empty-sessions">Scanning local Claude/Codex sessions...</div>
           </div>
           <div id="pager" class="session-pager">
             <button id="prevPage" class="secondary">&lsaquo; Previous</button>
@@ -1635,6 +1635,7 @@ let appliedScrubTerms = [];
 let redactionCache = new Map();
 let submitted = false;
 let activeOperation = false;
+let discoveryRunning = false;
 let page = 0;
 let sessionSort = {key:'', dir:'desc'};
 let sessionSearchQuery = '';
@@ -2908,7 +2909,9 @@ function renderSessions(){
   $('pager').style.display = totalVisible > pageSize ? 'flex' : 'none';
   refreshButtons();
 }
-$('discoverBtn').onclick = async () => {
+async function discoverSessions(){
+  if(discoveryRunning) return;
+  discoveryRunning = true;
   $('discoverBtn').disabled = true;
   status('discoverStatus','Scanning local session logs. This can take a minute for large histories...');
   progressTimers.discoverProgress = {start: Date.now()};
@@ -2959,10 +2962,12 @@ $('discoverBtn').onclick = async () => {
   finally {
     if(!discoverTiming && progressTimers.discoverProgress) discoverTiming = `Stopped after ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
     $('discoverBtn').disabled = false;
+    discoveryRunning = false;
     delete progressTimers.discoverProgress;
     updateProgressTime('discoverProgress', discoverTiming, {keep:!!discoverTiming});
   }
-};
+}
+$('discoverBtn').onclick = () => discoverSessions();
 $('prevPage').onclick = () => { if(page > 0){ page--; renderSessions(); } };
 $('nextPage').onclick = () => { if((page + 1) * pageSize < sortedSessions().length){ page++; renderSessions(); } };
 $('sessionSearch').oninput = () => {
@@ -3241,6 +3246,7 @@ $('submitBtn').onclick = async () => {
   }
 };
 loadProjectStats();
+discoverSessions();
 </script>
 </body>
 </html>

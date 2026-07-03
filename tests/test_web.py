@@ -91,6 +91,13 @@ class WebTests(unittest.TestCase):
         self.assertIn("scrollIntoView({behavior:'smooth', block:'start'})", INDEX_HTML)
         self.assertIn("pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicCreditName)", INDEX_HTML)
 
+    def test_session_discovery_runs_on_page_load(self):
+        self.assertIn("async function discoverSessions()", INDEX_HTML)
+        self.assertIn("let discoveryRunning = false", INDEX_HTML)
+        self.assertIn("$('discoverBtn').onclick = () => discoverSessions();", INDEX_HTML)
+        self.assertIn("loadProjectStats();\ndiscoverSessions();", INDEX_HTML)
+        self.assertIn("Scanning starts automatically", INDEX_HTML)
+
     def test_donated_rows_show_copyable_support_submission_id(self):
         self.assertIn("support-id", INDEX_HTML)
         self.assertNotIn("local-record", INDEX_HTML)
