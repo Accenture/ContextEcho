@@ -1269,6 +1269,9 @@ INDEX_HTML = r"""<!doctype html>
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
+    .session-row.resume-focus-row { opacity:1; background:#f1fbed; box-shadow:inset 5px 0 0 #17713f; }
+    .session-row.resume-focus-row:hover { background:#eef8ea; }
+    .session-row.resume-focus-row .pill.resume { background:#17713f; color:white; box-shadow:0 0 0 3px #c8e9c5; }
     .session-row.donated-history-row { background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
     .session-row.donated-history-row:hover { background:#e1eadb; }
     .session-row.donated-row { cursor:not-allowed; background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
@@ -1298,6 +1301,19 @@ INDEX_HTML = r"""<!doctype html>
     .session-menu button { display:block; width:100%; border:0; border-radius:8px; background:transparent; box-shadow:none; color:#14241d; text-align:left; padding:9px 10px; font-size:13px; font-weight:900; }
     .session-menu button:hover { background:#eaf4e5; transform:none; }
     .session-menu button.danger { color:#7a2c1f; }
+    .resume-guidance { display:none; margin:-2px 0 12px; border:2px solid #17713f; border-radius:12px; background:linear-gradient(135deg,#f2fbef,#e7f5e2); box-shadow:0 12px 28px rgba(23,113,63,.14); padding:12px; color:#10251b; }
+    .resume-guidance.show { display:block; }
+    .resume-guidance-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+    .resume-guidance-title { font-size:15px; font-weight:950; color:#0f5c34; }
+    .resume-guidance-subtitle { margin-top:2px; color:#4f5e56; font-size:12px; font-weight:750; overflow-wrap:anywhere; }
+    .resume-guidance-body { margin-top:9px; color:#21342b; font-size:13px; font-weight:800; line-height:1.35; }
+    .resume-guidance-body code, .resume-guidance-path code { background:#fffef8; color:#0f5c34; border:1px solid #cfe6c9; border-radius:6px; padding:1px 5px; font-weight:950; }
+    .resume-guidance-path { margin-top:8px; color:#52605a; font-size:12px; font-weight:800; overflow-wrap:anywhere; }
+    .resume-guidance-command { margin:8px 0 0; border-radius:8px; background:#10251b; color:#f6fff2; padding:10px; font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .resume-guidance-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .resume-guidance-actions button { padding:8px 11px; font-size:12px; }
+    .resume-guidance-dismiss { background:transparent; color:#52605a; box-shadow:none; padding:6px 8px; min-width:0; }
+    .resume-guidance-dismiss:hover { background:#dff1d9; transform:none; }
     .empty-sessions { padding:26px; text-align:center; color:var(--muted); }
     .next-button { min-width:170px; font-size:16px; }
     .pick-redact-row .next-button { background:var(--accent); color:white; box-shadow:0 10px 20px rgba(23,113,63,.22); }
@@ -1534,6 +1550,7 @@ INDEX_HTML = r"""<!doctype html>
             </div>
           </div>
         </div>
+        <div id="resumeGuidance" class="resume-guidance" aria-live="polite"></div>
         <div id="sessionList" class="session-list">
           <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs.">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
             <div class="empty-sessions">Scanning local Claude/Codex sessions...</div>
@@ -1646,6 +1663,7 @@ let page = 0;
 let sessionSort = {key:'', dir:'desc'};
 let sessionSearchQuery = '';
 let sessionStatusFilter = 'all';
+let resumeGuidance = null;
 const pageSize = 4;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
@@ -2816,6 +2834,74 @@ function sessionResumeInfo(s){
     command: `cd ${shellQuotePath(dir)}\n${openAgent}\n# then type /resume and choose this session`,
   };
 }
+function resumeSessionKey(s){
+  return sessionPathKey(s) || sessionLocalKey(s);
+}
+function renderResumeGuidance(){
+  const el = $('resumeGuidance');
+  if(!el) return;
+  if(!resumeGuidance){
+    el.classList.remove('show');
+    el.innerHTML = '';
+    return;
+  }
+  const stateText = resumeGuidance.action === 'opened'
+    ? 'Project folder opened'
+    : (resumeGuidance.action === 'copied' ? 'Continue steps copied' : 'Continue this session');
+  el.innerHTML = `
+    <div class="resume-guidance-head">
+      <div>
+        <div class="resume-guidance-title">${escapeHtml(stateText)}</div>
+        <div class="resume-guidance-subtitle">${escapeHtml(resumeGuidance.label)}</div>
+      </div>
+      <button type="button" class="resume-guidance-dismiss" data-resume-action="dismiss" aria-label="Dismiss continue instructions">Dismiss</button>
+    </div>
+    <div class="resume-guidance-body">Use this project folder, start the agent, then type <code>/resume</code> and choose this session.</div>
+    <div class="resume-guidance-path">Project folder: <code>${escapeHtml(resumeGuidance.dir)}</code></div>
+    <pre class="resume-guidance-command">${escapeHtml(resumeGuidance.command)}</pre>
+    <div class="resume-guidance-actions">
+      <button type="button" data-resume-action="copy">Copy steps</button>
+      <button type="button" class="secondary" data-resume-action="open">Open folder</button>
+    </div>
+  `;
+  el.classList.add('show');
+  el.querySelector('[data-resume-action="dismiss"]').onclick = () => {
+    resumeGuidance = null;
+    renderResumeGuidance();
+    renderSessions();
+  };
+  el.querySelector('[data-resume-action="copy"]').onclick = () => copyResumeSteps(resumeGuidance.session, resumeGuidance);
+  el.querySelector('[data-resume-action="open"]').onclick = () => openResumeFolder(resumeGuidance.session, resumeGuidance);
+}
+function setResumeGuidance(session, resumeInfo, action='selected'){
+  if(!resumeInfo?.dir) return;
+  resumeGuidance = {
+    key: resumeSessionKey(session),
+    session,
+    label: `${session?.agent || 'Session'} · ${session?.session_label || session?.project || 'unknown project'}`,
+    dir: resumeInfo.dir,
+    command: resumeInfo.command,
+    action,
+  };
+  renderResumeGuidance();
+  renderSessions();
+}
+function copyResumeSteps(session, resumeInfo){
+  setResumeGuidance(session, resumeInfo, 'copied');
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(resumeInfo.command)
+      .then(() => status('discoverStatus', 'Continue steps copied. See the highlighted instruction above the session list.', 'ok'))
+      .catch(() => status('discoverStatus', resumeInfo.command));
+  } else {
+    status('discoverStatus', resumeInfo.command);
+  }
+}
+function openResumeFolder(session, resumeInfo){
+  setResumeGuidance(session, resumeInfo, 'opened');
+  post('/api/open_path', {path:resumeInfo.dir})
+    .then(() => status('discoverStatus', 'Project folder opened. The highlighted instruction shows the /resume step.', 'ok'))
+    .catch(err => status('discoverStatus', 'ERROR: '+friendlyRequestError(err, 'open project folder')));
+}
 function hideSessionMenu(){
   const menu = $('sessionMenu');
   if(menu) menu.classList.remove('show');
@@ -2828,6 +2914,7 @@ function showSessionMenu(event, session, donationInfo){
   if(!menu || (!hasResumeActions && !hasSupportActions)) return;
   event.preventDefault();
   event.stopPropagation();
+  if(hasResumeActions) setResumeGuidance(session, resumeInfo, 'selected');
   menu.innerHTML = [
     hasResumeActions ? '<button type="button" role="menuitem" data-session-action="copy-resume">Copy continue steps</button>' : '',
     hasResumeActions ? '<button type="button" role="menuitem" data-session-action="open-resume">Open project folder</button>' : '',
@@ -2838,21 +2925,13 @@ function showSessionMenu(event, session, donationInfo){
   if(copyResume) copyResume.onclick = e => {
     e.stopPropagation();
     hideSessionMenu();
-    if(navigator.clipboard){
-      navigator.clipboard.writeText(resumeInfo.command)
-        .then(() => status('discoverStatus', 'Copied continue steps. Run them in Terminal, then use /resume in the agent.'))
-        .catch(() => status('discoverStatus', resumeInfo.command));
-    } else {
-      status('discoverStatus', resumeInfo.command);
-    }
+    copyResumeSteps(session, resumeInfo);
   };
   const openResume = menu.querySelector('[data-session-action="open-resume"]');
   if(openResume) openResume.onclick = e => {
     e.stopPropagation();
     hideSessionMenu();
-    post('/api/open_path', {path:resumeInfo.dir})
-      .then(() => status('discoverStatus', `Opened project folder. Start the agent there, then use /resume.`))
-      .catch(err => status('discoverStatus', 'ERROR: '+friendlyRequestError(err, 'open project folder')));
+    openResumeFolder(session, resumeInfo);
   };
   const update = menu.querySelector('[data-session-action="update"]');
   if(update) update.onclick = e => {
@@ -2875,6 +2954,7 @@ function showSessionMenu(event, session, donationInfo){
   menu.style.top = `${Math.max(margin, top)}px`;
 }
 function renderSessions(){
+  renderResumeGuidance();
   const list = $('sessionList');
   list.innerHTML = '';
   const sorted = sortedSessions();
@@ -2923,6 +3003,8 @@ function renderSessions(){
   rows.forEach(({s}, i) => {
     const idx = start + i;
     const row = document.createElement('div');
+    const resumeKey = resumeSessionKey(s);
+    row.dataset.sessionKey = resumeKey;
     const donationInfo = localDonationInfo(s);
     const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
     const ready = sessionReady(s);
@@ -2941,6 +3023,7 @@ function renderSessions(){
       ? '<span class="pill resume" data-session-action="continue" title="Copy or open the project folder to keep chatting with /resume">continue</span>'
       : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
+    if(resumeGuidance?.key === resumeKey) row.classList.add('resume-focus-row');
     if(donationInfo.donatedBefore) row.classList.add('donated-history-row');
     const currentFit = fit(s);
     const hasSupportActions = donationInfo.supportId && donationInfo.donatedBefore;
