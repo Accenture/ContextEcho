@@ -76,6 +76,10 @@
     .status-tab.active { background:#10211a; color:white; }
     .batch-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 14px; padding:10px 12px; border:1px solid #dce4df; border-radius:12px; background:#fbfdf8; }
     .selection-count { font-weight:900; color:#314139; }
+    .repair-launch { margin-top:14px; }
+    .repair-card[hidden] { display:none; }
+    .repair-card { margin-top:14px; }
+    .repair-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:12px; }
     .selected-redactions { margin-top:10px; padding:10px 12px; border:1px solid #dce4df; border-radius:10px; background:#fbfdf8; }
     .selected-redactions code { margin:4px 4px 0 0; display:inline-block; }
     .row-select { display:inline-flex; align-items:center; justify-content:center; margin:0; min-width:24px; }
@@ -239,9 +243,21 @@
         <div class="toolbar"><button id="loadPending">Load pending</button><input id="pendingFilter" placeholder="Filter submission, donor, institute"></div>
       </div>
       <div id="pendingStatus" class="status"></div>
-      <div class="card" style="margin-top:14px">
-        <div class="metric-label">Repair redaction on a submitted item</div>
-        <div class="hint">Use this when a donor asks to redact more terms after submission. The relay updates the staged artifact and keeps the old version in repo history.</div>
+      <div class="batch-tools repair-launch" aria-label="Redaction repair controls">
+        <div>
+          <span class="selection-count">Redaction repair</span>
+          <div class="hint">Open only when a donor asks to redact more terms after submission.</div>
+        </div>
+        <button id="openRedactionRepair" type="button">Open repair tools</button>
+      </div>
+      <div id="redactionRepairCard" class="card repair-card" hidden>
+        <div class="repair-head">
+          <div>
+            <div class="metric-label">Repair redaction on a submitted item</div>
+            <div class="hint">The relay updates the staged artifact and keeps the old version in repo history.</div>
+          </div>
+          <button id="closeRedactionRepair" type="button">Close</button>
+        </div>
         <label for="redactionSubmission">Single submission ID</label>
         <input id="redactionSubmission" placeholder="submission-xxxxxxxx">
         <div class="hint">Used by <strong>Redact single</strong> and <strong>Check single ID</strong>. Batch redaction uses the selected rows in the table.</div>
@@ -586,6 +602,19 @@ function clearSelectedRedactions(){
   state.selectedRedactionSubmissions.clear();
   renderPending();
 }
+function setRedactionRepairOpen(open, focusId=''){
+  const card = $('redactionRepairCard');
+  if(!card) return;
+  card.hidden = !open;
+  if($('openRedactionRepair')) $('openRedactionRepair').textContent = open ? 'Hide repair tools' : 'Open repair tools';
+  if(open){
+    card.scrollIntoView({block:'start', behavior:'smooth'});
+    if(focusId && $(focusId)) setTimeout(() => $(focusId).focus(), 120);
+  }
+}
+function openRedactionRepair(focusId='redactionTerms'){
+  setRedactionRepairOpen(true, focusId);
+}
 function setPendingStatusFilter(value){
   state.pendingStatusFilter = value;
   renderPending();
@@ -662,7 +691,7 @@ function renderPending(){
     <div class="batch-tools" aria-label="Selected redaction controls">
       <div>
         <span id="selectedRedactionCount" class="selection-count">0 selected</span>
-        <div class="hint">Selected rows use the scrub terms and maintainer note above.</div>
+        <div class="hint">Open repair tools to apply scrub terms to selected rows.</div>
       </div>
       <div class="toolbar">
         <button id="selectVisibleRedactions" type="button">Select visible</button>
@@ -709,8 +738,8 @@ function filePill(ok, label){
 function cueRedactionUpdate(submissionId){
   if(!submissionId) return;
   $('redactionSubmission').value = submissionId;
-  $('redactionSubmission').focus();
   showTab('pending');
+  openRedactionRepair('redactionTerms');
   status('redactionStatus', `Loaded ${submissionId}. Add extra scrub terms, then apply the redaction update.`);
 }
 
@@ -1193,6 +1222,11 @@ $('supportFilter').oninput = renderSupport;
 $('recordFilter').oninput = renderRecords;
 $('eventFilter').oninput = renderEvents;
 $('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));
+$('openRedactionRepair').onclick = () => {
+  const shouldOpen = $('redactionRepairCard').hidden;
+  setRedactionRepairOpen(shouldOpen, selectedRedactionIds().length ? 'redactionTerms' : 'redactionSubmission');
+};
+$('closeRedactionRepair').onclick = () => setRedactionRepairOpen(false);
 $('applyRedaction').onclick = () => applyRedactionUpdate().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
 $('applySelectedRedactions').onclick = () => applySelectedRedactionUpdates().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
 $('checkRedactionTerms').onclick = () => checkRedactionTerms().catch(e => status('redactionStatus', `ERROR: ${e.message}`, 'error'));
