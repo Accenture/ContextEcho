@@ -1306,6 +1306,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill.good { background:#dff1d9; color:#13552f; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#cfe1f5; color:#163f70; }
+    .pill.resume { background:#eef3e9; color:#13552f; cursor:pointer; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
     .session-list .pill { padding:3px 7px; font-size:11px; }
@@ -2017,6 +2018,10 @@ function fmtStat(n){
 }
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function shellQuotePath(value){
+  const clean = String(value || '').trim();
+  return "'" + clean.replace(/'/g, "'\\''") + "'";
 }
 function renderProjectStats(){
   const cards = [
@@ -2800,25 +2805,63 @@ function bindSessionFilterControls(){
     };
   });
 }
+function sessionResumeInfo(s){
+  const dir = String(s?.resume_dir || '').trim();
+  if(!dir) return {dir:'', command:''};
+  const agent = String(s?.agent || '').toLowerCase();
+  const launcher = agent.includes('claude') ? 'claude' : (agent.includes('codex') ? 'codex' : '');
+  const openAgent = launcher || '# open your coding agent here';
+  return {
+    dir,
+    command: `cd ${shellQuotePath(dir)}\n${openAgent}\n# then type /resume and choose this session`,
+  };
+}
 function hideSessionMenu(){
   const menu = $('sessionMenu');
   if(menu) menu.classList.remove('show');
 }
 function showSessionMenu(event, session, donationInfo){
   const menu = $('sessionMenu');
-  if(!menu || !donationInfo?.supportId || !donationInfo?.donatedBefore) return;
+  const resumeInfo = sessionResumeInfo(session);
+  const hasResumeActions = !!resumeInfo.dir && sessionNeedsMoreTurns(session);
+  const hasSupportActions = !!(donationInfo?.supportId && donationInfo?.donatedBefore);
+  if(!menu || (!hasResumeActions && !hasSupportActions)) return;
   event.preventDefault();
   event.stopPropagation();
-  menu.innerHTML = `
-    <button type="button" role="menuitem" data-session-action="update">Update info</button>
-    <button type="button" role="menuitem" data-session-action="problem" class="danger">Report problem</button>
-  `;
-  menu.querySelector('[data-session-action="update"]').onclick = e => {
+  menu.innerHTML = [
+    hasResumeActions ? '<button type="button" role="menuitem" data-session-action="copy-resume">Copy continue steps</button>' : '',
+    hasResumeActions ? '<button type="button" role="menuitem" data-session-action="open-resume">Open project folder</button>' : '',
+    hasSupportActions ? '<button type="button" role="menuitem" data-session-action="update">Update info</button>' : '',
+    hasSupportActions ? '<button type="button" role="menuitem" data-session-action="problem" class="danger">Report problem</button>' : '',
+  ].filter(Boolean).join('');
+  const copyResume = menu.querySelector('[data-session-action="copy-resume"]');
+  if(copyResume) copyResume.onclick = e => {
+    e.stopPropagation();
+    hideSessionMenu();
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(resumeInfo.command)
+        .then(() => status('discoverStatus', 'Copied continue steps. Run them in Terminal, then use /resume in the agent.'))
+        .catch(() => status('discoverStatus', resumeInfo.command));
+    } else {
+      status('discoverStatus', resumeInfo.command);
+    }
+  };
+  const openResume = menu.querySelector('[data-session-action="open-resume"]');
+  if(openResume) openResume.onclick = e => {
+    e.stopPropagation();
+    hideSessionMenu();
+    post('/api/open_path', {path:resumeInfo.dir})
+      .then(() => status('discoverStatus', `Opened project folder. Start the agent there, then use /resume.`))
+      .catch(err => status('discoverStatus', 'ERROR: '+friendlyRequestError(err, 'open project folder')));
+  };
+  const update = menu.querySelector('[data-session-action="update"]');
+  if(update) update.onclick = e => {
     e.stopPropagation();
     hideSessionMenu();
     beginMetadataUpdate(session, donationInfo.supportId);
   };
-  menu.querySelector('[data-session-action="problem"]').onclick = e => {
+  const problem = menu.querySelector('[data-session-action="problem"]');
+  if(problem) problem.onclick = e => {
     e.stopPropagation();
     hideSessionMenu();
     beginSupportRequest(session, donationInfo.supportId);
@@ -2892,11 +2935,18 @@ function renderSessions(){
     const supportPill = donationInfo.supportId
       ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
       : '';
+    const resumeInfo = sessionResumeInfo(s);
+    const hasResumeActions = !!resumeInfo.dir && sessionNeedsMoreTurns(s);
+    const resumePill = hasResumeActions
+      ? '<span class="pill resume" data-session-action="continue" title="Copy or open the project folder to keep chatting with /resume">continue</span>'
+      : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     if(donationInfo.donatedBefore) row.classList.add('donated-history-row');
     const currentFit = fit(s);
-    const hasMenuActions = donationInfo.supportId && donationInfo.donatedBefore;
-    const chipLine = [statusPill, supportPill].filter(Boolean).join(' ');
+    const hasSupportActions = donationInfo.supportId && donationInfo.donatedBefore;
+    const hasMenuActions = hasSupportActions || hasResumeActions;
+    const actionTitle = hasResumeActions ? 'Actions: continue this session from its project folder' : 'Actions: update info or report problem';
+    const chipLine = [statusPill, supportPill, resumePill].filter(Boolean).join(' ');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div class="session-main">
@@ -2907,7 +2957,7 @@ function renderSessions(){
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
       <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
-      <button type="button" class="session-chevron" aria-label="${hasMenuActions ? 'Open session actions' : 'Session details'}" ${hasMenuActions ? 'title="Actions: update info or report problem"' : 'disabled'}>&rsaquo;</button>
+      <button type="button" class="session-chevron" aria-label="${hasMenuActions ? 'Open session actions' : 'Session details'}" ${hasMenuActions ? `title="${actionTitle}"` : 'disabled'}>&rsaquo;</button>
     `;
     row.querySelectorAll('[data-copy-submission]').forEach(el => {
       el.onclick = event => {
@@ -2917,13 +2967,18 @@ function renderSessions(){
         status('discoverStatus', `Copied maintainer reset ID: ${id}`);
       };
     });
+    row.querySelectorAll('[data-session-action="continue"]').forEach(el => {
+      el.onclick = event => showSessionMenu(event, s, donationInfo);
+    });
     row.oncontextmenu = event => showSessionMenu(event, s, donationInfo);
     const chevron = row.querySelector('.session-chevron');
     if(chevron && hasMenuActions) chevron.onclick = event => showSessionMenu(event, s, donationInfo);
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     row.onclick = () => {
       if(!ready){
-        status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
+        status('discoverStatus', hasResumeActions
+          ? 'This session is not ready yet. Use the continue action to open or copy its project folder, then resume it until it reaches 50+ turns.'
+          : 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
         return;
       }
       if(donated){

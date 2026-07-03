@@ -130,6 +130,21 @@ class WebTests(unittest.TestCase):
         self.assertIn("update ready · +", INDEX_HTML)
         self.assertIn("donated${donationInfo.newTurns ? ` · +", INDEX_HTML)
 
+    def test_not_ready_sessions_offer_resume_project_actions(self):
+        self.assertIn("function sessionResumeInfo(s)", INDEX_HTML)
+        self.assertIn("const dir = String(s?.resume_dir || '').trim()", INDEX_HTML)
+        self.assertIn("function shellQuotePath(value)", INDEX_HTML)
+        self.assertIn("cd ${shellQuotePath(dir)}", INDEX_HTML)
+        self.assertIn("then type /resume and choose this session", INDEX_HTML)
+        self.assertIn(".pill.resume", INDEX_HTML)
+        self.assertIn('data-session-action="continue"', INDEX_HTML)
+        self.assertIn("Copy continue steps", INDEX_HTML)
+        self.assertIn("Open project folder", INDEX_HTML)
+        self.assertIn("post('/api/open_path', {path:resumeInfo.dir})", INDEX_HTML)
+        self.assertIn("Copied continue steps. Run them in Terminal, then use /resume in the agent.", INDEX_HTML)
+        self.assertIn("Opened project folder. Start the agent there, then use /resume.", INDEX_HTML)
+        self.assertIn("Use the continue action to open or copy its project folder", INDEX_HTML)
+
     def test_maintainer_metadata_updates_can_be_approved(self):
         html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")
         self.assertIn("/api/admin/metadata-updates/approve", html)

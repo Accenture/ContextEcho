@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
-from donate.adapters.base import GenericJsonlAdapter, is_redacted_artifact, iter_jsonl
+from donate.adapters.base import GenericJsonlAdapter, first_path_hint, is_redacted_artifact, iter_jsonl
 
 
 class CodexCliAdapter(GenericJsonlAdapter):
@@ -30,6 +30,11 @@ class CodexCliAdapter(GenericJsonlAdapter):
         info = super().inspect(path)
         info["agent"] = self.agent
         info["source_format"] = "codex-cli-jsonl"
+        for _, obj in iter_jsonl(path):
+            resume_dir = first_path_hint(obj)
+            if resume_dir:
+                info["resume_dir"] = resume_dir
+                break
         # Codex emits explicit top-level `compacted` records. Generic "compact"
         # text in messages/summaries is too noisy to count.
         info["compactions"] = sum(

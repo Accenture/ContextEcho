@@ -84,6 +84,7 @@ class DiscoverTests(unittest.TestCase):
         self.assertIn("2026-01-03T19:04:05", info["last_active_ts"])
         self.assertEqual(info["modified_ts"], info["last_active_ts"])
         self.assertEqual(info["project"], "work-agent-project")
+        self.assertEqual(info["resume_dir"], "/Users/alice/Documents/work/agent-project")
         self.assertRegex(info["session_label"], r"^work-agent-project · [0-9a-f]{4}$")
         self.assertTrue(info["conversation_fingerprint"].startswith("conv-"))
         self.assertEqual(info["fingerprint_version"], "structure-v1")
@@ -158,11 +159,14 @@ class DiscoverTests(unittest.TestCase):
 
     def test_claude_manual_path_is_classified_and_counts_explicit_compaction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
+            project_dir = (Path(tmp) / "client-safe-repo").resolve()
+            project_dir.mkdir()
+            project_slug = "-" + "-".join(project_dir.parts[1:])
             path = (
                 Path(tmp)
                 / ".claude"
                 / "projects"
-                / "-Users-alice-Documents-client-safe-repo"
+                / project_slug
                 / "session.jsonl"
             )
             rows = [
@@ -181,6 +185,7 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["turns"], 1)
         self.assertEqual(info["compactions"], 1)
         self.assertEqual(info["project"], "client-safe-repo")
+        self.assertEqual(info["resume_dir"], str(project_dir))
         self.assertRegex(info["session_label"], r"^client-safe-repo · [0-9a-f]{4}$")
 
     def test_same_folder_sessions_have_distinct_display_labels(self) -> None:
