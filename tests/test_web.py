@@ -83,6 +83,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("You (anonymous)", INDEX_HTML)
         self.assertIn("leaderboardPreviewPage", INDEX_HTML)
         self.assertIn("fetch('/api/project_stats', {cache:'no-store'})", INDEX_HTML)
+        self.assertNotIn("const sameName = row", INDEX_HTML)
+        self.assertNotIn("mergedWithExisting", INDEX_HTML)
         self.assertIn("Page ${currentPage + 1} of ${totalPages}", INDEX_HTML)
         self.assertIn("bindLeaderboardPager(model)", INDEX_HTML)
         self.assertIn("scrollToSubmitResult", INDEX_HTML)

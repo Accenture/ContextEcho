@@ -2281,13 +2281,11 @@ function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compa
   const localPendingHigh = Number(localPending.points_high || pendingPointsHigh);
   const localPendingTurns = Number(localPending.turns || turns || 0);
   const acceptedLeaders = publicStats.leaderboard || [];
-  const sameName = row => !publicAnonymous && String(row.contributor || '').toLowerCase() === publicCreditName.toLowerCase();
-  const mergedWithExisting = acceptedLeaders.some(sameName);
   const simulatedLeaders = acceptedLeaders.map(row => {
     const basePoints = Number(row.points_num || 0);
     const baseSessions = Number(row.sessions_num || 0);
     const baseTurns = Number(row.turns_num || 0);
-    if(!sameName(row)) return {
+    return {
       name: row.contributor || '',
       points: basePoints,
       pointsLow: basePoints,
@@ -2297,19 +2295,8 @@ function pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compa
       pending: false,
       pendingExisting: false,
     };
-    return {
-      name: publicCreditName,
-      displayName: pendingDisplayName || publicCreditName,
-      points: basePoints + localPendingLow,
-      pointsLow: basePoints + localPendingLow,
-      pointsHigh: basePoints + localPendingHigh,
-      sessions: baseSessions + localPendingSessions,
-      turns: baseTurns + localPendingTurns,
-      pending: true,
-      pendingExisting: true,
-    };
   });
-  if(!mergedWithExisting) simulatedLeaders.push({
+  simulatedLeaders.push({
     name: publicCreditName,
     displayName: pendingDisplayName || publicCreditName,
     points: localPendingLow,
