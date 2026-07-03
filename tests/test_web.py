@@ -82,6 +82,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("Default is public credit", INDEX_HTML)
         self.assertIn("You (anonymous)", INDEX_HTML)
         self.assertIn("leaderboardPreviewPage", INDEX_HTML)
+        self.assertIn("fetch('/api/project_stats', {cache:'no-store'})", INDEX_HTML)
         self.assertIn("Page ${currentPage + 1} of ${totalPages}", INDEX_HTML)
         self.assertIn("bindLeaderboardPager(model)", INDEX_HTML)
         self.assertIn("scrollToSubmitResult", INDEX_HTML)

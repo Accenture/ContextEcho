@@ -2064,7 +2064,7 @@ function suggestedScrubTerms(data){
 async function loadProjectStats(){
   renderProjectStats();
   try {
-    const r = await fetch('/api/project_stats');
+    const r = await fetch('/api/project_stats', {cache:'no-store'});
     if(!r.ok) return;
     publicStats = await r.json();
     renderProjectStats();
@@ -3258,12 +3258,14 @@ class Handler(BaseHTTPRequestHandler):
                 return False
             raise
 
-    def _json(self, payload: dict, status: int = 200, *, cors: bool = False) -> None:
+    def _json(self, payload: dict, status: int = 200, *, cors: bool = False, no_store: bool = False) -> None:
         body = json.dumps(payload, indent=2).encode()
         try:
             self.send_response(status)
             self.send_header("content-type", "application/json")
             self.send_header("content-length", str(len(body)))
+            if no_store:
+                self.send_header("cache-control", "no-store")
             if cors:
                 self.send_header("access-control-allow-origin", "*")
                 self.send_header("access-control-allow-methods", "GET, OPTIONS")
@@ -3318,7 +3320,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"sessions": annotate_donated(sessions)})
             return
         if parsed.path == "/api/project_stats":
-            self._json(project_stats())
+            self._json(project_stats(), no_store=True)
             return
         if parsed.path == "/api/discover_stream":
             qs = parse_qs(parsed.query)
