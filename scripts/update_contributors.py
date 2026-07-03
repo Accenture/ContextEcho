@@ -430,10 +430,27 @@ def render_contributors(contributors: list[Contributor], sessions: list[SessionE
     return "\n".join(lines)
 
 
+def accepted_submission_ids(sessions: list[SessionEntry]) -> list[str]:
+    return sorted({s.submission_id for s in sessions if s.submission_id})
+
+
+def render_project_stats(current: dict[str, Any], sessions: list[SessionEntry]) -> str:
+    payload = dict(current)
+    accepted_ids = accepted_submission_ids(sessions)
+    payload["accepted_submission_ids"] = accepted_ids
+    payload["accepted_submission_count"] = len(accepted_ids)
+    payload["accepted_submission_ids_note"] = (
+        "Public accepted staging IDs used by the local donor wizard to avoid "
+        "showing already-reviewed local receipts as pending."
+    )
+    return json.dumps(payload, indent=2) + "\n"
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Regenerate CONTRIBUTORS.md from accepted donations.")
     p.add_argument("--dataset-root", type=Path, default=Path("data_archive_release_v2"))
     p.add_argument("--out", type=Path, default=Path("CONTRIBUTORS.md"))
+    p.add_argument("--stats-out", type=Path, default=Path("docs/project_stats.json"))
     p.add_argument("--check", action="store_true", help="fail if the output file is not up to date")
     return p.parse_args(argv)
 
@@ -445,16 +462,29 @@ def main(argv: list[str] | None = None) -> int:
     score_sessions(sessions)
     contributors = group_contributors(sessions)
     rendered = render_contributors(contributors, sessions)
+    stats_current = json.loads(args.stats_out.read_text(encoding="utf-8")) if args.stats_out.exists() else {}
+    stats_rendered = render_project_stats(stats_current, sessions)
     out = args.out
     if args.check:
+        stale = False
         current = out.read_text(encoding="utf-8") if out.exists() else ""
         if current != rendered:
             print(f"[contributors] stale: {out}")
+            stale = True
+        stats_current_text = args.stats_out.read_text(encoding="utf-8") if args.stats_out.exists() else ""
+        if stats_current_text != stats_rendered:
+            print(f"[contributors] stale: {args.stats_out}")
+            stale = True
+        if stale:
             return 1
         print(f"[contributors] up to date: {out}")
+        print(f"[contributors] up to date: {args.stats_out}")
         return 0
     out.write_text(rendered, encoding="utf-8")
+    args.stats_out.parent.mkdir(parents=True, exist_ok=True)
+    args.stats_out.write_text(stats_rendered, encoding="utf-8")
     print(f"[contributors] wrote {out}")
+    print(f"[contributors] wrote {args.stats_out}")
     return 0
 
 

@@ -3,8 +3,10 @@ import unittest
 from scripts.update_contributors import (
     SessionEntry,
     anonymous_ledger_name,
+    accepted_submission_ids,
     display_name,
     group_contributors,
+    render_project_stats,
     score_sessions,
 )
 
@@ -72,6 +74,21 @@ class UpdateContributorsTests(unittest.TestCase):
         self.assertEqual(len(contributors[0].counted_sessions), 1)
         self.assertFalse(sessions[1].counted)
         self.assertEqual(sessions[1].points, 0)
+
+    def test_project_stats_preserves_downloads_and_publishes_accepted_submission_ids(self):
+        sessions = [
+            SessionEntry(sid="S4", contributor="Dana Contributor", submission_id="submission-b", source_key="b"),
+            SessionEntry(sid="S5", contributor="Dana Contributor", submission_id="submission-a", source_key="a"),
+            SessionEntry(sid="S6", contributor="Founding", source_key="founding"),
+        ]
+        self.assertEqual(accepted_submission_ids(sessions), ["submission-a", "submission-b"])
+
+        rendered = render_project_stats({"dataset_total_downloads": 47350}, sessions)
+
+        self.assertIn('"dataset_total_downloads": 47350', rendered)
+        self.assertIn('"accepted_submission_count": 2', rendered)
+        self.assertIn('"submission-a"', rendered)
+        self.assertIn('"submission-b"', rendered)
 
 
 if __name__ == "__main__":

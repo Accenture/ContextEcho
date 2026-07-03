@@ -804,11 +804,37 @@ class WebTests(unittest.TestCase):
             with mock.patch("donate.web.DONATION_ROOT", Path(td)), mock.patch("donate.web.DONATION_REGISTRY", registry):
                 save_donation_record(source1, artifact1, "[submit] Submission ID: submission-a", receipt=receipt)
                 save_donation_record(source2, artifact2, "[submit] Submission ID: submission-b", receipt=receipt)
-                summary = local_pending_summary(receipt)
+                summary = local_pending_summary(receipt, accepted_submission_ids=set())
 
         self.assertEqual(summary["sessions"], 2)
         self.assertEqual(summary["points_low"], 4)
         self.assertEqual(summary["points_high"], 8)
+
+    def test_local_pending_summary_excludes_accepted_submission_ids(self):
+        with TemporaryDirectory() as td:
+            registry = Path(td) / ".donated_sessions.json"
+            source1 = Path(td) / "source1.jsonl"
+            source2 = Path(td) / "source2.jsonl"
+            artifact1 = Path(td) / "session1.redacted.jsonl"
+            artifact2 = Path(td) / "session2.redacted.jsonl"
+            for path in [source1, source2, artifact1, artifact2]:
+                path.write_text('{"type":"user"}\n')
+            receipt = {
+                "credit_name": "Xianzhong Ding",
+                "contributor_email": "xding5@ucmerced.edu",
+                "institute": "UC Merced",
+                "turns": "18",
+                "compactions": "0",
+            }
+
+            with mock.patch("donate.web.DONATION_ROOT", Path(td)), mock.patch("donate.web.DONATION_REGISTRY", registry):
+                save_donation_record(source1, artifact1, "[submit] Submission ID: submission-a", receipt=receipt)
+                save_donation_record(source2, artifact2, "[submit] Submission ID: submission-b", receipt=receipt)
+                summary = local_pending_summary(receipt, accepted_submission_ids={"submission-a"})
+
+        self.assertEqual(summary["sessions"], 1)
+        self.assertEqual(summary["points_low"], 2)
+        self.assertEqual(summary["points_high"], 4)
 
     def test_write_receipt_records_submission_details(self):
         with TemporaryDirectory() as td:

@@ -419,17 +419,36 @@ def contributor_identity(receipt: dict) -> str:
     return "\n".join([name, email, institute])
 
 
-def local_pending_summary(receipt: dict) -> dict:
+def accepted_submission_ids_from_project_stats() -> set[str]:
+    try:
+        stats = _load_tracked_project_stats()
+    except Exception:
+        return set()
+    raw_ids = stats.get("accepted_submission_ids", []) if isinstance(stats, dict) else []
+    if not isinstance(raw_ids, list):
+        return set()
+    return {
+        submission_id
+        for submission_id in (normalize_submission_id(item) for item in raw_ids)
+        if is_support_submission_id(submission_id)
+    }
+
+
+def local_pending_summary(receipt: dict, accepted_submission_ids: set[str] | None = None) -> dict:
     target = contributor_identity(receipt)
     if not target:
         low, high = donation_points_range(receipt.get("turns", 0), receipt.get("compactions", 0))
         return {"sessions": 1, "points_low": low, "points_high": high}
+    accepted_submission_ids = accepted_submission_ids_from_project_stats() if accepted_submission_ids is None else accepted_submission_ids
     sessions = 0
     points_low = 0
     points_high = 0
     turns = 0
     for item in load_donation_registry().get("submissions", []):
         if item.get("contributor_identity") != target:
+            continue
+        submission_id = normalize_submission_id(item.get("submission_id") or item.get("submission"))
+        if submission_id and submission_id in accepted_submission_ids:
             continue
         sessions += 1
         points_low += int(item.get("points_low") or 0)
@@ -955,6 +974,8 @@ def project_stats() -> dict:
         "dataset_total_downloads": None,
         "dataset_downloads": None,
         "dataset_likes": None,
+        "accepted_submission_ids": [],
+        "accepted_submission_count": 0,
         "leaderboard": [],
         "coverage": {},
     }
@@ -971,6 +992,10 @@ def project_stats() -> dict:
     try:
         tracked = _load_tracked_project_stats()
         stats["dataset_total_downloads"] = tracked.get("dataset_total_downloads")
+        accepted_ids = tracked.get("accepted_submission_ids", [])
+        if isinstance(accepted_ids, list):
+            stats["accepted_submission_ids"] = accepted_ids
+            stats["accepted_submission_count"] = tracked.get("accepted_submission_count", len(accepted_ids))
     except Exception:
         pass
     try:
