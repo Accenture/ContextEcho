@@ -1233,14 +1233,19 @@ INDEX_HTML = r"""<!doctype html>
     .session-subtitle { margin-top:6px; color:#59615d; font-size:14px; white-space:nowrap; }
     .session-summary { display:flex; flex-wrap:nowrap; gap:10px; justify-content:flex-end; align-items:stretch; flex:0 0 auto; }
     .count-badge { min-width:66px; border:1px solid #d9ded6; border-radius:12px; padding:8px 12px; color:#13231c; background:#fff; font-weight:900; text-align:center; box-shadow:0 8px 24px rgba(38,54,44,.05); }
+    button.count-badge, button.fit-chip { color:#13231c; box-shadow:0 8px 24px rgba(38,54,44,.05); }
     .count-badge strong { display:block; color:var(--accent); font-size:24px; line-height:1; }
     .count-badge span { display:block; margin-top:2px; font-size:12px; color:#38423d; }
     .fit-summary { display:flex; flex-wrap:nowrap; gap:10px; justify-content:flex-end; }
     .fit-chip { border-radius:10px; padding:12px 14px; font-size:14px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:118px; white-space:nowrap; }
-    .count-badge[data-tooltip], .fit-chip[data-tooltip], .sort-header[data-tooltip] { position:relative; cursor:help; }
+    .count-badge[data-tooltip], .fit-chip[data-tooltip], .sort-header[data-tooltip] { position:relative; }
+    .count-badge[data-tooltip], .fit-chip[data-tooltip] { cursor:pointer; }
+    .sort-header[data-tooltip] { cursor:help; }
     .count-badge[data-tooltip]:after, .fit-chip[data-tooltip]:after, .sort-header[data-tooltip]:after { content:attr(data-tooltip); position:absolute; left:50%; top:calc(100% + 8px); transform:translateX(-50%); opacity:0; pointer-events:none; z-index:30; min-width:150px; padding:8px 10px; border-radius:8px; background:#14241d; color:#fff; box-shadow:0 8px 20px rgba(15,25,20,.18); font-size:12px; font-weight:800; line-height:1.35; text-align:left; white-space:pre-line; }
     .count-badge[data-tooltip]:before, .fit-chip[data-tooltip]:before, .sort-header[data-tooltip]:before { content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); opacity:0; pointer-events:none; z-index:31; border:5px solid transparent; border-bottom-color:#14241d; }
     .count-badge[data-tooltip]:hover:after, .count-badge[data-tooltip]:hover:before, .fit-chip[data-tooltip]:hover:after, .fit-chip[data-tooltip]:hover:before, .sort-header[data-tooltip]:hover:after, .sort-header[data-tooltip]:hover:before { opacity:1; }
+    .count-badge.active, .fit-chip.active { box-shadow:inset 0 0 0 2px #17713f, 0 8px 24px rgba(38,54,44,.06); }
+    .count-badge:focus-visible, .fit-chip:focus-visible { outline:3px solid #bfe6c0; outline-offset:2px; }
     .fit-chip.ready { background:#dff1d9; color:#13552f; }
     .fit-chip.best { background:#dff1d9; color:#13552f; }
     .fit-chip.good { background:#dff1d9; color:#13552f; }
@@ -1514,7 +1519,7 @@ INDEX_HTML = r"""<!doctype html>
               <div class="session-subtitle">Detected from your local conversations.</div>
             </div>
             <div class="session-summary">
-              <span id="sessionCount" class="count-badge"><strong>0</strong><span>found</span></span>
+              <button type="button" id="sessionCount" class="count-badge active" data-session-filter="all" aria-pressed="true"><strong>0</strong><span>found</span></button>
               <div id="fitSummary" class="fit-summary" aria-live="polite"></div>
             </div>
           </div>
@@ -1639,6 +1644,7 @@ let discoveryRunning = false;
 let page = 0;
 let sessionSort = {key:'', dir:'desc'};
 let sessionSearchQuery = '';
+let sessionStatusFilter = 'all';
 const pageSize = 4;
 const $ = id => document.getElementById(id);
 const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonatedPaths') || '[]'));
@@ -2719,9 +2725,22 @@ function sessionSearchText(s){
     fitLabel(fit(s)),
   ].map(x => String(x).toLowerCase()).join(' ');
 }
+function sessionHasDonationHistory(s){
+  const info = localDonationInfo(s);
+  return !!(info.exactDonated || info.donatedBefore);
+}
+function sessionStatusMatches(s){
+  if(sessionStatusFilter === 'donated') return sessionHasDonationHistory(s);
+  if(sessionStatusFilter === 'ready') return sessionReady(s);
+  if(sessionStatusFilter === 'improve') return fit(s) === 'improve';
+  return true;
+}
 function filteredSessionItems(){
   const q = sessionSearchQuery.trim().toLowerCase();
-  return sessions.map((s, idx) => ({s, idx})).filter(item => !q || sessionSearchText(item.s).includes(q));
+  return sessions
+    .map((s, idx) => ({s, idx}))
+    .filter(item => sessionStatusMatches(item.s))
+    .filter(item => !q || sessionSearchText(item.s).includes(q));
 }
 function fitSortValue(s){
   return {best:3, good:2, improve:1}[fit(s)] || 0;
@@ -2755,6 +2774,24 @@ function bindSessionSortHeaders(){
       sessionSort = sessionSort.key === key
         ? {key, dir: sessionSort.dir === 'desc' ? 'asc' : 'desc'}
         : {key, dir: defaultDir};
+      page = 0;
+      renderSessions();
+    };
+  });
+}
+function sessionStatusFilterLabel(){
+  return {
+    donated: 'donated',
+    ready: 'ready',
+    improve: 'keep chatting',
+  }[sessionStatusFilter] || '';
+}
+function bindSessionFilterControls(){
+  document.querySelectorAll('[data-session-filter]').forEach(btn => {
+    btn.onclick = event => {
+      event.stopPropagation();
+      const nextFilter = btn.dataset.sessionFilter || 'all';
+      sessionStatusFilter = sessionStatusFilter === nextFilter && nextFilter !== 'all' ? 'all' : nextFilter;
       page = 0;
       renderSessions();
     };
@@ -2813,17 +2850,25 @@ function renderSessions(){
   const donatedSummaryTitle = donatedModelSummary();
   $('sessionCount').dataset.tooltip = sessionSummaryTitle;
   $('sessionCount').setAttribute('aria-label', sessionSummaryTitle);
+  $('sessionCount').classList.toggle('active', sessionStatusFilter === 'all');
+  $('sessionCount').setAttribute('aria-pressed', sessionStatusFilter === 'all' ? 'true' : 'false');
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   $('fitSummary').innerHTML = sessions.length
-    ? `<span class="fit-chip donated" data-tooltip="${escapeHtml(donatedSummaryTitle)}" aria-label="${escapeHtml(donatedSummaryTitle)}">Donated ${donatedTotal}</span><span class="fit-chip ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}">Ready ${readyCount}</span><span class="fit-chip improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction">Keep chatting ${counts.improve || 0}</span>`
+    ? `<button type="button" class="fit-chip donated${sessionStatusFilter === 'donated' ? ' active' : ''}" data-session-filter="donated" data-tooltip="${escapeHtml(donatedSummaryTitle)}" aria-label="${escapeHtml(donatedSummaryTitle)}" aria-pressed="${sessionStatusFilter === 'donated' ? 'true' : 'false'}">Donated ${donatedTotal}</button><button type="button" class="fit-chip ready${sessionStatusFilter === 'ready' ? ' active' : ''}" data-session-filter="ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}" aria-pressed="${sessionStatusFilter === 'ready' ? 'true' : 'false'}">Ready ${readyCount}</button><button type="button" class="fit-chip improve${sessionStatusFilter === 'improve' ? ' active' : ''}" data-session-filter="improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction" aria-pressed="${sessionStatusFilter === 'improve' ? 'true' : 'false'}">Keep chatting ${counts.improve || 0}</button>`
     : '';
+  bindSessionFilterControls();
   if(!rows.length){
     const searched = $('discoverProgress').style.display === 'block';
+    const activeFilter = sessionStatusFilterLabel();
     const emptyText = searched
       ? `<div class="empty-sessions thanks">Thanks for considering a ContextEcho donation.<span>We did not find any Claude Code or Codex sessions on this machine yet. Feel free to keep using your coding agent and come back later; we will continue collecting donations.</span></div>`
       : (sessions.length && sessionSearchQuery.trim()
-        ? '<div class="empty-sessions">No sessions match this search.</div>'
-        : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>');
+        ? (activeFilter
+          ? `<div class="empty-sessions">No sessions match this ${activeFilter} filter and search.</div>`
+          : '<div class="empty-sessions">No sessions match this search.</div>')
+        : (sessions.length && activeFilter
+          ? `<div class="empty-sessions">No ${escapeHtml(activeFilter)} sessions found.</div>`
+          : '<div class="empty-sessions">No sessions found yet. Click Discover Sessions to scan this machine.</div>'));
     list.innerHTML = `${sessionTableHead()}${emptyText}`;
     bindSessionSortHeaders();
   }
