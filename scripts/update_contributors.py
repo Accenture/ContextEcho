@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 class SessionEntry:
     sid: str
     contributor: str
+    contributor_group: str = ""
     identity_name: str = ""
     email: str = ""
     institute: str = ""
@@ -147,6 +148,8 @@ def anonymous_ledger_name(row: dict[str, Any], sid: str) -> str:
 
 def merge_key(session: SessionEntry) -> tuple[str, ...]:
     """Merge when maintainer-known identity fields match; render names separately."""
+    if session.contributor_group:
+        return ("manual", session.contributor_group.lower())
     identity_name = norm(session.identity_name or session.contributor).lower()
     email = norm(session.email).lower()
     institute = norm(session.institute).lower()
@@ -156,9 +159,30 @@ def merge_key(session: SessionEntry) -> tuple[str, ...]:
     return ("unique", session.sid)
 
 
+def load_contributor_groups(dataset_root: Path) -> dict[str, str]:
+    path = dataset_root / "data" / "donations" / "contributor_groups.json"
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    groups = data.get("groups", []) if isinstance(data, dict) else []
+    out: dict[str, str] = {}
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        public_name = norm(group.get("public_name"))
+        if not public_name:
+            continue
+        for submission_id in group.get("submission_ids", []):
+            sid = norm(submission_id)
+            if sid:
+                out[sid] = public_name
+    return out
+
+
 def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
     ledger = dataset_root / "data" / "donations" / "ledger.jsonl"
     rows = iter_jsonl(ledger)
+    contributor_groups = load_contributor_groups(dataset_root)
     out: list[SessionEntry] = []
     for i, row in enumerate(rows, start=4):
         if norm(row.get("decision")) != "ACCEPTABLE":
@@ -172,6 +196,9 @@ def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
         if manifest.get("public_anonymous"):
             public_record["public_anonymous"] = True
         name = display_name(public_record, anonymous_ledger_name(row, sid))
+        contributor_group = contributor_groups.get(norm(row.get("submission_id")), "")
+        if contributor_group:
+            name = contributor_group
         identity_name = norm(row.get("credit_name") or row.get("contributor") or manifest.get("credit_name") or manifest.get("contributor"))
         email = norm(manifest.get("contributor_email") or row.get("contributor_email"))
         institute = norm(row.get("institute") or manifest.get("contributor_institute"))
@@ -180,6 +207,7 @@ def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
             SessionEntry(
                 sid=sid,
                 contributor=name,
+                contributor_group=contributor_group,
                 identity_name=identity_name,
                 email=email,
                 institute=institute,
@@ -324,7 +352,8 @@ def render_contributors(contributors: list[Contributor], sessions: list[SessionE
         "",
         "> Public-anonymous donors are grouped under a stable anonymous alias when",
         "> maintainer-known identity fields match exactly after normalization.",
-        "> Anonymous sessions without a complete private identity remain separate.",
+        "> `data/donations/contributor_groups.json` can override grouping by",
+        "> submission ID without publishing private donor identity fields.",
         "",
         "---",
         "",

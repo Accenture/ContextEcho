@@ -1,0 +1,30 @@
+{
+  "groups": [
+    {
+      "public_name": "Anonymous donor 38ccb48b",
+      "submission_ids": [
+        "submission-38ccb48b",
+        "submission-6b493dd1",
+        "submission-9ccc8b68",
+        "submission-b2a90d8c",
+        "submission-cd9b41f2"
+      ]
+    },
+    {
+      "public_name": "Anonymous donor 6ad76f41",
+      "submission_ids": [
+        "submission-6ad76f41",
+        "submission-709bb557",
+        "submission-a997ebe1"
+      ]
+    },
+    {
+      "public_name": "Anonymous donor 86ff44fe",
+      "submission_ids": [
+        "submission-297da79a",
+        "submission-86ff44fe",
+        "submission-cb9b3ae7"
+      ]
+    }
+  ]
+}

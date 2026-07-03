@@ -32,6 +32,17 @@ class UpdateContributorsTests(unittest.TestCase):
         self.assertEqual(len(contributors[0].counted_sessions), 2)
         self.assertGreater(contributors[0].points, 5)
 
+    def test_manual_contributor_group_merges_different_private_identity_fields(self):
+        sessions = [
+            SessionEntry(sid="S4", contributor="Anonymous donor controlled", contributor_group="Anonymous donor controlled", identity_name="Dana Contributor", email="d@example.com", institute="Lab", public_anonymous=True, agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="a"),
+            SessionEntry(sid="S5", contributor="Anonymous donor controlled", contributor_group="Anonymous donor controlled", identity_name="Dana C.", email="other@example.com", institute="Other Lab", public_anonymous=True, agent="Claude", model="opus", org="Anthropic", domain="docs", language="mixed", turns=200, compactions=1, source_key="b"),
+        ]
+        score_sessions(sessions)
+        contributors = group_contributors(sessions)
+        self.assertEqual(len(contributors), 1)
+        self.assertEqual(contributors[0].name, "Anonymous donor controlled")
+        self.assertEqual(len(contributors[0].counted_sessions), 2)
+
     def test_future_anonymous_donor_uses_submission_id(self):
         fallback = anonymous_ledger_name({"submission_id": "submission-d51e3f33"}, "S4")
         self.assertEqual(display_name({"credit_name": "anonymous"}, fallback), "Anonymous donor d51e3f33")
