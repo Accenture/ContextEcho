@@ -1850,10 +1850,7 @@ function restoreCachedRedaction(){
   return true;
 }
 function allSessionsDonated(){
-  return sessions.length > 0 && sessions.every(s => {
-    const info = localDonationInfo(s);
-    return info.exactDonated || (info.donatedBefore && !info.updateReady);
-  });
+  return sessions.length > 0 && sessions.every(s => sessionIsBlockedDonation(s));
 }
 function relayStatusChecked(){
   return sessions.length > 0 && sessions.every(s => !!s.relay_checked);
@@ -1926,11 +1923,12 @@ function setUiProcessing(on){
 }
 function fit(s){ const t=+s.turns||0,c=+s.compactions||0; return t>=100&&c>=2?'best':(t>=50?'good':'improve'); }
 function sessionReady(s){ return fit(s) !== 'improve'; }
-function fitCounts(){
+function actionableReadyCounts(){
   return sessions.reduce((acc, s) => {
+    if(!sessionIsActionableReady(s)) return acc;
     acc[fit(s)] = (acc[fit(s)] || 0) + 1;
     return acc;
-  }, {best:0, good:0, improve:0});
+  }, {best:0, good:0});
 }
 function agentFamilyCounts(){
   return sessions.reduce((acc, s) => {
@@ -1944,8 +1942,7 @@ function agentFamilyCounts(){
 function donatedModelCounts(){
   const counts = new Map();
   sessions.forEach(s => {
-    const info = localDonationInfo(s);
-    if(!(info.exactDonated || info.donatedBefore)) return;
+    if(!sessionIsBlockedDonation(s)) return;
     const model = String(s.model || 'Unknown model').trim() || 'Unknown model';
     counts.set(model, (counts.get(model) || 0) + 1);
   });
@@ -2725,14 +2722,20 @@ function sessionSearchText(s){
     fitLabel(fit(s)),
   ].map(x => String(x).toLowerCase()).join(' ');
 }
-function sessionHasDonationHistory(s){
+function sessionIsBlockedDonation(s){
   const info = localDonationInfo(s);
-  return !!(info.exactDonated || info.donatedBefore);
+  return !!(info.exactDonated || (info.donatedBefore && !info.updateReady));
+}
+function sessionIsActionableReady(s){
+  return sessionReady(s) && !sessionIsBlockedDonation(s);
+}
+function sessionNeedsMoreTurns(s){
+  return fit(s) === 'improve' && !sessionIsBlockedDonation(s);
 }
 function sessionStatusMatches(s){
-  if(sessionStatusFilter === 'donated') return sessionHasDonationHistory(s);
-  if(sessionStatusFilter === 'ready') return sessionReady(s);
-  if(sessionStatusFilter === 'improve') return fit(s) === 'improve';
+  if(sessionStatusFilter === 'donated') return sessionIsBlockedDonation(s);
+  if(sessionStatusFilter === 'ready') return sessionIsActionableReady(s);
+  if(sessionStatusFilter === 'improve') return sessionNeedsMoreTurns(s);
   return true;
 }
 function filteredSessionItems(){
@@ -2838,15 +2841,13 @@ function renderSessions(){
   const start = page * pageSize;
   const rows = sorted.slice(start, start + pageSize);
   const allDonated = allSessionsDonated();
-  const counts = fitCounts();
-  const readyCount = (counts.best || 0) + (counts.good || 0);
-  const donatedTotal = sessions.reduce((count, s) => {
-    const info = localDonationInfo(s);
-    return count + (info.exactDonated || info.donatedBefore ? 1 : 0);
-  }, 0);
+  const readyCounts = actionableReadyCounts();
+  const readyCount = (readyCounts.best || 0) + (readyCounts.good || 0);
+  const improveCount = sessions.reduce((count, s) => count + (sessionNeedsMoreTurns(s) ? 1 : 0), 0);
+  const donatedTotal = sessions.reduce((count, s) => count + (sessionIsBlockedDonation(s) ? 1 : 0), 0);
   const agentCounts = agentFamilyCounts();
   const sessionSummaryTitle = `Claude: ${agentCounts.claude}\nCodex: ${agentCounts.codex}\nOther: ${agentCounts.other}`;
-  const readySummaryTitle = `Best: ${counts.best || 0}\nExcellent: ${counts.good || 0}`;
+  const readySummaryTitle = `Best: ${readyCounts.best || 0}\nExcellent: ${readyCounts.good || 0}`;
   const donatedSummaryTitle = donatedModelSummary();
   $('sessionCount').dataset.tooltip = sessionSummaryTitle;
   $('sessionCount').setAttribute('aria-label', sessionSummaryTitle);
@@ -2854,7 +2855,7 @@ function renderSessions(){
   $('sessionCount').setAttribute('aria-pressed', sessionStatusFilter === 'all' ? 'true' : 'false');
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   $('fitSummary').innerHTML = sessions.length
-    ? `<button type="button" class="fit-chip donated${sessionStatusFilter === 'donated' ? ' active' : ''}" data-session-filter="donated" data-tooltip="${escapeHtml(donatedSummaryTitle)}" aria-label="${escapeHtml(donatedSummaryTitle)}" aria-pressed="${sessionStatusFilter === 'donated' ? 'true' : 'false'}">Donated ${donatedTotal}</button><button type="button" class="fit-chip ready${sessionStatusFilter === 'ready' ? ' active' : ''}" data-session-filter="ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}" aria-pressed="${sessionStatusFilter === 'ready' ? 'true' : 'false'}">Ready ${readyCount}</button><button type="button" class="fit-chip improve${sessionStatusFilter === 'improve' ? ' active' : ''}" data-session-filter="improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction" aria-pressed="${sessionStatusFilter === 'improve' ? 'true' : 'false'}">Keep chatting ${counts.improve || 0}</button>`
+    ? `<button type="button" class="fit-chip donated${sessionStatusFilter === 'donated' ? ' active' : ''}" data-session-filter="donated" data-tooltip="${escapeHtml(donatedSummaryTitle)}" aria-label="${escapeHtml(donatedSummaryTitle)}" aria-pressed="${sessionStatusFilter === 'donated' ? 'true' : 'false'}">Donated ${donatedTotal}</button><button type="button" class="fit-chip ready${sessionStatusFilter === 'ready' ? ' active' : ''}" data-session-filter="ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}" aria-pressed="${sessionStatusFilter === 'ready' ? 'true' : 'false'}">Ready ${readyCount}</button><button type="button" class="fit-chip improve${sessionStatusFilter === 'improve' ? ' active' : ''}" data-session-filter="improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction" aria-pressed="${sessionStatusFilter === 'improve' ? 'true' : 'false'}">Keep chatting ${improveCount}</button>`
     : '';
   bindSessionFilterControls();
   if(!rows.length){
