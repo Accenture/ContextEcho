@@ -1238,15 +1238,12 @@ INDEX_HTML = r"""<!doctype html>
     .count-badge span { display:block; margin-top:2px; font-size:12px; color:#38423d; }
     .fit-summary { display:flex; flex-wrap:nowrap; gap:10px; justify-content:flex-end; }
     .fit-chip { border-radius:10px; padding:12px 14px; font-size:14px; font-weight:950; background:#edf1e4; color:#44504a; display:inline-flex; align-items:center; justify-content:center; min-width:118px; white-space:nowrap; }
-    .count-badge[data-tooltip], .fit-chip[data-tooltip], .sort-header[data-tooltip], .session-row[data-tooltip] { position:relative; }
+    .count-badge[data-tooltip], .fit-chip[data-tooltip], .sort-header[data-tooltip] { position:relative; }
     .count-badge[data-tooltip], .fit-chip[data-tooltip] { cursor:pointer; }
     .sort-header[data-tooltip] { cursor:help; }
     .count-badge[data-tooltip]:after, .fit-chip[data-tooltip]:after, .sort-header[data-tooltip]:after { content:attr(data-tooltip); position:absolute; left:50%; top:calc(100% + 8px); transform:translateX(-50%); opacity:0; pointer-events:none; z-index:30; min-width:150px; padding:8px 10px; border-radius:8px; background:#14241d; color:#fff; box-shadow:0 8px 20px rgba(15,25,20,.18); font-size:12px; font-weight:800; line-height:1.35; text-align:left; white-space:pre-line; }
     .count-badge[data-tooltip]:before, .fit-chip[data-tooltip]:before, .sort-header[data-tooltip]:before { content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); opacity:0; pointer-events:none; z-index:31; border:5px solid transparent; border-bottom-color:#14241d; }
     .count-badge[data-tooltip]:hover:after, .count-badge[data-tooltip]:hover:before, .fit-chip[data-tooltip]:hover:after, .fit-chip[data-tooltip]:hover:before, .sort-header[data-tooltip]:hover:after, .sort-header[data-tooltip]:hover:before { opacity:1; }
-    .session-row[data-tooltip]:after { content:attr(data-tooltip); position:absolute; left:58px; top:calc(100% - 2px); opacity:0; pointer-events:none; z-index:40; min-width:240px; max-width:380px; padding:9px 11px; border-radius:8px; background:#14241d; color:#fff; box-shadow:0 8px 20px rgba(15,25,20,.18); font-size:12px; font-weight:800; line-height:1.35; text-align:left; white-space:pre-line; }
-    .session-row[data-tooltip]:before { content:""; position:absolute; left:72px; top:calc(100% - 10px); opacity:0; pointer-events:none; z-index:41; border:5px solid transparent; border-bottom-color:#14241d; }
-    .session-row[data-tooltip]:hover:after, .session-row[data-tooltip]:hover:before { opacity:1; }
     .count-badge.active, .fit-chip.active { box-shadow:inset 0 0 0 2px #17713f, 0 8px 24px rgba(38,54,44,.06); }
     .count-badge:focus-visible, .fit-chip:focus-visible { outline:3px solid #bfe6c0; outline-offset:2px; }
     .fit-chip.ready { background:#dff1d9; color:#13552f; }
@@ -1756,24 +1753,6 @@ function localDonationInfo(s){
   const exactDonated = !!(s?.donated || donatedPaths.has(sessionLocalKey(s)));
   const donatedBefore = exactDonated || !!s?.donated_before || !!previousTurns || !!record?.submission_id || !!record?.submitted_at;
   return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId:pathKey};
-}
-function sessionDonationHoverText(s, donationInfo){
-  const info = donationInfo || localDonationInfo(s);
-  if(!info.donatedBefore && !info.supportId) return 'Donation: not submitted yet';
-  const contributor = localContributorRecord(s);
-  const publicCredit = contributor.publicAnonymous
-    ? 'anonymous'
-    : (contributor.creditName || 'not available locally');
-  return [
-    'Donation info',
-    `Submission ID: ${info.supportId || 'not available locally'}`,
-    `Public leaderboard: ${publicCredit}`,
-    `Submitted name: ${contributor.creditName || 'not available locally'}`,
-    `Email: ${contributor.email || 'not available locally'}`,
-    `Institute: ${contributor.institute || 'not available locally'}`,
-    contributor.submittedAt ? `Submitted: ${contributor.submittedAt.slice(0, 10)}` : '',
-    info.previousTurns ? `Donated turns: ${compactNumber(info.previousTurns)}` : '',
-  ].filter(Boolean).join('\n');
 }
 function beginMetadataUpdate(session, submissionId){
   metadataUpdateComplete = false;
@@ -3096,7 +3075,6 @@ function renderSessions(){
     const resumeKey = resumeSessionKey(s);
     row.dataset.sessionKey = resumeKey;
     const donationInfo = localDonationInfo(s);
-    row.dataset.tooltip = sessionDonationHoverText(s, donationInfo);
     const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
     const ready = sessionReady(s);
     const updateReady = donationInfo.updateReady;
