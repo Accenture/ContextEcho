@@ -1564,6 +1564,7 @@ INDEX_HTML = r"""<!doctype html>
             <button id="nextPage" class="secondary">Next &rsaquo;</button>
           </div>
         </div>
+        <div id="pickSessionInfoCard" class="selected-card"></div>
         <div class="pick-redact-row">
           <button id="pickNext" class="next-button" disabled>Next: Redact  -&gt;</button>
         </div>
@@ -2279,6 +2280,55 @@ function renderSelectedCard(s, idx){
   $('selectedCard').classList.add('show');
   $('revealSourceFile').onclick = () => post('/api/open_path', {path:s.path, reveal:true}).catch(e => status('redactStatus','ERROR: '+e.message));
 }
+function renderPickDonationCard(s, idx){
+  const donationInfo = localDonationInfo(s);
+  const contributor = localContributorRecord(s);
+  const publicCredit = contributor.publicAnonymous
+    ? 'Anonymous donor'
+    : (contributor.creditName || 'Not available locally');
+  const donationStatus = donationInfo.updateReady
+    ? `<span class="pill best">update ready · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns</span>`
+    : `<span class="pill donated">donated${donationInfo.newTurns ? ` · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns` : ''}</span>`;
+  const supportPill = donationInfo.supportId
+    ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
+    : '';
+  $('pickSessionInfoCard').innerHTML = `
+    <div class="selected-card-layout">
+      <div class="selected-card-main">
+        <div class="result-head">
+          <div><strong>Donation info #${idx + 1}: ${escapeHtml(s.project || 'unknown project')}</strong></div>
+          <span class="pill ${fit(s)}">${fit(s).charAt(0).toUpperCase() + fit(s).slice(1)}</span>
+        </div>
+        <div class="session-chip-row">${donationStatus}${supportPill}</div>
+        <div class="metrics donation-info">
+          <span class="metric">Public leaderboard: <strong>${escapeHtml(publicCredit)}</strong></span>
+          <span class="metric">Submitted name: <strong>${escapeHtml(contributor.creditName || 'Not available locally')}</strong></span>
+          <span class="metric">Email: <strong>${escapeHtml(contributor.email || 'Not available locally')}</strong></span>
+          <span class="metric">Institute: <strong>${escapeHtml(contributor.institute || 'Not available locally')}</strong></span>
+          ${contributor.submittedAt ? `<span class="metric">Submitted: <strong>${escapeHtml(contributor.submittedAt.slice(0, 10))}</strong></span>` : ''}
+          ${donationInfo.previousTurns ? `<span class="metric">Donated turns: <strong>${compactNumber(donationInfo.previousTurns)}</strong></span>` : ''}
+        </div>
+        <div class="metrics">
+          <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
+          <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
+          <span class="metric">User turns: <strong>${compactNumber(s.turns)}</strong></span>
+          <span class="metric">Context compactions: <strong>${s.compactions || 0}</strong></span>
+        </div>
+        <div class="hint">${contributor.publicAnonymous ? 'Public pages hide your name; maintainers can still use the submitted name, email, and institute for review and support.' : 'This is the donation identity saved locally or returned by the maintainer relay.'}</div>
+      </div>
+    </div>
+  `;
+  $('pickSessionInfoCard').classList.add('show');
+  $('pickSessionInfoCard').querySelectorAll('[data-copy-submission]').forEach(el => {
+    el.onclick = event => {
+      event.stopPropagation();
+      const id = el.dataset.copySubmission || '';
+      navigator.clipboard?.writeText(id).catch(()=>{});
+      status('discoverStatus', `Copied maintainer reset ID: ${id}`);
+    };
+  });
+  $('pickSessionInfoCard').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
 function renderSearchResult(data){
   const hits = data.results || [];
   const anyHit = hits.some(x => x.count > 0);
@@ -2623,6 +2673,8 @@ function clearSelectedSession(){
   redactionCache = new Map();
   submitted = false;
   document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
+  $('pickSessionInfoCard').innerHTML = '';
+  $('pickSessionInfoCard').classList.remove('show');
   $('selectedCard').innerHTML = '';
   $('selectedCard').classList.remove('show');
   $('redactResult').classList.remove('show');
@@ -3130,13 +3182,15 @@ function renderSessions(){
         row.classList.add('selected');
         selected = s;
         redacted = null; appliedScrubTerms = []; redactionCache = new Map(); submitted = true;
-        renderSelectedCard(s, idx);
+        renderPickDonationCard(s, idx);
         status('redactStatus', '');
         status('discoverStatus', donationInfo.newTurns ? `This donated session has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'Showing saved donation info. Use Update info or Report issue if support is needed.');
         refreshButtons();
         return;
       }
       if(!ready){
+        $('pickSessionInfoCard').innerHTML = '';
+        $('pickSessionInfoCard').classList.remove('show');
         clearSelectedSession();
         if(hasResumeActions){
           setResumeGuidance(s, resumeInfo, 'selected');
@@ -3148,6 +3202,8 @@ function renderSessions(){
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
       row.classList.add('selected'); selected = s;
+      $('pickSessionInfoCard').innerHTML = '';
+      $('pickSessionInfoCard').classList.remove('show');
       redacted = null; appliedScrubTerms = []; redactionCache = new Map(); submitted = !!donated;
       renderSelectedCard(s, idx);
       status('redactStatus', '');
