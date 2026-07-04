@@ -1746,6 +1746,24 @@ function localDonationInfo(s){
   const donatedBefore = exactDonated || !!s?.donated_before || !!previousTurns || !!record?.submission_id || !!record?.submitted_at;
   return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId:pathKey};
 }
+function sessionDonationHoverText(s, donationInfo){
+  const info = donationInfo || localDonationInfo(s);
+  if(!info.donatedBefore && !info.supportId) return 'Donation: not submitted yet';
+  const contributor = localContributorRecord(s);
+  const publicCredit = contributor.publicAnonymous
+    ? 'anonymous'
+    : (contributor.creditName || 'not available locally');
+  return [
+    'Donation info',
+    `Submission ID: ${info.supportId || 'not available locally'}`,
+    `Public leaderboard: ${publicCredit}`,
+    `Submitted name: ${contributor.creditName || 'not available locally'}`,
+    `Email: ${contributor.email || 'not available locally'}`,
+    `Institute: ${contributor.institute || 'not available locally'}`,
+    contributor.submittedAt ? `Submitted: ${contributor.submittedAt.slice(0, 10)}` : '',
+    info.previousTurns ? `Donated turns: ${compactNumber(info.previousTurns)}` : '',
+  ].filter(Boolean).join('\n');
+}
 function beginMetadataUpdate(session, submissionId){
   metadataUpdateComplete = false;
   supportRequestSubmissionId = '';
@@ -3044,6 +3062,7 @@ function renderSessions(){
     const resumeKey = resumeSessionKey(s);
     row.dataset.sessionKey = resumeKey;
     const donationInfo = localDonationInfo(s);
+    row.title = sessionDonationHoverText(s, donationInfo);
     const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
     const ready = sessionReady(s);
     const updateReady = donationInfo.updateReady;

@@ -111,6 +111,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("beginSupportRequest(s, donationInfo.supportId)", INDEX_HTML)
         self.assertIn("Public leaderboard:", INDEX_HTML)
         self.assertIn("Submitted name:", INDEX_HTML)
+        self.assertIn("function sessionDonationHoverText(s, donationInfo)", INDEX_HTML)
+        self.assertIn("row.title = sessionDonationHoverText(s, donationInfo)", INDEX_HTML)
         self.assertIn("selectedUpdateInfo", INDEX_HTML)
         self.assertIn("selectedReportIssue", INDEX_HTML)
         self.assertIn("Showing saved donation info", INDEX_HTML)
