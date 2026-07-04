@@ -88,6 +88,13 @@
     .turn-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#52a564,#167843); min-width:0; }
     .batch-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 14px; padding:10px 12px; border:1px solid #dce4df; border-radius:12px; background:#fbfdf8; }
     .selection-count { font-weight:900; color:#314139; }
+    .donor-group-row td { background:#f8fbf5; border-top:1px solid #dce4df; }
+    .donor-group-main { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .donor-group-title { font-weight:950; color:#10211a; }
+    .donor-group-meta { margin-top:4px; color:var(--muted); font-size:13px; }
+    .donor-group-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .donor-session-row td:first-child { border-left:5px solid #e1eadc; }
+    .donor-session-row.is-collapsed { display:none; }
     .repair-launch { margin-top:14px; }
     .repair-card[hidden] { display:none; }
     .repair-card { margin-top:14px; }
@@ -375,7 +382,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', pendingSortKey:'submitted_utc', pendingSortDir:'desc', selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
+const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', pendingSortKey:'submitted_utc', pendingSortDir:'desc', pendingGroupByDonor:true, expandedDonorGroups:new Set(), selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -492,7 +499,7 @@ function pendingComposition(){
   return {sessions:state.pending.length, donors:donors.size, institutes:institutes.size, agents:agents.size, turns, records, compactions};
 }
 function donorIdentity(row){
-  const parts = [row.contributor, row.email, row.institute].map(value => String(value || '').trim().toLowerCase());
+  const parts = [row.contributor, row.email, row.institute].map(value => String(value || '').trim());
   return parts.some(Boolean) ? parts.join('\u0000') : '';
 }
 function quantile(sorted, q){
@@ -644,6 +651,99 @@ function pendingRows(){
     return !q || JSON.stringify(row).toLowerCase().includes(q);
   }).sort(comparePendingRows);
 }
+function donorGroupKey(row){
+  const identity = donorIdentity(row);
+  return identity ? `donor:${encodeURIComponent(identity)}` : `submission:${encodeURIComponent(row.submission_id || '')}`;
+}
+function donorDisplayName(row){
+  return String(row.contributor || '').trim() || 'Anonymous donor';
+}
+function donorGroups(rows){
+  const groups = new Map();
+  rows.forEach(row => {
+    const key = donorGroupKey(row);
+    if(!groups.has(key)){
+      groups.set(key, {
+        key,
+        donor: donorDisplayName(row),
+        email: String(row.email || '').trim(),
+        institute: String(row.institute || '').trim(),
+        rows: [],
+        turns: 0,
+        records: 0,
+        compactions: 0,
+        promoted: 0,
+        needsValidation: 0,
+      });
+    }
+    const group = groups.get(key);
+    group.rows.push(row);
+    group.turns += Number(row.turns || 0);
+    group.records += Number(row.records || 0);
+    group.compactions += Number(row.compactions || 0);
+    if(row.review_status === 'promoted' || row.promoted) group.promoted += 1;
+    else group.needsValidation += 1;
+  });
+  return Array.from(groups.values()).sort((a, b) => {
+    const cmp = a.donor.localeCompare(b.donor, undefined, {numeric:true, sensitivity:'base'});
+    if(cmp) return cmp;
+    return a.email.localeCompare(b.email, undefined, {numeric:true, sensitivity:'base'});
+  });
+}
+function donorGroupSummary(group){
+  const review = group.needsValidation
+    ? `${compact(group.needsValidation)} need validation · ${compact(group.promoted)} promoted`
+    : `${compact(group.promoted)} promoted`;
+  return `${compact(group.rows.length)} session${group.rows.length === 1 ? '' : 's'} · ${compact(group.turns)} turns · ${compact(group.records)} records · ${compact(group.compactions)} ctx · ${review}`;
+}
+function renderPendingSessionCells(row){
+  return [
+    `<label class="row-select"><input type="checkbox" data-redaction-select="${escapeHtml(row.submission_id || '')}" ${state.selectedRedactionSubmissions.has(row.submission_id || '') ? 'checked' : ''}><span class="sr-only">Select ${escapeHtml(row.submission_id || '')}</span></label>`,
+    `<code>${escapeHtml(row.submission_id)}</code>`,
+    reviewStatusPill(row),
+    `${escapeHtml(row.contributor || '')}<div class="hint">${escapeHtml(row.email || '')}</div>`,
+    escapeHtml(row.institute || ''),
+    `${escapeHtml(row.agent || '')}<div class="hint">${escapeHtml(row.model || '')}</div>`,
+    `${compact(row.turns)} turns<div class="hint">${compact(row.records)} records · ${compact(row.compactions)} ctx${row.submitted_utc ? ` · ${escapeHtml(formatMinute(row.submitted_utc))}` : ''}</div>`,
+    `${filePill(row.has_session, 'session')} ${filePill(row.has_manifest, 'manifest')} ${filePill(row.has_consent, 'consent')}`,
+    submissionHistory(row),
+    `<button data-redact-more="${escapeHtml(row.submission_id || '')}">Redact more</button>`,
+  ];
+}
+function pendingTableHead(){
+  return ['Select', sortHeader('Submission', 'submission'), sortHeader('Review', 'review'), sortHeader('Donor', 'donor'), sortHeader('Institute', 'institute'), sortHeader('Session', 'session'), sortHeader('Stats', 'submitted_utc'), 'Files', sortHeader('History', 'history'), 'Action'];
+}
+function renderFlatPendingTable(rows){
+  return table(pendingTableHead(), rows.map(renderPendingSessionCells));
+}
+function renderGroupedPendingTable(rows){
+  const groups = donorGroups(rows);
+  if(!groups.length) return '<div class="card"><div class="hint">No rows found.</div></div>';
+  const heads = pendingTableHead();
+  const headMarkup = heads.map(h => `<th>${h && typeof h === 'object' && h.html ? h.html : escapeHtml(h)}</th>`).join('');
+  const body = groups.map(group => {
+    const expanded = state.expandedDonorGroups.has(group.key);
+    const groupRow = `
+      <tr class="donor-group-row">
+        <td colspan="${heads.length}">
+          <div class="donor-group-main">
+            <div>
+              <div class="donor-group-title">${escapeHtml(group.donor)}${group.email ? ` · ${escapeHtml(group.email)}` : ''}</div>
+              <div class="donor-group-meta">${escapeHtml(group.institute || 'No institute')} · ${escapeHtml(donorGroupSummary(group))}</div>
+            </div>
+            <div class="donor-group-actions">
+              <button type="button" data-donor-toggle="${escapeHtml(group.key)}">${expanded ? 'Collapse sessions' : 'Show sessions'}</button>
+              <button type="button" data-donor-select="${escapeHtml(group.key)}">Select donor sessions</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+    const sessionRows = group.rows.map(row => `<tr class="donor-session-row ${expanded ? '' : 'is-collapsed'}">${renderPendingSessionCells(row).map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+    return groupRow + sessionRows;
+  }).join('');
+  return `<table><thead><tr>${headMarkup}</tr></thead><tbody>${body}</tbody></table>`;
+}
 function selectedRedactionIds(){
   const selected = state.selectedRedactionSubmissions;
   const ordered = state.pending
@@ -786,29 +886,17 @@ function renderPending(){
     <div class="batch-tools" aria-label="Selected redaction controls">
       <div>
         <span id="selectedRedactionCount" class="selection-count">0 selected</span>
-        <div class="hint">Open repair tools to apply scrub terms to selected rows.</div>
+        <div class="hint">${state.pendingGroupByDonor ? 'Grouped by exact donor identity: name, email, and institute.' : 'Open repair tools to apply scrub terms to selected rows.'}</div>
       </div>
       <div class="toolbar">
+        <button id="togglePendingGrouping" type="button">${state.pendingGroupByDonor ? 'Show flat rows' : 'Group by donor'}</button>
+        ${state.pendingGroupByDonor ? '<button id="expandDonorGroups" type="button">Expand all</button><button id="collapseDonorGroups" type="button">Collapse all</button>' : ''}
         <button id="selectVisibleRedactions" type="button">Select visible</button>
         <button id="clearSelectedRedactions" type="button">Clear selection</button>
       </div>
     </div>
   `;
-  $('pendingTable').innerHTML = table(
-    ['Select', sortHeader('Submission', 'submission'), sortHeader('Review', 'review'), sortHeader('Donor', 'donor'), sortHeader('Institute', 'institute'), sortHeader('Session', 'session'), sortHeader('Stats', 'submitted_utc'), 'Files', sortHeader('History', 'history'), 'Action'],
-    rows.map(row => [
-      `<label class="row-select"><input type="checkbox" data-redaction-select="${escapeHtml(row.submission_id || '')}" ${state.selectedRedactionSubmissions.has(row.submission_id || '') ? 'checked' : ''}><span class="sr-only">Select ${escapeHtml(row.submission_id || '')}</span></label>`,
-      `<code>${escapeHtml(row.submission_id)}</code>`,
-      reviewStatusPill(row),
-      `${escapeHtml(row.contributor || '')}<div class="hint">${escapeHtml(row.email || '')}</div>`,
-      escapeHtml(row.institute || ''),
-      `${escapeHtml(row.agent || '')}<div class="hint">${escapeHtml(row.model || '')}</div>`,
-      `${compact(row.turns)} turns<div class="hint">${compact(row.records)} records · ${compact(row.compactions)} ctx${row.submitted_utc ? ` · ${escapeHtml(formatMinute(row.submitted_utc))}` : ''}</div>`,
-      `${filePill(row.has_session, 'session')} ${filePill(row.has_manifest, 'manifest')} ${filePill(row.has_consent, 'consent')}`,
-      submissionHistory(row),
-      `<button data-redact-more="${escapeHtml(row.submission_id || '')}">Redact more</button>`,
-    ])
-  );
+  $('pendingTable').innerHTML = state.pendingGroupByDonor ? renderGroupedPendingTable(rows) : renderFlatPendingTable(rows);
   $('pendingTable').innerHTML = tabs + batchTools + $('pendingTable').innerHTML;
   document.querySelectorAll('[data-pending-status]').forEach(btn => {
     btn.onclick = () => setPendingStatusFilter(btn.dataset.pendingStatus || 'needs_validation');
@@ -821,6 +909,39 @@ function renderPending(){
   });
   $('selectVisibleRedactions').onclick = selectVisibleRedactions;
   $('clearSelectedRedactions').onclick = clearSelectedRedactions;
+  $('togglePendingGrouping').onclick = () => {
+    state.pendingGroupByDonor = !state.pendingGroupByDonor;
+    renderPending();
+  };
+  if($('expandDonorGroups')) $('expandDonorGroups').onclick = () => {
+    donorGroups(rows).forEach(group => state.expandedDonorGroups.add(group.key));
+    renderPending();
+  };
+  if($('collapseDonorGroups')) $('collapseDonorGroups').onclick = () => {
+    donorGroups(rows).forEach(group => state.expandedDonorGroups.delete(group.key));
+    renderPending();
+  };
+  document.querySelectorAll('[data-donor-toggle]').forEach(btn => {
+    btn.onclick = () => {
+      const key = btn.dataset.donorToggle || '';
+      if(state.expandedDonorGroups.has(key)) state.expandedDonorGroups.delete(key);
+      else state.expandedDonorGroups.add(key);
+      renderPending();
+    };
+  });
+  document.querySelectorAll('[data-donor-select]').forEach(btn => {
+    btn.onclick = () => {
+      const key = btn.dataset.donorSelect || '';
+      const group = donorGroups(rows).find(item => item.key === key);
+      if(group){
+        group.rows.forEach(row => {
+          const id = String(row.submission_id || '').trim();
+          if(id) state.selectedRedactionSubmissions.add(id);
+        });
+      }
+      renderPending();
+    };
+  });
   document.querySelectorAll('[data-redact-more]').forEach(btn => {
     btn.onclick = () => cueRedactionUpdate(btn.dataset.redactMore || '');
   });
