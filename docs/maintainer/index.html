@@ -382,7 +382,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', pendingSortKey:'submitted_utc', pendingSortDir:'desc', pendingGroupByDonor:true, expandedDonorGroups:new Set(), selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
+const state = { summary:null, pending:[], pendingStatusFilter:'needs_validation', pendingSortKey:'submitted_utc', pendingSortDir:'desc', pendingGroupByDonor:true, pendingGroupSortKey:'donation_date', pendingGroupSortDir:'desc', expandedDonorGroups:new Set(), selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -674,6 +674,7 @@ function donorGroups(rows){
         compactions: 0,
         promoted: 0,
         needsValidation: 0,
+        latestSubmitted: 0,
       });
     }
     const group = groups.get(key);
@@ -681,13 +682,20 @@ function donorGroups(rows){
     group.turns += Number(row.turns || 0);
     group.records += Number(row.records || 0);
     group.compactions += Number(row.compactions || 0);
+    group.latestSubmitted = Math.max(group.latestSubmitted, Date.parse(row.submitted_utc || '') || 0);
     if(row.review_status === 'promoted' || row.promoted) group.promoted += 1;
     else group.needsValidation += 1;
   });
   return Array.from(groups.values()).sort((a, b) => {
-    const cmp = a.donor.localeCompare(b.donor, undefined, {numeric:true, sensitivity:'base'});
-    if(cmp) return cmp;
-    return a.email.localeCompare(b.email, undefined, {numeric:true, sensitivity:'base'});
+    let cmp = 0;
+    if(state.pendingGroupSortKey === 'donations'){
+      cmp = a.rows.length - b.rows.length;
+    } else {
+      cmp = a.latestSubmitted - b.latestSubmitted;
+    }
+    if(cmp === 0) cmp = a.donor.localeCompare(b.donor, undefined, {numeric:true, sensitivity:'base'});
+    if(cmp === 0) cmp = a.email.localeCompare(b.email, undefined, {numeric:true, sensitivity:'base'});
+    return state.pendingGroupSortDir === 'asc' ? cmp : -cmp;
   });
 }
 function donorGroupSummary(group){
@@ -695,6 +703,23 @@ function donorGroupSummary(group){
     ? `${compact(group.needsValidation)} need validation · ${compact(group.promoted)} promoted`
     : `${compact(group.promoted)} promoted`;
   return `${compact(group.rows.length)} session${group.rows.length === 1 ? '' : 's'} · ${compact(group.turns)} turns · ${compact(group.records)} records · ${compact(group.compactions)} ctx · ${review}`;
+}
+function groupSortLabel(key){
+  return key === 'donations' ? 'Donations' : 'Donation date';
+}
+function setPendingGroupSort(key){
+  if(state.pendingGroupSortKey === key){
+    state.pendingGroupSortDir = state.pendingGroupSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    state.pendingGroupSortKey = key;
+    state.pendingGroupSortDir = 'desc';
+  }
+  renderPending();
+}
+function groupSortButton(label, key){
+  const active = state.pendingGroupSortKey === key;
+  const mark = active ? (state.pendingGroupSortDir === 'asc' ? ' ↑' : ' ↓') : '';
+  return `<button class="${active ? 'primary' : ''}" type="button" data-group-sort="${escapeHtml(key)}">${escapeHtml(label)}${mark}</button>`;
 }
 function renderPendingSessionCells(row){
   return [
@@ -886,11 +911,11 @@ function renderPending(){
     <div class="batch-tools" aria-label="Selected redaction controls">
       <div>
         <span id="selectedRedactionCount" class="selection-count">0 selected</span>
-        <div class="hint">${state.pendingGroupByDonor ? 'Grouped by exact donor identity: name, email, and institute.' : 'Open repair tools to apply scrub terms to selected rows.'}</div>
+        <div class="hint">${state.pendingGroupByDonor ? `Grouped by exact donor identity: name, email, and institute. Sorted by ${groupSortLabel(state.pendingGroupSortKey).toLowerCase()}.` : 'Open repair tools to apply scrub terms to selected rows.'}</div>
       </div>
       <div class="toolbar">
         <button id="togglePendingGrouping" type="button">${state.pendingGroupByDonor ? 'Show flat rows' : 'Group by donor'}</button>
-        ${state.pendingGroupByDonor ? '<button id="expandDonorGroups" type="button">Expand all</button><button id="collapseDonorGroups" type="button">Collapse all</button>' : ''}
+        ${state.pendingGroupByDonor ? `${groupSortButton('Donation date', 'donation_date')}${groupSortButton('Donations', 'donations')}<button id="expandDonorGroups" type="button">Expand all</button><button id="collapseDonorGroups" type="button">Collapse all</button>` : ''}
         <button id="selectVisibleRedactions" type="button">Select visible</button>
         <button id="clearSelectedRedactions" type="button">Clear selection</button>
       </div>
@@ -921,6 +946,9 @@ function renderPending(){
     donorGroups(rows).forEach(group => state.expandedDonorGroups.delete(group.key));
     renderPending();
   };
+  document.querySelectorAll('[data-group-sort]').forEach(btn => {
+    btn.onclick = () => setPendingGroupSort(btn.dataset.groupSort || 'donation_date');
+  });
   document.querySelectorAll('[data-donor-toggle]').forEach(btn => {
     btn.onclick = () => {
       const key = btn.dataset.donorToggle || '';
