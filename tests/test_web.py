@@ -120,6 +120,7 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("selectedReportIssue", INDEX_HTML)
         self.assertIn("Showing saved donation info", INDEX_HTML)
         self.assertIn("row.classList.add('selected');\n        selected = s;", INDEX_HTML)
+        self.assertLess(INDEX_HTML.index("if(donated){"), INDEX_HTML.index("if(!ready){"))
         self.assertIn("sessionMenu", INDEX_HTML)
         self.assertIn("showSupportSessionMenu", INDEX_HTML)
         self.assertNotIn("oncontextmenu", INDEX_HTML)

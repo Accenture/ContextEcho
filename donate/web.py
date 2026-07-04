@@ -3124,16 +3124,6 @@ function renderSessions(){
     if(chevron && hasSupportActions) chevron.onclick = event => showSupportSessionMenu(event, s, donationInfo);
     if (selected && selected.path === s.path) row.classList.add('selected');
     row.onclick = () => {
-      if(!ready){
-        clearSelectedSession();
-        if(hasResumeActions){
-          setResumeGuidance(s, resumeInfo, 'selected');
-          status('discoverStatus', '');
-        } else {
-          status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
-        }
-        return;
-      }
       clearResumeGuidance();
       if(donated){
         document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
@@ -3144,6 +3134,16 @@ function renderSessions(){
         status('redactStatus', '');
         status('discoverStatus', donationInfo.newTurns ? `This donated session has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'Showing saved donation info. Use Update info or Report issue if support is needed.');
         refreshButtons();
+        return;
+      }
+      if(!ready){
+        clearSelectedSession();
+        if(hasResumeActions){
+          setResumeGuidance(s, resumeInfo, 'selected');
+          status('discoverStatus', '');
+        } else {
+          status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
+        }
         return;
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
