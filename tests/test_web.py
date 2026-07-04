@@ -238,6 +238,15 @@ class WebTests(unittest.TestCase):
         self.assertIn("data-pending-sort", html)
         self.assertIn("sortHeader('Institute', 'institute')", html)
         self.assertIn("sort(comparePendingRows)", html)
+        self.assertIn('id="pendingStats"', html)
+        self.assertIn("Staging snapshot", html)
+        self.assertIn("function pendingStats", html)
+        self.assertIn("function renderPendingStats", html)
+        self.assertIn("function donorIdentity", html)
+        self.assertIn("Turn distribution", html)
+        self.assertIn("median ${compact(visible.medianTurns)}", html)
+        self.assertIn("p90 ${compact(visible.p90Turns)}", html)
+        self.assertIn("renderPendingStats(rows)", html)
 
     def test_maintainer_pending_view_separates_promoted_from_needs_validation(self):
         html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")

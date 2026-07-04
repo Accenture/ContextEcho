@@ -74,6 +74,18 @@
     .status-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
     .status-tab { background:white; border-color:#dce4df; color:#415148; }
     .status-tab.active { background:#10211a; color:white; }
+    .pending-snapshot { margin:0 0 14px; border:1px solid #dce4df; border-radius:14px; background:linear-gradient(90deg,#fbfdf8,#fffef8); padding:14px; }
+    .snapshot-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:12px; }
+    .snapshot-title { font-size:16px; font-weight:950; color:#10211a; }
+    .snapshot-subtitle { margin-top:3px; color:var(--muted); font-size:13px; }
+    .snapshot-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+    .snapshot-tile { border:1px solid #e1e8df; border-radius:12px; background:white; padding:12px; min-height:74px; }
+    .snapshot-value { font-size:24px; line-height:1; font-weight:950; color:#10211a; margin-top:5px; }
+    .snapshot-detail { margin-top:6px; color:var(--muted); font-size:12px; line-height:1.3; }
+    .turn-bars { display:grid; gap:8px; }
+    .turn-row { display:grid; grid-template-columns:72px minmax(0,1fr) 46px; gap:10px; align-items:center; color:#415148; font-size:13px; font-weight:850; }
+    .turn-track { height:10px; border-radius:999px; background:#edf2e9; overflow:hidden; }
+    .turn-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#52a564,#167843); min-width:0; }
     .batch-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 14px; padding:10px 12px; border:1px solid #dce4df; border-radius:12px; background:#fbfdf8; }
     .selection-count { font-weight:900; color:#314139; }
     .repair-launch { margin-top:14px; }
@@ -112,8 +124,8 @@
     .two-col { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:16px; }
     .danger-zone { border-color:#efc2be; background:#fff8f7; }
     .mono-block { white-space:pre-wrap; overflow:auto; max-height:360px; border:1px solid var(--line); background:#111b18; color:#fffef8; border-radius:12px; padding:14px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; line-height:1.45; }
-    @media (max-width:920px) { header, .two-col, .connection-grid, .connection-footer { grid-template-columns:1fr; display:grid; } .title-wrap { max-width:none; } .top-actions { min-width:0; width:100%; } .connection-status { width:100%; } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media (max-width:620px) { main { padding:18px 10px 36px; } .shell { padding:18px; } .grid { grid-template-columns:1fr; } h1 { font-size:30px; } .toolbar input { min-width:0; } }
+    @media (max-width:920px) { header, .two-col, .connection-grid, .connection-footer { grid-template-columns:1fr; display:grid; } .title-wrap { max-width:none; } .top-actions { min-width:0; width:100%; } .connection-status { width:100%; } .grid, .snapshot-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:620px) { main { padding:18px 10px 36px; } .shell { padding:18px; } .grid, .snapshot-grid { grid-template-columns:1fr; } h1 { font-size:30px; } .toolbar input { min-width:0; } }
   </style>
 </head>
 <body>
@@ -243,6 +255,7 @@
         <div class="toolbar"><button id="loadPending">Load pending</button><input id="pendingFilter" placeholder="Filter submission, donor, institute"></div>
       </div>
       <div id="pendingStatus" class="status"></div>
+      <div id="pendingStats"></div>
       <div class="batch-tools repair-launch" aria-label="Redaction repair controls">
         <div>
           <span class="selection-count">Redaction repair</span>
@@ -478,6 +491,87 @@ function pendingComposition(){
   });
   return {sessions:state.pending.length, donors:donors.size, institutes:institutes.size, agents:agents.size, turns, records, compactions};
 }
+function donorIdentity(row){
+  const parts = [row.contributor, row.email, row.institute].map(value => String(value || '').trim().toLowerCase());
+  return parts.some(Boolean) ? parts.join('\u0000') : '';
+}
+function quantile(sorted, q){
+  if(!sorted.length) return 0;
+  const pos = (sorted.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  const next = sorted[base + 1];
+  return Math.round(next === undefined ? sorted[base] : sorted[base] + rest * (next - sorted[base]));
+}
+function pendingStats(rows){
+  const donors = new Set();
+  const institutes = new Set();
+  const turns = [];
+  const buckets = [
+    {label:'0-49', count:0},
+    {label:'50-99', count:0},
+    {label:'100-249', count:0},
+    {label:'250-499', count:0},
+    {label:'500+', count:0},
+  ];
+  rows.forEach(row => {
+    const donor = donorIdentity(row);
+    if(donor) donors.add(donor);
+    const institute = String(row.institute || '').trim().toLowerCase();
+    if(institute) institutes.add(institute);
+    const turnCount = Math.max(0, Number(row.turns || 0));
+    turns.push(turnCount);
+    if(turnCount >= 500) buckets[4].count += 1;
+    else if(turnCount >= 250) buckets[3].count += 1;
+    else if(turnCount >= 100) buckets[2].count += 1;
+    else if(turnCount >= 50) buckets[1].count += 1;
+    else buckets[0].count += 1;
+  });
+  turns.sort((a, b) => a - b);
+  const totalTurns = turns.reduce((sum, value) => sum + value, 0);
+  return {
+    sessions: rows.length,
+    donors: donors.size,
+    institutes: institutes.size,
+    totalTurns,
+    medianTurns: quantile(turns, 0.5),
+    p90Turns: quantile(turns, 0.9),
+    maxTurns: turns.length ? turns[turns.length - 1] : 0,
+    buckets,
+  };
+}
+function renderPendingStats(rows){
+  const visible = pendingStats(rows);
+  const all = pendingStats(state.pending);
+  const filtered = rows.length !== state.pending.length;
+  const maxBucket = Math.max(1, ...visible.buckets.map(bucket => bucket.count));
+  const bucketRows = visible.buckets.map(bucket => `
+    <div class="turn-row">
+      <span>${escapeHtml(bucket.label)}</span>
+      <div class="turn-track" aria-hidden="true"><div class="turn-fill" style="width:${Math.round((bucket.count / maxBucket) * 100)}%"></div></div>
+      <span>${compact(bucket.count)}</span>
+    </div>
+  `).join('');
+  $('pendingStats').innerHTML = `
+    <div class="pending-snapshot">
+      <div class="snapshot-head">
+        <div>
+          <div class="snapshot-title">Staging snapshot</div>
+          <div class="snapshot-subtitle">${filtered ? `${compact(rows.length)} visible of ${compact(state.pending.length)} loaded staging submissions` : `${compact(state.pending.length)} loaded staging submissions`}</div>
+        </div>
+        <span class="pill">${escapeHtml(state.pendingStatusFilter === 'all' ? 'all staging' : state.pendingStatusFilter.replace('_', ' '))}</span>
+      </div>
+      <div class="snapshot-grid">
+        <div class="snapshot-tile"><div class="metric-label">Unique donors</div><div class="snapshot-value">${compact(visible.donors)}</div><div class="snapshot-detail">${compact(all.donors)} across all loaded staging</div></div>
+        <div class="snapshot-tile"><div class="metric-label">Institutes</div><div class="snapshot-value">${compact(visible.institutes)}</div><div class="snapshot-detail">${compact(all.institutes)} across all loaded staging</div></div>
+        <div class="snapshot-tile"><div class="metric-label">Turns</div><div class="snapshot-value">${compact(visible.totalTurns)}</div><div class="snapshot-detail">median ${compact(visible.medianTurns)} · p90 ${compact(visible.p90Turns)}</div></div>
+        <div class="snapshot-tile"><div class="metric-label">Largest session</div><div class="snapshot-value">${compact(visible.maxTurns)}</div><div class="snapshot-detail">user turns</div></div>
+      </div>
+      <div class="metric-label">Turn distribution</div>
+      <div class="turn-bars" aria-label="Turn distribution by session">${bucketRows}</div>
+    </div>
+  `;
+}
 function pendingReviewCounts(){
   const counts = {all: state.pending.length, needs_validation: 0, promoted: 0};
   state.pending.forEach(row => {
@@ -680,6 +774,7 @@ function renderPending(){
   pruneSelectedRedactions();
   const rows = pendingRows();
   const counts = pendingReviewCounts();
+  renderPendingStats(rows);
   const tabs = `
     <div class="status-tabs" role="tablist" aria-label="Pending review status">
       <button class="status-tab ${state.pendingStatusFilter === 'needs_validation' ? 'active' : ''}" data-pending-status="needs_validation">Needs validation (${compact(counts.needs_validation)})</button>
