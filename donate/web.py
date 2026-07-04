@@ -1318,6 +1318,9 @@ INDEX_HTML = r"""<!doctype html>
     .pill.resume { background:#f3e5d2; color:#7a420a; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
+    .pill.report-issue { background:#f5e2da; color:#7a2c1f; cursor:pointer; }
+    button.pill { border:0; font:inherit; min-width:0; }
+    button.pill:hover { transform:none; filter:brightness(.98); }
     .session-list .pill { padding:3px 7px; font-size:11px; }
     .session-list .fit-star, .session-list .fit-arrow { font-size:11px; }
     .fit-legend { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:14px; padding:10px 14px; border:1px solid var(--line); border-radius:12px; background:#fbfcf8; color:var(--muted); font-size:12px; line-height:1.35; }
@@ -3016,6 +3019,9 @@ function renderSessions(){
     const supportPill = donationInfo.supportId
       ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
       : '';
+    const supportActions = donationInfo.supportId && donationInfo.donatedBefore
+      ? `<button type="button" class="pill update-info" data-session-action="update-info">Update info</button> <button type="button" class="pill report-issue" data-session-action="report-issue">Report issue</button>`
+      : '';
     const resumeInfo = sessionResumeInfo(s);
     const hasResumeActions = !!resumeInfo.command && sessionNeedsMoreTurns(s);
     const resumePillLabel = 'add turns';
@@ -3027,7 +3033,7 @@ function renderSessions(){
     if(resumeGuidance?.key === resumeKey) row.classList.add('resume-focus-row');
     if(donationInfo.donatedBefore) row.classList.add('donated-history-row');
     const currentFit = fit(s);
-    const chipLine = [statusPill, supportPill, resumePill].filter(Boolean).join(' ');
+    const chipLine = [statusPill, supportPill, supportActions, resumePill].filter(Boolean).join(' ');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div class="session-main">
@@ -3046,6 +3052,20 @@ function renderSessions(){
         const id = el.dataset.copySubmission || '';
         navigator.clipboard?.writeText(id).catch(()=>{});
         status('discoverStatus', `Copied maintainer reset ID: ${id}`);
+      };
+    });
+    row.querySelectorAll('[data-session-action="update-info"]').forEach(el => {
+      el.onclick = event => {
+        event.stopPropagation();
+        clearResumeGuidance({rerender:true});
+        beginMetadataUpdate(s, donationInfo.supportId);
+      };
+    });
+    row.querySelectorAll('[data-session-action="report-issue"]').forEach(el => {
+      el.onclick = event => {
+        event.stopPropagation();
+        clearResumeGuidance({rerender:true});
+        beginSupportRequest(s, donationInfo.supportId);
       };
     });
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
@@ -3083,7 +3103,7 @@ function renderSessions(){
     $('selectedCard').innerHTML = '';
     $('selectedCard').classList.remove('show');
     $('reviewConfirm').checked = false;
-    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated. Click an ID pill to copy the maintainer reset ID if support is needed.</span></div>`);
+    list.insertAdjacentHTML('beforeend', `<div class="all-donated-note">Thank you for donating all your scanned session data.<span>All ${sessions.length} discovered session${sessions.length === 1 ? '' : 's'} are already marked donated. Use the row buttons to update info or report an issue if support is needed.</span></div>`);
   }
   $('pageInfo').textContent = `Page ${page + 1} of ${totalPages} · showing ${totalVisible ? start + 1 : 0}-${Math.min(start + pageSize, totalVisible)} of ${totalVisible}${totalVisible !== sessions.length ? ` filtered from ${sessions.length}` : ''}`;
   $('prevPage').disabled = page <= 0;
