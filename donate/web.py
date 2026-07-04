@@ -2825,13 +2825,20 @@ function bindSessionFilterControls(){
 }
 function sessionResumeInfo(s){
   const dir = String(s?.resume_dir || '').trim();
-  if(!dir) return {dir:'', command:''};
+  const exactCommand = String(s?.resume_command || '').trim();
+  const resumeId = String(s?.resume_session_id || '').trim();
+  if(!dir && !exactCommand) return {dir:'', command:'', exact:false, resumeId:''};
   const agent = String(s?.agent || '').toLowerCase();
   const launcher = agent.includes('claude') ? 'claude' : (agent.includes('codex') ? 'codex' : '');
   const openAgent = launcher || '# open your coding agent here';
+  const command = exactCommand
+    ? (dir ? `cd ${shellQuotePath(dir)}\n${exactCommand}` : exactCommand)
+    : `cd ${shellQuotePath(dir)}\n${openAgent}\n# then type /resume and choose this session`;
   return {
     dir,
-    command: `cd ${shellQuotePath(dir)}\n${openAgent}\n# then type /resume and choose this session`,
+    command,
+    exact: !!exactCommand,
+    resumeId,
   };
 }
 function resumeSessionKey(s){
@@ -2847,7 +2854,19 @@ function renderResumeGuidance(){
   }
   const stateText = resumeGuidance.action === 'opened'
     ? 'Project folder opened'
-    : (resumeGuidance.action === 'copied' ? '/resume steps copied' : 'Resume this session in your agent');
+    : (resumeGuidance.action === 'copied' ? 'Resume command copied' : 'Resume this session in your agent');
+  const body = resumeGuidance.exact
+    ? 'Run this exact resume command to continue this specific session.'
+    : 'Use this project folder, start the agent, then type <code>/resume</code> and choose this session.';
+  const sessionIdLine = resumeGuidance.resumeId
+    ? `<div class="resume-guidance-path">Session ID: <code>${escapeHtml(resumeGuidance.resumeId)}</code></div>`
+    : '';
+  const folderLine = resumeGuidance.dir
+    ? `<div class="resume-guidance-path">Project folder: <code>${escapeHtml(resumeGuidance.dir)}</code></div>`
+    : '';
+  const openButton = resumeGuidance.dir
+    ? '<button type="button" class="secondary" data-resume-action="open">Open folder</button>'
+    : '';
   el.innerHTML = `
     <div class="resume-guidance-head">
       <div>
@@ -2856,12 +2875,13 @@ function renderResumeGuidance(){
       </div>
       <button type="button" class="resume-guidance-dismiss" data-resume-action="dismiss" aria-label="Dismiss resume instructions">Dismiss</button>
     </div>
-    <div class="resume-guidance-body">Use this project folder, start the agent, then type <code>/resume</code> and choose this session.</div>
-    <div class="resume-guidance-path">Project folder: <code>${escapeHtml(resumeGuidance.dir)}</code></div>
+    <div class="resume-guidance-body">${body}</div>
+    ${sessionIdLine}
+    ${folderLine}
     <pre class="resume-guidance-command">${escapeHtml(resumeGuidance.command)}</pre>
     <div class="resume-guidance-actions">
-      <button type="button" data-resume-action="copy">Copy steps</button>
-      <button type="button" class="secondary" data-resume-action="open">Open folder</button>
+      <button type="button" data-resume-action="copy">Copy command</button>
+      ${openButton}
     </div>
   `;
   el.classList.add('show');
@@ -2871,16 +2891,19 @@ function renderResumeGuidance(){
     renderSessions();
   };
   el.querySelector('[data-resume-action="copy"]').onclick = () => copyResumeSteps(resumeGuidance.session, resumeGuidance);
-  el.querySelector('[data-resume-action="open"]').onclick = () => openResumeFolder(resumeGuidance.session, resumeGuidance);
+  const open = el.querySelector('[data-resume-action="open"]');
+  if(open) open.onclick = () => openResumeFolder(resumeGuidance.session, resumeGuidance);
 }
 function setResumeGuidance(session, resumeInfo, action='selected'){
-  if(!resumeInfo?.dir) return;
+  if(!resumeInfo?.command && !resumeInfo?.dir) return;
   resumeGuidance = {
     key: resumeSessionKey(session),
     session,
     label: `${session?.agent || 'Session'} · ${session?.session_label || session?.project || 'unknown project'}`,
     dir: resumeInfo.dir,
     command: resumeInfo.command,
+    exact: !!resumeInfo.exact,
+    resumeId: resumeInfo.resumeId || '',
     action,
   };
   renderResumeGuidance();
@@ -2888,9 +2911,12 @@ function setResumeGuidance(session, resumeInfo, action='selected'){
 }
 function copyResumeSteps(session, resumeInfo){
   setResumeGuidance(session, resumeInfo, 'copied');
+  const copiedMessage = resumeInfo.exact
+    ? 'Resume command copied. See the highlighted instruction above the session list.'
+    : '/resume steps copied. See the highlighted instruction above the session list.';
   if(navigator.clipboard){
     navigator.clipboard.writeText(resumeInfo.command)
-      .then(() => status('discoverStatus', '/resume steps copied. See the highlighted instruction above the session list.', 'ok'))
+      .then(() => status('discoverStatus', copiedMessage, 'ok'))
       .catch(() => status('discoverStatus', resumeInfo.command));
   } else {
     status('discoverStatus', resumeInfo.command);
@@ -2909,15 +2935,16 @@ function hideSessionMenu(){
 function showSessionMenu(event, session, donationInfo){
   const menu = $('sessionMenu');
   const resumeInfo = sessionResumeInfo(session);
-  const hasResumeActions = !!resumeInfo.dir && sessionNeedsMoreTurns(session);
+  const hasResumeActions = !!resumeInfo.command && sessionNeedsMoreTurns(session);
   const hasSupportActions = !!(donationInfo?.supportId && donationInfo?.donatedBefore);
   if(!menu || (!hasResumeActions && !hasSupportActions)) return;
   event.preventDefault();
   event.stopPropagation();
   if(hasResumeActions) setResumeGuidance(session, resumeInfo, 'selected');
+  const copyResumeLabel = resumeInfo.exact ? 'Copy exact resume command' : 'Copy /resume steps';
   menu.innerHTML = [
-    hasResumeActions ? '<button type="button" role="menuitem" data-session-action="copy-resume">Copy /resume steps</button>' : '',
-    hasResumeActions ? '<button type="button" role="menuitem" data-session-action="open-resume">Open project folder</button>' : '',
+    hasResumeActions ? `<button type="button" role="menuitem" data-session-action="copy-resume">${copyResumeLabel}</button>` : '',
+    hasResumeActions && resumeInfo.dir ? '<button type="button" role="menuitem" data-session-action="open-resume">Open project folder</button>' : '',
     hasSupportActions ? '<button type="button" role="menuitem" data-session-action="update">Update info</button>' : '',
     hasSupportActions ? '<button type="button" role="menuitem" data-session-action="problem" class="danger">Report problem</button>' : '',
   ].filter(Boolean).join('');
@@ -3018,9 +3045,11 @@ function renderSessions(){
       ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
       : '';
     const resumeInfo = sessionResumeInfo(s);
-    const hasResumeActions = !!resumeInfo.dir && sessionNeedsMoreTurns(s);
+    const hasResumeActions = !!resumeInfo.command && sessionNeedsMoreTurns(s);
+    const resumePillLabel = resumeInfo.exact ? 'resume cmd' : '/resume';
+    const resumePillTitle = resumeInfo.exact ? 'Copy the exact agent resume command' : 'Open or copy the project folder, then use /resume';
     const resumePill = hasResumeActions
-      ? '<span class="pill resume" data-session-action="resume" title="Copy or open the project folder, then use /resume">/resume</span>'
+      ? `<span class="pill resume" data-session-action="resume" title="${resumePillTitle}">${resumePillLabel}</span>`
       : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     if(resumeGuidance?.key === resumeKey) row.classList.add('resume-focus-row');
@@ -3060,7 +3089,7 @@ function renderSessions(){
     row.onclick = () => {
       if(!ready){
         status('discoverStatus', hasResumeActions
-          ? 'This session is not ready yet. Use the /resume pill or row arrow to open/copy its project folder, then keep chatting until it reaches 50+ turns.'
+          ? 'This session is not ready yet. Use the resume cmd pill or row arrow to copy the exact agent resume command, then keep chatting until it reaches 50+ turns.'
           : 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
         return;
       }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Iterable
 
@@ -13,6 +14,14 @@ from donate.adapters.base import (
     safe_project_name_from_path,
     session_label,
 )
+
+
+UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+
+
+def resume_session_id_from_path(path: Path) -> str:
+    match = UUID_RE.fullmatch(path.stem) or UUID_RE.search(path.stem)
+    return match.group(0).lower() if match else ""
 
 
 def _existing_path_from_slug_tokens(tokens: list[str]) -> Path | None:
@@ -80,6 +89,10 @@ class ClaudeCodeAdapter(GenericJsonlAdapter):
         info["project"] = safe_project_name_from_path(path.parent.name)
         info["session_label"] = session_label(info["project"], str(info.get("conversation_fingerprint") or ""), path)
         info["resume_dir"] = first_resume_dir_from_records(path) or resume_dir_from_project_slug(path.parent.name)
+        resume_id = resume_session_id_from_path(path)
+        if resume_id:
+            info["resume_session_id"] = resume_id
+            info["resume_command"] = f"claude --resume {resume_id}"
         info["source_format"] = "claude-code-jsonl"
         info["confidence"]["agent"] = "high"
         return info

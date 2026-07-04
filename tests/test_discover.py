@@ -43,7 +43,8 @@ class DiscoverTests(unittest.TestCase):
 
     def test_codex_manual_path_is_classified_and_inspected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / ".codex" / "sessions" / "rollout.jsonl"
+            codex_id = "019f1981-e66d-7790-9765-2bee48c892b9"
+            path = Path(tmp) / ".codex" / "sessions" / f"rollout-2026-06-30T10-09-31-{codex_id}.jsonl"
             rows = [
                 {
                     "timestamp": "2026-01-02T03:04:05.000Z",
@@ -85,6 +86,8 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["modified_ts"], info["last_active_ts"])
         self.assertEqual(info["project"], "work-agent-project")
         self.assertEqual(info["resume_dir"], "/Users/alice/Documents/work/agent-project")
+        self.assertEqual(info["resume_session_id"], codex_id)
+        self.assertEqual(info["resume_command"], f"codex resume {codex_id}")
         self.assertRegex(info["session_label"], r"^work-agent-project · [0-9a-f]{4}$")
         self.assertTrue(info["conversation_fingerprint"].startswith("conv-"))
         self.assertEqual(info["fingerprint_version"], "structure-v1")
@@ -162,12 +165,13 @@ class DiscoverTests(unittest.TestCase):
             project_dir = (Path(tmp) / "client-safe-repo").resolve()
             project_dir.mkdir()
             project_slug = "-" + "-".join(project_dir.parts[1:])
+            claude_id = "1bb251a2-8df3-41b4-b767-c8029ffb23ce"
             path = (
                 Path(tmp)
                 / ".claude"
                 / "projects"
                 / project_slug
-                / "session.jsonl"
+                / f"{claude_id}.jsonl"
             )
             rows = [
                 {"model": "claude-opus-4-7", "message": {"role": "user", "content": [{"type": "text", "text": "fix failing tests"}]}},
@@ -186,6 +190,8 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["compactions"], 1)
         self.assertEqual(info["project"], "client-safe-repo")
         self.assertEqual(info["resume_dir"], str(project_dir))
+        self.assertEqual(info["resume_session_id"], claude_id)
+        self.assertEqual(info["resume_command"], f"claude --resume {claude_id}")
         self.assertRegex(info["session_label"], r"^client-safe-repo · [0-9a-f]{4}$")
 
     def test_same_folder_sessions_have_distinct_display_labels(self) -> None:

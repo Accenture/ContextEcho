@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Iterable
 
 from donate.adapters.base import GenericJsonlAdapter, first_path_hint, is_redacted_artifact, iter_jsonl
+
+
+UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+
+
+def resume_session_id_from_path(path: Path) -> str:
+    matches = list(UUID_RE.finditer(path.stem))
+    return matches[-1].group(0).lower() if matches else ""
 
 
 class CodexCliAdapter(GenericJsonlAdapter):
@@ -30,6 +39,10 @@ class CodexCliAdapter(GenericJsonlAdapter):
         info = super().inspect(path)
         info["agent"] = self.agent
         info["source_format"] = "codex-cli-jsonl"
+        resume_id = resume_session_id_from_path(path)
+        if resume_id:
+            info["resume_session_id"] = resume_id
+            info["resume_command"] = f"codex resume {resume_id}"
         for _, obj in iter_jsonl(path):
             resume_dir = first_path_hint(obj)
             if resume_dir:
