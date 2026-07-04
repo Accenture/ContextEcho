@@ -1257,7 +1257,7 @@ INDEX_HTML = r"""<!doctype html>
     .session-tools .legend-items { justify-content:flex-end; flex-wrap:nowrap; gap:10px; }
     .session-tools .legend-item { white-space:nowrap; font-size:11px; }
     .session-list { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:white; }
-    .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 146px 96px 92px 88px 16px; gap:18px; align-items:center; }
+    .session-table-head, .session-row { display:grid; grid-template-columns:40px minmax(280px,1fr) 146px 96px 92px 88px; gap:18px; align-items:center; }
     .session-table-head { padding:10px 16px; background:#f2f5ef; color:#5a625d; font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
     .session-table-head > div { display:flex; align-items:center; justify-content:center; gap:5px; text-align:center; }
     .sort-header { border:0; background:transparent; box-shadow:none; color:inherit; padding:0; min-width:0; border-radius:6px; display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:950; letter-spacing:inherit; text-transform:inherit; cursor:pointer; }
@@ -1294,13 +1294,6 @@ INDEX_HTML = r"""<!doctype html>
     .session-num { font-weight:950; font-size:15px; color:#07110d; }
     .session-fit { display:flex; justify-content:center; }
     .session-fit .pill { text-transform:capitalize; }
-    .session-chevron { color:#5f6662; font-size:20px; line-height:1; justify-self:end; border:0; background:transparent; box-shadow:none; padding:2px 4px; min-width:0; border-radius:8px; }
-    .session-chevron:hover:not(:disabled), .session-row:hover .session-chevron { color:#13552f; background:#eaf4e5; transform:none; }
-    .session-menu { position:fixed; z-index:1000; min-width:168px; padding:6px; border:1px solid var(--line); border-radius:12px; background:#fffef8; box-shadow:0 16px 42px rgba(25,38,31,.18); display:none; }
-    .session-menu.show { display:block; }
-    .session-menu button { display:block; width:100%; border:0; border-radius:8px; background:transparent; box-shadow:none; color:#14241d; text-align:left; padding:9px 10px; font-size:13px; font-weight:900; }
-    .session-menu button:hover { background:#eaf4e5; transform:none; }
-    .session-menu button.danger { color:#7a2c1f; }
     .resume-guidance { display:none; margin:-2px 0 12px; border:2px solid #a75009; border-radius:12px; background:linear-gradient(135deg,#fff9ef,#f7ead9); box-shadow:0 12px 28px rgba(167,80,9,.14); padding:12px; color:#2d2115; }
     .resume-guidance.show { display:block; }
     .resume-guidance-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
@@ -1322,7 +1315,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill.good { background:#dff1d9; color:#13552f; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#cfe1f5; color:#163f70; }
-    .pill.resume { background:#f3e5d2; color:#7a420a; cursor:pointer; }
+    .pill.resume { background:#f3e5d2; color:#7a420a; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
     .session-list .pill { padding:3px 7px; font-size:11px; }
@@ -1467,8 +1460,8 @@ INDEX_HTML = r"""<!doctype html>
     .privacy-card { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fffef7; cursor:pointer; }
     .privacy-card:has(input:checked) { border-color:#1f6f43; background:#eef8e8; box-shadow:0 8px 22px rgba(31,111,67,.12); }
     .privacy-card input { width:auto; margin-right:7px; }
-    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .privacy-links { justify-content:flex-start; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-summary,.fit-summary { flex-wrap:wrap; } .session-table-head,.session-row { grid-template-columns:46px minmax(180px,1fr) 122px 92px 92px 22px; } .session-table-head > div:nth-child(6), .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
-    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-head { flex-direction:column; } .session-summary { justify-content:flex-start; } .session-tools { align-items:stretch; } .session-search { max-width:none; width:100%; } .session-table-head,.session-row { grid-template-columns:44px minmax(0,1fr) 22px; } .session-table-head > div:nth-child(n+3):nth-child(-n+6), .session-date,.session-turns,.session-cmp,.session-fit { display:none; } .session-icon { width:36px; height:36px; font-size:16px; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
+    @media (max-width:1000px) { .hero-top, .hero-side, .bottom-nav { align-items:flex-start; flex-direction:column; } .hero-flow { grid-template-columns:1fr; } .support-card { align-items:flex-start; flex-wrap:wrap; } .stats { width:100%; min-width:0; } .privacy-note { text-align:left; max-width:none; white-space:normal; } .privacy-links { justify-content:flex-start; } .hero-progress { justify-content:flex-start; } .pick-grid { grid-template-columns:1fr; } .session-summary,.fit-summary { flex-wrap:wrap; } .session-table-head,.session-row { grid-template-columns:46px minmax(180px,1fr) 122px 92px 92px; } .session-table-head > div:nth-child(6), .session-fit { display:none; } .success-layout { grid-template-columns:1fr; } .success-detail-card { position:static; } .redact-review-grid { grid-template-columns:1fr; } }
+    @media (max-width:700px) { main { padding:14px 10px 34px; } .hero,.card,.bottom-nav { border-radius:20px; padding:22px; } .grid,.submit-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .composition-row { grid-template-columns:38px minmax(84px,1fr) minmax(64px,auto); gap:10px; } .composition-track { grid-column:2 / 4; } .steps { grid-template-columns:1fr; gap:10px; } .step-pill:after { display:none; } .session-head { flex-direction:column; } .session-summary { justify-content:flex-start; } .session-tools { align-items:stretch; } .session-search { max-width:none; width:100%; } .session-table-head,.session-row { grid-template-columns:44px minmax(0,1fr); } .session-table-head > div:nth-child(n+3):nth-child(-n+6), .session-date,.session-turns,.session-cmp,.session-fit { display:none; } .session-icon { width:36px; height:36px; font-size:16px; } .privacy-options { grid-template-columns:1fr; } .privacy-card { grid-template-columns:auto minmax(0,1fr); } .privacy-icon { display:none; } .selected-card-layout { flex-direction:column; } .compact-input-row { flex-wrap:wrap; } .compact-input-row input { flex-basis:100%; } .credit-scoreboard { grid-template-columns:1fr; } .success-hero { flex-direction:column; gap:16px; } .leaderboard-head,.leaderboard-row { grid-template-columns:42px minmax(0,1fr) 72px; } .leaderboard-head span:nth-child(4), .leaderboard-row > span:nth-child(4) { display:none; } .search-panel.compact-search .row { flex-wrap:wrap; } .actions { justify-content:flex-start; } }
   </style>
 </head>
 <body>
@@ -1552,7 +1545,7 @@ INDEX_HTML = r"""<!doctype html>
         </div>
         <div id="resumeGuidance" class="resume-guidance" aria-live="polite"></div>
         <div id="sessionList" class="session-list">
-          <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs.">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
+          <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs.">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div></div>
             <div class="empty-sessions">Scanning local Claude/Codex sessions...</div>
           </div>
           <div id="pager" class="session-pager">
@@ -1566,7 +1559,6 @@ INDEX_HTML = r"""<!doctype html>
         </div>
       </div>
     </div>
-    <div id="sessionMenu" class="session-menu" role="menu" aria-label="Session actions"></div>
   </section>
 
   <section id="step2" class="card step">
@@ -2729,7 +2721,6 @@ function sessionTableHead(){
     <div><button type="button" class="sort-header" data-sort-key="turns" aria-sort="${aria('turns')}">User turns${arrow('turns')}</button></div>
     <div><button type="button" class="sort-header" data-sort-key="compactions" aria-sort="${aria('compactions')}" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs.">Ctx cmp<span class="header-footnote">1</span>${arrow('compactions')}</button></div>
     <div><button type="button" class="sort-header" data-sort-key="fit" aria-sort="${aria('fit')}">Fit${arrow('fit')}</button></div>
-    <div></div>
   </div>`;
 }
 function fitLabel(value){
@@ -2957,59 +2948,6 @@ function openResumeFolder(session, resumeInfo){
     .then(() => status('discoverStatus', 'Project folder opened. The highlighted instruction shows the /resume step.', 'ok'))
     .catch(err => status('discoverStatus', 'ERROR: '+friendlyRequestError(err, 'open project folder')));
 }
-function hideSessionMenu(){
-  const menu = $('sessionMenu');
-  if(menu) menu.classList.remove('show');
-}
-function showSessionMenu(event, session, donationInfo){
-  const menu = $('sessionMenu');
-  const resumeInfo = sessionResumeInfo(session);
-  const hasResumeActions = !!resumeInfo.command && sessionNeedsMoreTurns(session);
-  const hasSupportActions = !!(donationInfo?.supportId && donationInfo?.donatedBefore);
-  if(!menu || (!hasResumeActions && !hasSupportActions)) return;
-  event.preventDefault();
-  event.stopPropagation();
-  if(hasResumeActions) setResumeGuidance(session, resumeInfo, 'selected');
-  else clearResumeGuidance();
-  const copyResumeLabel = resumeInfo.exact ? 'Copy add-turns command' : 'Copy /resume steps';
-  menu.innerHTML = [
-    hasResumeActions ? `<button type="button" role="menuitem" data-session-action="copy-resume">${copyResumeLabel}</button>` : '',
-    hasResumeActions && resumeInfo.dir ? '<button type="button" role="menuitem" data-session-action="open-resume">Open project folder</button>' : '',
-    hasSupportActions ? '<button type="button" role="menuitem" data-session-action="update">Update info</button>' : '',
-    hasSupportActions ? '<button type="button" role="menuitem" data-session-action="problem" class="danger">Report problem</button>' : '',
-  ].filter(Boolean).join('');
-  const copyResume = menu.querySelector('[data-session-action="copy-resume"]');
-  if(copyResume) copyResume.onclick = e => {
-    e.stopPropagation();
-    hideSessionMenu();
-    copyResumeSteps(session, resumeInfo);
-  };
-  const openResume = menu.querySelector('[data-session-action="open-resume"]');
-  if(openResume) openResume.onclick = e => {
-    e.stopPropagation();
-    hideSessionMenu();
-    openResumeFolder(session, resumeInfo);
-  };
-  const update = menu.querySelector('[data-session-action="update"]');
-  if(update) update.onclick = e => {
-    e.stopPropagation();
-    hideSessionMenu();
-    beginMetadataUpdate(session, donationInfo.supportId);
-  };
-  const problem = menu.querySelector('[data-session-action="problem"]');
-  if(problem) problem.onclick = e => {
-    e.stopPropagation();
-    hideSessionMenu();
-    beginSupportRequest(session, donationInfo.supportId);
-  };
-  menu.classList.add('show');
-  const rect = menu.getBoundingClientRect();
-  const margin = 10;
-  const left = Math.min(event.clientX, window.innerWidth - rect.width - margin);
-  const top = Math.min(event.clientY, window.innerHeight - rect.height - margin);
-  menu.style.left = `${Math.max(margin, left)}px`;
-  menu.style.top = `${Math.max(margin, top)}px`;
-}
 function renderSessions(){
   renderResumeGuidance();
   const list = $('sessionList');
@@ -3077,17 +3015,14 @@ function renderSessions(){
     const resumeInfo = sessionResumeInfo(s);
     const hasResumeActions = !!resumeInfo.command && sessionNeedsMoreTurns(s);
     const resumePillLabel = 'add turns';
-    const resumePillTitle = resumeInfo.exact ? 'Copy the command to add more turns to this session' : 'Open or copy the project folder, then use /resume to add turns';
+    const resumePillTitle = 'Needs more turns before donation';
     const resumePill = hasResumeActions
-      ? `<span class="pill resume" data-session-action="resume" title="${resumePillTitle}">${resumePillLabel}</span>`
+      ? `<span class="pill resume" title="${resumePillTitle}">${resumePillLabel}</span>`
       : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     if(resumeGuidance?.key === resumeKey) row.classList.add('resume-focus-row');
     if(donationInfo.donatedBefore) row.classList.add('donated-history-row');
     const currentFit = fit(s);
-    const hasSupportActions = donationInfo.supportId && donationInfo.donatedBefore;
-    const hasMenuActions = hasSupportActions || hasResumeActions;
-    const actionTitle = hasResumeActions ? 'Actions: resume this session from its project folder' : 'Actions: update info or report problem';
     const chipLine = [statusPill, supportPill, resumePill].filter(Boolean).join(' ');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
@@ -3099,7 +3034,6 @@ function renderSessions(){
       <div class="session-turns"><div class="session-num">${compactNumber(s.turns)}</div></div>
       <div class="session-cmp"><div class="session-num">${s.compactions || 0}</div></div>
       <div class="session-fit"><span class="pill ${currentFit}">${currentFit === 'improve' ? '<span class="fit-arrow">&uarr;</span>' : '<span class="fit-star">&#9733;</span>'}${fitLabel(currentFit)}</span></div>
-      <button type="button" class="session-chevron" aria-label="${hasMenuActions ? 'Open session actions' : 'Session details'}" ${hasMenuActions ? `title="${actionTitle}"` : 'disabled'}>&rsaquo;</button>
     `;
     row.querySelectorAll('[data-copy-submission]').forEach(el => {
       el.onclick = event => {
@@ -3110,12 +3044,6 @@ function renderSessions(){
         status('discoverStatus', `Copied maintainer reset ID: ${id}`);
       };
     });
-    row.querySelectorAll('[data-session-action="resume"]').forEach(el => {
-      el.onclick = event => showSessionMenu(event, s, donationInfo);
-    });
-    row.oncontextmenu = event => showSessionMenu(event, s, donationInfo);
-    const chevron = row.querySelector('.session-chevron');
-    if(chevron && hasMenuActions) chevron.onclick = event => showSessionMenu(event, s, donationInfo);
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     row.onclick = () => {
       if(!ready){
@@ -3230,7 +3158,6 @@ $('sessionSearch').oninput = () => {
   renderSessions();
 };
 document.addEventListener('click', event => {
-  hideSessionMenu();
   if(!resumeGuidance) return;
   const target = event.target;
   if(target?.closest?.('#resumeGuidance')) return;
@@ -3238,9 +3165,6 @@ document.addEventListener('click', event => {
   if(row && row.dataset.sessionKey === resumeGuidance.key) return;
   clearResumeGuidance({rerender:true});
 });
-document.addEventListener('keydown', event => { if(event.key === 'Escape') hideSessionMenu(); });
-window.addEventListener('resize', hideSessionMenu);
-window.addEventListener('scroll', hideSessionMenu, true);
 $('safeConfirm').onchange = refreshButtons;
 $('reviewConfirm').onchange = refreshButtons;
 document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
