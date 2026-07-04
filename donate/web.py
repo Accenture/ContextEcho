@@ -1274,7 +1274,7 @@ INDEX_HTML = r"""<!doctype html>
     .session-row.resume-focus-row .pill.resume { background:#a75009; color:white; box-shadow:0 0 0 3px #f3d7b5; }
     .session-row.donated-history-row { background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
     .session-row.donated-history-row:hover { background:#e1eadb; }
-    .session-row.donated-row { cursor:not-allowed; background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
+    .session-row.donated-row { cursor:pointer; background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
     .session-row.donated-row:hover { background:#e1eadb; }
     .session-row.improve-row { cursor:not-allowed; background:#fff9f0; opacity:.82; }
     .session-row.improve-row:hover { background:#fff9f0; }
@@ -1693,7 +1693,8 @@ function localContributorRecord(s){
     creditName: s?.local_credit_name || record?.credit_name || '',
     email: s?.local_contributor_email || record?.contributor_email || '',
     institute: s?.local_institute || record?.institute || '',
-    publicAnonymous: !!(s?.local_public_anonymous || record?.public_anonymous)
+    publicAnonymous: !!(s?.local_public_anonymous || record?.public_anonymous),
+    submittedAt: s?.local_submitted_at || record?.submitted_at || ''
   };
 }
 function prefillContributorFields(session, overwrite=false){
@@ -1726,14 +1727,18 @@ function resetMetadataUpdateUi(){
   $('metadataBackBtn').style.display = 'none';
 }
 function localDonationInfo(s){
-  const relayRecordId = normalizeSubmissionId(s?.relay_submission_id || '');
+  const pathKey = sessionPathKey(s);
+  const record = pathKey ? (donatedRecords[pathKey] || {}) : {};
+  const relayRecordId = normalizeSubmissionId(s?.relay_submission_id || record?.submission_id || record?.submission || '');
   const supportId = relayRecordId.startsWith('submission-') ? relayRecordId : '';
-  const previousTurns = Number(s?.donated_turns || 0);
-  const newTurns = Math.max(0, Number(s?.new_turns || 0));
-  const updateReady = !!s?.update_ready;
-  const exactDonated = !!s?.donated;
-  const donatedBefore = exactDonated || !!s?.donated_before;
-  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId:''};
+  const previousTurns = Number(s?.donated_turns || record?.turns || 0);
+  const currentTurns = Number(s?.turns || 0);
+  const cachedNewTurns = Number(s?.new_turns || 0);
+  const newTurns = Math.max(0, cachedNewTurns || (previousTurns ? currentTurns - previousTurns : 0));
+  const updateReady = !!s?.update_ready || (!!previousTurns && session_update_ready(currentTurns, previousTurns));
+  const exactDonated = !!(s?.donated || donatedPaths.has(sessionLocalKey(s)));
+  const donatedBefore = exactDonated || !!s?.donated_before || !!previousTurns || !!record?.submission_id || !!record?.submitted_at;
+  return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId:pathKey};
 }
 function beginMetadataUpdate(session, submissionId){
   metadataUpdateComplete = false;
@@ -2212,6 +2217,7 @@ function mergeRedactionStats(previousStats, nextStats){
 function renderSelectedCard(s, idx){
   const donationInfo = localDonationInfo(s);
   const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
+  const contributor = localContributorRecord(s);
   const donationStatus = donationInfo.updateReady
     ? `<span class="pill best">update ready · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns</span>`
     : (donationInfo.donatedBefore
@@ -2220,6 +2226,26 @@ function renderSelectedCard(s, idx){
   const donationPills = (donationStatus || donationInfo.supportId)
     ? `<div class="session-chip-row">${donationStatus}${donationInfo.supportId ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>` : ''}</div>`
     : '';
+  const publicCredit = contributor.publicAnonymous
+    ? 'Anonymous donor'
+    : (contributor.creditName || 'Not available locally');
+  const donationDetails = donationInfo.donatedBefore ? `
+        <div class="metrics donation-info">
+          <span class="metric">Public leaderboard: <strong>${escapeHtml(publicCredit)}</strong></span>
+          <span class="metric">Submitted name: <strong>${escapeHtml(contributor.creditName || 'Not available locally')}</strong></span>
+          <span class="metric">Email: <strong>${escapeHtml(contributor.email || 'Not available locally')}</strong></span>
+          <span class="metric">Institute: <strong>${escapeHtml(contributor.institute || 'Not available locally')}</strong></span>
+          ${contributor.submittedAt ? `<span class="metric">Submitted: <strong>${escapeHtml(contributor.submittedAt.slice(0, 10))}</strong></span>` : ''}
+          ${donationInfo.previousTurns ? `<span class="metric">Donated turns: <strong>${compactNumber(donationInfo.previousTurns)}</strong></span>` : ''}
+        </div>
+        <div class="hint">${contributor.publicAnonymous ? 'Public pages hide your name; maintainers can still use the submitted name, email, and institute for review and support.' : 'This is the donation identity saved locally or returned by the maintainer relay.'}</div>
+      ` : '';
+  const donationActions = donationInfo.supportId && donationInfo.donatedBefore ? `
+        <div class="row selected-donation-actions">
+          <button type="button" class="secondary" id="selectedUpdateInfo">Update info</button>
+          <button type="button" class="secondary" id="selectedReportIssue">Report issue</button>
+        </div>
+      ` : '';
   $('selectedCard').innerHTML = `
     <div class="selected-card-layout">
       <div class="selected-card-main">
@@ -2228,6 +2254,7 @@ function renderSelectedCard(s, idx){
           <span class="pill ${fit(s)}">${fit(s).charAt(0).toUpperCase() + fit(s).slice(1)}</span>
         </div>
         ${donationPills}
+        ${donationDetails}
         <div class="metrics">
           <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
           <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
@@ -2237,12 +2264,15 @@ function renderSelectedCard(s, idx){
           <span class="metric">Last active: <strong>${escapeHtml(s.last_active || s.modified || '?')}</strong></span>
         </div>
         <div class="hint">${escapeHtml(compactionNote(s))}</div>
+        ${donationActions}
       </div>
       <div class="selected-card-action"><button class="secondary" id="revealSourceFile">Reveal Source File</button></div>
     </div>
   `;
   $('selectedCard').classList.add('show');
   $('revealSourceFile').onclick = () => post('/api/open_path', {path:s.path, reveal:true}).catch(e => status('redactStatus','ERROR: '+e.message));
+  if($('selectedUpdateInfo')) $('selectedUpdateInfo').onclick = () => beginMetadataUpdate(s, donationInfo.supportId);
+  if($('selectedReportIssue')) $('selectedReportIssue').onclick = () => beginSupportRequest(s, donationInfo.supportId);
 }
 function renderSearchResult(data){
   const hits = data.results || [];
@@ -3068,7 +3098,7 @@ function renderSessions(){
         beginSupportRequest(s, donationInfo.supportId);
       };
     });
-    if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
+    if (selected && selected.path === s.path) row.classList.add('selected');
     row.onclick = () => {
       if(!ready){
         clearSelectedSession();
@@ -3082,8 +3112,14 @@ function renderSessions(){
       }
       clearResumeGuidance();
       if(donated){
-        clearSelectedSession();
-        status('discoverStatus', donationInfo.newTurns ? `This session was donated before and has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'This session is already marked donated. Click the ID pill to copy the maintainer reset ID if support is needed.');
+        document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
+        row.classList.add('selected');
+        selected = s;
+        redacted = null; appliedScrubTerms = []; redactionCache = new Map(); submitted = true;
+        renderSelectedCard(s, idx);
+        status('redactStatus', '');
+        status('discoverStatus', donationInfo.newTurns ? `This donated session has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'Showing saved donation info. Use Update info or Report issue if support is needed.');
+        refreshButtons();
         return;
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
