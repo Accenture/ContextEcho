@@ -1686,6 +1686,12 @@ function sessionPathKey(s){ return String(s?.path || ''); }
 function normalizeSubmissionId(value){
   return String(value || '').replace(/^pending\//, '').replace(/\/$/, '');
 }
+function sessionUpdateReady(currentTurns, previousTurns){
+  const previous = Number(previousTurns || 0);
+  const delta = Math.max(0, Number(currentTurns || 0) - previous);
+  const growth = previous ? (delta / previous) : (delta ? 1 : 0);
+  return !!delta && (delta >= 50 || growth >= 0.20);
+}
 function localContributorRecord(s){
   const pathKey = sessionPathKey(s);
   const record = pathKey ? donatedRecords[pathKey] : {};
@@ -1735,7 +1741,7 @@ function localDonationInfo(s){
   const currentTurns = Number(s?.turns || 0);
   const cachedNewTurns = Number(s?.new_turns || 0);
   const newTurns = Math.max(0, cachedNewTurns || (previousTurns ? currentTurns - previousTurns : 0));
-  const updateReady = !!s?.update_ready || (!!previousTurns && session_update_ready(currentTurns, previousTurns));
+  const updateReady = !!s?.update_ready || (!!previousTurns && sessionUpdateReady(currentTurns, previousTurns));
   const exactDonated = !!(s?.donated || donatedPaths.has(sessionLocalKey(s)));
   const donatedBefore = exactDonated || !!s?.donated_before || !!previousTurns || !!record?.submission_id || !!record?.submitted_at;
   return {exactDonated, donatedBefore, previousTurns, newTurns, updateReady, supportId, localRecordId:pathKey};
