@@ -1892,6 +1892,7 @@ function hasDetectSecretsFailure(data){
   return Array.isArray(blocking.detect_secrets) && blocking.detect_secrets.length > 0;
 }
 function goStep(n){
+  clearResumeGuidance();
   if(n !== 3) resetMetadataUpdateUi();
   const pct = Math.round((n / 3) * 100);
   for(let i=1;i<=3;i++){
@@ -2801,6 +2802,7 @@ function bindSessionSortHeaders(){
         ? {key, dir: sessionSort.dir === 'desc' ? 'asc' : 'desc'}
         : {key, dir: defaultDir};
       page = 0;
+      clearResumeGuidance();
       renderSessions();
     };
   });
@@ -2819,6 +2821,7 @@ function bindSessionFilterControls(){
       const nextFilter = btn.dataset.sessionFilter || 'all';
       sessionStatusFilter = sessionStatusFilter === nextFilter && nextFilter !== 'all' ? 'all' : nextFilter;
       page = 0;
+      clearResumeGuidance();
       renderSessions();
     };
   });
@@ -2894,6 +2897,13 @@ function renderResumeGuidance(){
   const open = el.querySelector('[data-resume-action="open"]');
   if(open) open.onclick = () => openResumeFolder(resumeGuidance.session, resumeGuidance);
 }
+function clearResumeGuidance({rerender=false} = {}){
+  if(!resumeGuidance) return;
+  resumeGuidance = null;
+  document.querySelectorAll('.resume-focus-row').forEach(x=>x.classList.remove('resume-focus-row'));
+  renderResumeGuidance();
+  if(rerender) renderSessions();
+}
 function setResumeGuidance(session, resumeInfo, action='selected'){
   if(!resumeInfo?.command && !resumeInfo?.dir) return;
   resumeGuidance = {
@@ -2941,6 +2951,7 @@ function showSessionMenu(event, session, donationInfo){
   event.preventDefault();
   event.stopPropagation();
   if(hasResumeActions) setResumeGuidance(session, resumeInfo, 'selected');
+  else clearResumeGuidance();
   const copyResumeLabel = resumeInfo.exact ? 'Copy add-turns command' : 'Copy /resume steps';
   menu.innerHTML = [
     hasResumeActions ? `<button type="button" role="menuitem" data-session-action="copy-resume">${copyResumeLabel}</button>` : '',
@@ -3074,6 +3085,7 @@ function renderSessions(){
     row.querySelectorAll('[data-copy-submission]').forEach(el => {
       el.onclick = event => {
         event.stopPropagation();
+        clearResumeGuidance({rerender:true});
         const id = el.dataset.copySubmission || '';
         navigator.clipboard?.writeText(id).catch(()=>{});
         status('discoverStatus', `Copied maintainer reset ID: ${id}`);
@@ -3096,6 +3108,7 @@ function renderSessions(){
         }
         return;
       }
+      clearResumeGuidance();
       if(donated){
         status('discoverStatus', donationInfo.newTurns ? `This session was donated before and has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'This session is already marked donated. Click the ID pill to copy the maintainer reset ID if support is needed.');
         return;
@@ -3127,6 +3140,7 @@ function renderSessions(){
 }
 async function discoverSessions(){
   if(discoveryRunning) return;
+  clearResumeGuidance();
   discoveryRunning = true;
   $('discoverBtn').disabled = true;
   status('discoverStatus','Scanning local session logs. This can take a minute for large histories...');
@@ -3184,14 +3198,23 @@ async function discoverSessions(){
   }
 }
 $('discoverBtn').onclick = () => discoverSessions();
-$('prevPage').onclick = () => { if(page > 0){ page--; renderSessions(); } };
-$('nextPage').onclick = () => { if((page + 1) * pageSize < sortedSessions().length){ page++; renderSessions(); } };
+$('prevPage').onclick = () => { if(page > 0){ page--; clearResumeGuidance(); renderSessions(); } };
+$('nextPage').onclick = () => { if((page + 1) * pageSize < sortedSessions().length){ page++; clearResumeGuidance(); renderSessions(); } };
 $('sessionSearch').oninput = () => {
   sessionSearchQuery = $('sessionSearch').value || '';
   page = 0;
+  clearResumeGuidance();
   renderSessions();
 };
-document.addEventListener('click', hideSessionMenu);
+document.addEventListener('click', event => {
+  hideSessionMenu();
+  if(!resumeGuidance) return;
+  const target = event.target;
+  if(target?.closest?.('#resumeGuidance')) return;
+  const row = target?.closest?.('.session-row');
+  if(row && row.dataset.sessionKey === resumeGuidance.key) return;
+  clearResumeGuidance({rerender:true});
+});
 document.addEventListener('keydown', event => { if(event.key === 'Escape') hideSessionMenu(); });
 window.addEventListener('resize', hideSessionMenu);
 window.addEventListener('scroll', hideSessionMenu, true);
