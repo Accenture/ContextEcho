@@ -2898,14 +2898,21 @@ function renderResumeGuidance(){
     </div>
   `;
   el.classList.add('show');
-  el.querySelector('[data-resume-action="dismiss"]').onclick = () => {
+  el.querySelector('[data-resume-action="dismiss"]').onclick = event => {
+    event.stopPropagation();
     resumeGuidance = null;
     renderResumeGuidance();
     renderSessions();
   };
-  el.querySelector('[data-resume-action="copy"]').onclick = () => copyResumeSteps(resumeGuidance.session, resumeGuidance);
+  el.querySelector('[data-resume-action="copy"]').onclick = event => {
+    event.stopPropagation();
+    copyResumeSteps(resumeGuidance.session, resumeGuidance);
+  };
   const open = el.querySelector('[data-resume-action="open"]');
-  if(open) open.onclick = () => openResumeFolder(resumeGuidance.session, resumeGuidance);
+  if(open) open.onclick = event => {
+    event.stopPropagation();
+    openResumeFolder(resumeGuidance.session, resumeGuidance);
+  };
 }
 function clearResumeGuidance({rerender=false} = {}){
   if(!resumeGuidance) return;

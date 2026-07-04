@@ -160,6 +160,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("Project folder: <code>${escapeHtml(resumeGuidance.dir)}</code>", INDEX_HTML)
         self.assertIn("add turns", INDEX_HTML)
         self.assertIn("Copy add-turns command", INDEX_HTML)
+        self.assertIn("event.stopPropagation();\n    copyResumeSteps(resumeGuidance.session, resumeGuidance);", INDEX_HTML)
+        self.assertIn("event.stopPropagation();\n    openResumeFolder(resumeGuidance.session, resumeGuidance);", INDEX_HTML)
         self.assertIn("Add-turns command copied. See the highlighted instruction above the session list.", INDEX_HTML)
         self.assertIn("Project folder opened. The highlighted instruction shows the /resume step.", INDEX_HTML)
         self.assertIn("setResumeGuidance(s, resumeInfo, 'selected')", INDEX_HTML)
