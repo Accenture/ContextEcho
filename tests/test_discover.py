@@ -88,7 +88,7 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["resume_dir"], "/Users/alice/Documents/work/agent-project")
         self.assertEqual(info["resume_session_id"], codex_id)
         self.assertEqual(info["resume_command"], f"codex resume {codex_id}")
-        self.assertRegex(info["session_label"], r"^work-agent-project · [0-9a-f]{4}$")
+        self.assertEqual(info["session_label"], f"work-agent-project · {codex_id.split('-', 1)[0]}")
         self.assertTrue(info["conversation_fingerprint"].startswith("conv-"))
         self.assertEqual(info["fingerprint_version"], "structure-v1")
 
@@ -192,7 +192,7 @@ class DiscoverTests(unittest.TestCase):
         self.assertEqual(info["resume_dir"], str(project_dir))
         self.assertEqual(info["resume_session_id"], claude_id)
         self.assertEqual(info["resume_command"], f"claude --resume {claude_id}")
-        self.assertRegex(info["session_label"], r"^client-safe-repo · [0-9a-f]{4}$")
+        self.assertEqual(info["session_label"], f"client-safe-repo · {claude_id.split('-', 1)[0]}")
 
     def test_same_folder_sessions_have_distinct_display_labels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

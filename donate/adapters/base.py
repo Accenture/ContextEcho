@@ -238,10 +238,12 @@ def conversation_fingerprint(path: Path, max_rows: int = FINGERPRINT_ROWS) -> st
     return f"conv-{h.hexdigest()[:16]}"
 
 
-def session_label(project: str, fingerprint: str, path: Path | None = None) -> str:
+def session_label(project: str, fingerprint: str, path: Path | None = None, resume_session_id: str = "") -> str:
     """Display label that distinguishes multiple sessions from one project."""
     suffix = ""
-    if path is not None and path.name:
+    if resume_session_id:
+        suffix = resume_session_id.split("-", 1)[0].lower()
+    if not suffix and path is not None and path.name:
         suffix = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[:4]
     if not suffix:
         suffix = (fingerprint or "").replace("conv-", "")[:4]

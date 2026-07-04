@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Iterable
 
-from donate.adapters.base import GenericJsonlAdapter, first_path_hint, is_redacted_artifact, iter_jsonl
+from donate.adapters.base import GenericJsonlAdapter, first_path_hint, is_redacted_artifact, iter_jsonl, session_label
 
 
 UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
@@ -43,6 +43,12 @@ class CodexCliAdapter(GenericJsonlAdapter):
         if resume_id:
             info["resume_session_id"] = resume_id
             info["resume_command"] = f"codex resume {resume_id}"
+            info["session_label"] = session_label(
+                str(info.get("project") or ""),
+                str(info.get("conversation_fingerprint") or ""),
+                path,
+                resume_id,
+            )
         for _, obj in iter_jsonl(path):
             resume_dir = first_path_hint(obj)
             if resume_dir:

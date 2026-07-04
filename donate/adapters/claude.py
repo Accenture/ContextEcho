@@ -87,9 +87,14 @@ class ClaudeCodeAdapter(GenericJsonlAdapter):
         info = super().inspect(path)
         info["agent"] = self.agent
         info["project"] = safe_project_name_from_path(path.parent.name)
-        info["session_label"] = session_label(info["project"], str(info.get("conversation_fingerprint") or ""), path)
-        info["resume_dir"] = first_resume_dir_from_records(path) or resume_dir_from_project_slug(path.parent.name)
         resume_id = resume_session_id_from_path(path)
+        info["session_label"] = session_label(
+            info["project"],
+            str(info.get("conversation_fingerprint") or ""),
+            path,
+            resume_id,
+        )
+        info["resume_dir"] = first_resume_dir_from_records(path) or resume_dir_from_project_slug(path.parent.name)
         if resume_id:
             info["resume_session_id"] = resume_id
             info["resume_command"] = f"claude --resume {resume_id}"
