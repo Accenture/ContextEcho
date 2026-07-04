@@ -90,6 +90,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("scrollToSubmitResult", INDEX_HTML)
         self.assertIn("scrollIntoView({behavior:'smooth', block:'start'})", INDEX_HTML)
         self.assertIn("pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicCreditName)", INDEX_HTML)
+        self.assertNotIn("<div class=\"leaderboard-preview\">\n          ${leaderboardPreviewHtml(model)}", INDEX_HTML)
+        self.assertIn("You already reviewed the leaderboard preview before submitting", INDEX_HTML)
 
     def test_session_discovery_runs_on_page_load(self):
         self.assertIn("async function discoverSessions()", INDEX_HTML)

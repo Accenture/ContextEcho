@@ -2528,10 +2528,7 @@ function renderSubmitResult(data){
           <div class="credit-card"><div class="credit-icon">◇</div><div><strong>${highValue ? '+1' : '+0'}</strong><span>${highValue ? 'High-value session bonus' : 'High-value bonus pending'}</span></div></div>
           <div class="credit-card"><div class="credit-icon">▣</div><div><strong>+1</strong><span>Possible coverage / usability bonus</span></div></div>
         </div>
-        <div class="leader-note"><span><strong>Pending score: ${localPendingRange} points across ${localPendingSessions} pending session${localPendingSessions === 1 ? '' : 's'}.</strong> Accepted donations appear on the contributor leaderboard and release acknowledgments.</span></div>
-        <div class="leaderboard-preview">
-          ${leaderboardPreviewHtml(model)}
-        </div>
+        <div class="leader-note"><span><strong>Pending score: ${localPendingRange} points across ${localPendingSessions} pending session${localPendingSessions === 1 ? '' : 's'}.</strong> You already reviewed the leaderboard preview before submitting; accepted donations appear on the contributor leaderboard and release acknowledgments.</span></div>
         ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">Email opens your mail app with the receipt details; no email is sent by the local tool.</div></div>` : ''}
       </div>
       <aside class="success-detail-card">
