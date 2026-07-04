@@ -1913,10 +1913,10 @@ function refreshButtons(){
   if(activeOperation) return;
   const selectedInfo = selected ? localDonationInfo(selected) : null;
   const selectedDonated = !!(selectedInfo && (selectedInfo.exactDonated || (selectedInfo.donatedBefore && !selectedInfo.updateReady)));
-  const selectedImprove = selected ? fit(selected) === 'improve' : false;
+  const selectedActionable = !!(selected && sessionIsActionableReady(selected));
   const canSubmitArtifact = !!(redacted && redacted.verify_passed) && !submitted && !selectedDonated && !metadataUpdateSubmissionId && !metadataUpdateComplete && !supportRequestSubmissionId && !supportRequestComplete;
   const contributorComplete = contributorFieldsComplete();
-  $('pickNext').disabled = !selected || selectedDonated || selectedImprove;
+  $('pickNext').disabled = !selectedActionable;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
@@ -2588,6 +2588,24 @@ function resetSessionArtifacts(){
   ['redactProgress','submitProgress','searchProgress'].forEach(id => setBusy(id, false));
   refreshButtons();
 }
+function clearSelectedSession(){
+  if(!selected && !redacted && !submitted) return;
+  selected = null;
+  redacted = null;
+  appliedScrubTerms = [];
+  redactionCache = new Map();
+  submitted = false;
+  document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
+  $('selectedCard').innerHTML = '';
+  $('selectedCard').classList.remove('show');
+  $('redactResult').classList.remove('show');
+  $('searchPanel').classList.remove('show');
+  $('searchResult').classList.remove('show');
+  $('reviewConfirm').checked = false;
+  $('safeConfirm').checked = false;
+  status('redactStatus', '');
+  refreshButtons();
+}
 function setProgress(pct){
   const clamped = Math.max(0, Math.min(100, pct));
   $('discoverProgress').style.display = 'block';
@@ -2822,6 +2840,7 @@ function bindSessionFilterControls(){
       sessionStatusFilter = sessionStatusFilter === nextFilter && nextFilter !== 'all' ? 'all' : nextFilter;
       page = 0;
       clearResumeGuidance();
+      clearSelectedSession();
       renderSessions();
     };
   });
@@ -3100,6 +3119,7 @@ function renderSessions(){
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     row.onclick = () => {
       if(!ready){
+        clearSelectedSession();
         if(hasResumeActions){
           setResumeGuidance(s, resumeInfo, 'selected');
           status('discoverStatus', '');
@@ -3110,6 +3130,7 @@ function renderSessions(){
       }
       clearResumeGuidance();
       if(donated){
+        clearSelectedSession();
         status('discoverStatus', donationInfo.newTurns ? `This session was donated before and has ${compactNumber(donationInfo.newTurns)} new turns, but it is below the update threshold. Keep working until it has at least 50 new turns or 20% growth.` : 'This session is already marked donated. Click the ID pill to copy the maintainer reset ID if support is needed.');
         return;
       }
@@ -3141,6 +3162,7 @@ function renderSessions(){
 async function discoverSessions(){
   if(discoveryRunning) return;
   clearResumeGuidance();
+  clearSelectedSession();
   discoveryRunning = true;
   $('discoverBtn').disabled = true;
   status('discoverStatus','Scanning local session logs. This can take a minute for large histories...');
@@ -3198,12 +3220,13 @@ async function discoverSessions(){
   }
 }
 $('discoverBtn').onclick = () => discoverSessions();
-$('prevPage').onclick = () => { if(page > 0){ page--; clearResumeGuidance(); renderSessions(); } };
-$('nextPage').onclick = () => { if((page + 1) * pageSize < sortedSessions().length){ page++; clearResumeGuidance(); renderSessions(); } };
+$('prevPage').onclick = () => { if(page > 0){ page--; clearResumeGuidance(); clearSelectedSession(); renderSessions(); } };
+$('nextPage').onclick = () => { if((page + 1) * pageSize < sortedSessions().length){ page++; clearResumeGuidance(); clearSelectedSession(); renderSessions(); } };
 $('sessionSearch').oninput = () => {
   sessionSearchQuery = $('sessionSearch').value || '';
   page = 0;
   clearResumeGuidance();
+  clearSelectedSession();
   renderSessions();
 };
 document.addEventListener('click', event => {
