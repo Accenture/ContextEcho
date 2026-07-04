@@ -1269,9 +1269,9 @@ INDEX_HTML = r"""<!doctype html>
     .session-row:last-child { border-bottom:0; }
     .session-row:hover, .session-row.selected { background:#f4f8ef; }
     .session-row.selected { box-shadow:inset 4px 0 0 var(--accent); }
-    .session-row.resume-focus-row { opacity:1; background:#f1fbed; box-shadow:inset 5px 0 0 #17713f; }
-    .session-row.resume-focus-row:hover { background:#eef8ea; }
-    .session-row.resume-focus-row .pill.resume { background:#17713f; color:white; box-shadow:0 0 0 3px #c8e9c5; }
+    .session-row.resume-focus-row { opacity:1; background:#fff6e8; box-shadow:inset 5px 0 0 #a75009; }
+    .session-row.resume-focus-row:hover { background:#fff2dc; }
+    .session-row.resume-focus-row .pill.resume { background:#a75009; color:white; box-shadow:0 0 0 3px #f3d7b5; }
     .session-row.donated-history-row { background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
     .session-row.donated-history-row:hover { background:#e1eadb; }
     .session-row.donated-row { cursor:not-allowed; background:#e7eee2; box-shadow:inset 5px 0 0 #7f9a7a; }
@@ -1301,19 +1301,19 @@ INDEX_HTML = r"""<!doctype html>
     .session-menu button { display:block; width:100%; border:0; border-radius:8px; background:transparent; box-shadow:none; color:#14241d; text-align:left; padding:9px 10px; font-size:13px; font-weight:900; }
     .session-menu button:hover { background:#eaf4e5; transform:none; }
     .session-menu button.danger { color:#7a2c1f; }
-    .resume-guidance { display:none; margin:-2px 0 12px; border:2px solid #17713f; border-radius:12px; background:linear-gradient(135deg,#f2fbef,#e7f5e2); box-shadow:0 12px 28px rgba(23,113,63,.14); padding:12px; color:#10251b; }
+    .resume-guidance { display:none; margin:-2px 0 12px; border:2px solid #a75009; border-radius:12px; background:linear-gradient(135deg,#fff9ef,#f7ead9); box-shadow:0 12px 28px rgba(167,80,9,.14); padding:12px; color:#2d2115; }
     .resume-guidance.show { display:block; }
     .resume-guidance-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
-    .resume-guidance-title { font-size:15px; font-weight:950; color:#0f5c34; }
+    .resume-guidance-title { font-size:15px; font-weight:950; color:#7a420a; }
     .resume-guidance-subtitle { margin-top:2px; color:#4f5e56; font-size:12px; font-weight:750; overflow-wrap:anywhere; }
     .resume-guidance-body { margin-top:9px; color:#21342b; font-size:13px; font-weight:800; line-height:1.35; }
-    .resume-guidance-body code, .resume-guidance-path code { background:#fffef8; color:#0f5c34; border:1px solid #cfe6c9; border-radius:6px; padding:1px 5px; font-weight:950; }
+    .resume-guidance-body code, .resume-guidance-path code { background:#fffef8; color:#7a420a; border:1px solid #efd5b2; border-radius:6px; padding:1px 5px; font-weight:950; }
     .resume-guidance-path { margin-top:8px; color:#52605a; font-size:12px; font-weight:800; overflow-wrap:anywhere; }
     .resume-guidance-command { margin:8px 0 0; border-radius:8px; background:#10251b; color:#f6fff2; padding:10px; font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
     .resume-guidance-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
     .resume-guidance-actions button { padding:8px 11px; font-size:12px; }
     .resume-guidance-dismiss { background:transparent; color:#52605a; box-shadow:none; padding:6px 8px; min-width:0; }
-    .resume-guidance-dismiss:hover { background:#dff1d9; transform:none; }
+    .resume-guidance-dismiss:hover { background:#f3e5d2; transform:none; }
     .empty-sessions { padding:26px; text-align:center; color:var(--muted); }
     .next-button { min-width:170px; font-size:16px; }
     .pick-redact-row .next-button { background:var(--accent); color:white; box-shadow:0 10px 20px rgba(23,113,63,.22); }
@@ -1322,7 +1322,7 @@ INDEX_HTML = r"""<!doctype html>
     .pill.good { background:#dff1d9; color:#13552f; }
     .pill.improve { background:#f3e5d2; color:#7a420a; }
     .pill.donated { background:#cfe1f5; color:#163f70; }
-    .pill.resume { background:#eef3e9; color:#13552f; cursor:pointer; }
+    .pill.resume { background:#f3e5d2; color:#7a420a; cursor:pointer; }
     .pill.support-id { background:#eef3e9; color:#45524b; cursor:pointer; }
     .pill.update-info { background:#eaf4e5; color:#13552f; cursor:pointer; }
     .session-list .pill { padding:3px 7px; font-size:11px; }
@@ -2854,10 +2854,10 @@ function renderResumeGuidance(){
   }
   const stateText = resumeGuidance.action === 'opened'
     ? 'Project folder opened'
-    : (resumeGuidance.action === 'copied' ? 'Resume command copied' : 'Resume this session in your agent');
+    : (resumeGuidance.action === 'copied' ? 'Add-turns command copied' : 'Not ready yet: add turns first');
   const body = resumeGuidance.exact
-    ? 'Run this exact resume command to continue this specific session.'
-    : 'Use this project folder, start the agent, then type <code>/resume</code> and choose this session.';
+    ? 'This session needs 50+ turns before donation. Copy the exact command below, keep chatting in the agent, then come back and donate.'
+    : 'This session needs 50+ turns before donation. Use this project folder, start the agent, type <code>/resume</code>, keep chatting, then come back and donate.';
   const sessionIdLine = resumeGuidance.resumeId
     ? `<div class="resume-guidance-path">Session ID: <code>${escapeHtml(resumeGuidance.resumeId)}</code></div>`
     : '';
@@ -2880,7 +2880,7 @@ function renderResumeGuidance(){
     ${folderLine}
     <pre class="resume-guidance-command">${escapeHtml(resumeGuidance.command)}</pre>
     <div class="resume-guidance-actions">
-      <button type="button" data-resume-action="copy">Copy command</button>
+      <button type="button" data-resume-action="copy">Copy add-turns command</button>
       ${openButton}
     </div>
   `;
@@ -2912,7 +2912,7 @@ function setResumeGuidance(session, resumeInfo, action='selected'){
 function copyResumeSteps(session, resumeInfo){
   setResumeGuidance(session, resumeInfo, 'copied');
   const copiedMessage = resumeInfo.exact
-    ? 'Resume command copied. See the highlighted instruction above the session list.'
+    ? 'Add-turns command copied. See the highlighted instruction above the session list.'
     : '/resume steps copied. See the highlighted instruction above the session list.';
   if(navigator.clipboard){
     navigator.clipboard.writeText(resumeInfo.command)
@@ -2941,7 +2941,7 @@ function showSessionMenu(event, session, donationInfo){
   event.preventDefault();
   event.stopPropagation();
   if(hasResumeActions) setResumeGuidance(session, resumeInfo, 'selected');
-  const copyResumeLabel = resumeInfo.exact ? 'Copy exact resume command' : 'Copy /resume steps';
+  const copyResumeLabel = resumeInfo.exact ? 'Copy add-turns command' : 'Copy /resume steps';
   menu.innerHTML = [
     hasResumeActions ? `<button type="button" role="menuitem" data-session-action="copy-resume">${copyResumeLabel}</button>` : '',
     hasResumeActions && resumeInfo.dir ? '<button type="button" role="menuitem" data-session-action="open-resume">Open project folder</button>' : '',
@@ -3046,8 +3046,8 @@ function renderSessions(){
       : '';
     const resumeInfo = sessionResumeInfo(s);
     const hasResumeActions = !!resumeInfo.command && sessionNeedsMoreTurns(s);
-    const resumePillLabel = resumeInfo.exact ? 'resume cmd' : '/resume';
-    const resumePillTitle = resumeInfo.exact ? 'Copy the exact agent resume command' : 'Open or copy the project folder, then use /resume';
+    const resumePillLabel = 'add turns';
+    const resumePillTitle = resumeInfo.exact ? 'Copy the command to add more turns to this session' : 'Open or copy the project folder, then use /resume to add turns';
     const resumePill = hasResumeActions
       ? `<span class="pill resume" data-session-action="resume" title="${resumePillTitle}">${resumePillLabel}</span>`
       : '';
@@ -3088,9 +3088,12 @@ function renderSessions(){
     if (selected && selected.path === s.path && !donated && ready) row.classList.add('selected');
     row.onclick = () => {
       if(!ready){
-        status('discoverStatus', hasResumeActions
-          ? 'This session is not ready yet. Use the resume cmd pill or row arrow to copy the exact agent resume command, then keep chatting until it reaches 50+ turns.'
-          : 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
+        if(hasResumeActions){
+          setResumeGuidance(s, resumeInfo, 'selected');
+          status('discoverStatus', '');
+        } else {
+          status('discoverStatus', 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
+        }
         return;
       }
       if(donated){
