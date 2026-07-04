@@ -2847,14 +2847,14 @@ function renderResumeGuidance(){
   }
   const stateText = resumeGuidance.action === 'opened'
     ? 'Project folder opened'
-    : (resumeGuidance.action === 'copied' ? 'Continue steps copied' : 'Continue this session');
+    : (resumeGuidance.action === 'copied' ? '/resume steps copied' : 'Resume this session in your agent');
   el.innerHTML = `
     <div class="resume-guidance-head">
       <div>
         <div class="resume-guidance-title">${escapeHtml(stateText)}</div>
         <div class="resume-guidance-subtitle">${escapeHtml(resumeGuidance.label)}</div>
       </div>
-      <button type="button" class="resume-guidance-dismiss" data-resume-action="dismiss" aria-label="Dismiss continue instructions">Dismiss</button>
+      <button type="button" class="resume-guidance-dismiss" data-resume-action="dismiss" aria-label="Dismiss resume instructions">Dismiss</button>
     </div>
     <div class="resume-guidance-body">Use this project folder, start the agent, then type <code>/resume</code> and choose this session.</div>
     <div class="resume-guidance-path">Project folder: <code>${escapeHtml(resumeGuidance.dir)}</code></div>
@@ -2890,7 +2890,7 @@ function copyResumeSteps(session, resumeInfo){
   setResumeGuidance(session, resumeInfo, 'copied');
   if(navigator.clipboard){
     navigator.clipboard.writeText(resumeInfo.command)
-      .then(() => status('discoverStatus', 'Continue steps copied. See the highlighted instruction above the session list.', 'ok'))
+      .then(() => status('discoverStatus', '/resume steps copied. See the highlighted instruction above the session list.', 'ok'))
       .catch(() => status('discoverStatus', resumeInfo.command));
   } else {
     status('discoverStatus', resumeInfo.command);
@@ -2916,7 +2916,7 @@ function showSessionMenu(event, session, donationInfo){
   event.stopPropagation();
   if(hasResumeActions) setResumeGuidance(session, resumeInfo, 'selected');
   menu.innerHTML = [
-    hasResumeActions ? '<button type="button" role="menuitem" data-session-action="copy-resume">Copy continue steps</button>' : '',
+    hasResumeActions ? '<button type="button" role="menuitem" data-session-action="copy-resume">Copy /resume steps</button>' : '',
     hasResumeActions ? '<button type="button" role="menuitem" data-session-action="open-resume">Open project folder</button>' : '',
     hasSupportActions ? '<button type="button" role="menuitem" data-session-action="update">Update info</button>' : '',
     hasSupportActions ? '<button type="button" role="menuitem" data-session-action="problem" class="danger">Report problem</button>' : '',
@@ -3020,7 +3020,7 @@ function renderSessions(){
     const resumeInfo = sessionResumeInfo(s);
     const hasResumeActions = !!resumeInfo.dir && sessionNeedsMoreTurns(s);
     const resumePill = hasResumeActions
-      ? '<span class="pill resume" data-session-action="continue" title="Copy or open the project folder to keep chatting with /resume">continue</span>'
+      ? '<span class="pill resume" data-session-action="resume" title="Copy or open the project folder, then use /resume">/resume</span>'
       : '';
     row.className = donated ? 'session-row donated-row' : (ready ? 'session-row' : 'session-row improve-row');
     if(resumeGuidance?.key === resumeKey) row.classList.add('resume-focus-row');
@@ -3028,7 +3028,7 @@ function renderSessions(){
     const currentFit = fit(s);
     const hasSupportActions = donationInfo.supportId && donationInfo.donatedBefore;
     const hasMenuActions = hasSupportActions || hasResumeActions;
-    const actionTitle = hasResumeActions ? 'Actions: continue this session from its project folder' : 'Actions: update info or report problem';
+    const actionTitle = hasResumeActions ? 'Actions: resume this session from its project folder' : 'Actions: update info or report problem';
     const chipLine = [statusPill, supportPill, resumePill].filter(Boolean).join(' ');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
@@ -3050,7 +3050,7 @@ function renderSessions(){
         status('discoverStatus', `Copied maintainer reset ID: ${id}`);
       };
     });
-    row.querySelectorAll('[data-session-action="continue"]').forEach(el => {
+    row.querySelectorAll('[data-session-action="resume"]').forEach(el => {
       el.onclick = event => showSessionMenu(event, s, donationInfo);
     });
     row.oncontextmenu = event => showSessionMenu(event, s, donationInfo);
@@ -3060,7 +3060,7 @@ function renderSessions(){
     row.onclick = () => {
       if(!ready){
         status('discoverStatus', hasResumeActions
-          ? 'This session is not ready yet. Use the continue action to open or copy its project folder, then resume it until it reaches 50+ turns.'
+          ? 'This session is not ready yet. Use the /resume pill or row arrow to open/copy its project folder, then keep chatting until it reaches 50+ turns.'
           : 'This session is not ready to donate yet. Keep working until it reaches 50+ turns.');
         return;
       }
