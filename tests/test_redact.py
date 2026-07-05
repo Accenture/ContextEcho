@@ -147,6 +147,40 @@ class RedactTests(unittest.TestCase):
         self.assertGreaterEqual(stats.get("private_word_variant:accenture:Accenture", 0), 1)
         self.assertGreaterEqual(stats.get("private_word_variant:accenture:ACCENTURE", 0), 1)
 
+    def test_accenture_is_default_scrub_term_for_repairs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "session.redacted.jsonl"
+            path.write_text(
+                '{"text":"Accenture accenture accEnture project"}\n',
+                encoding="utf-8",
+            )
+
+            stats = apply_scrub_terms_to_file(path, path, set())
+            text = path.read_text(encoding="utf-8")
+
+        self.assertNotIn("accenture", text.lower())
+        self.assertGreaterEqual(stats.get("private_word:accenture", 0), 3)
+        self.assertGreaterEqual(stats.get("private_word_variant:accenture:Accenture", 0), 1)
+        self.assertGreaterEqual(stats.get("private_word_variant:accenture:accenture", 0), 1)
+        self.assertGreaterEqual(stats.get("private_word_variant:accenture:accEnture", 0), 1)
+
+    def test_accenture_is_default_scrub_term_for_redact_text(self) -> None:
+        class NoopEngine:
+            def analyze(self, text, language, entities):
+                return []
+
+        with mock.patch("presidio_anonymizer.AnonymizerEngine") as anonymizer_cls:
+            anonymizer = mock.Mock()
+            anonymizer.anonymize.side_effect = lambda text, analyzer_results, operators: type("Result", (), {"text": text})()
+            anonymizer_cls.return_value = anonymizer
+            stats = {}
+
+            redacted = redact_text("Accenture accenture accEnture", NoopEngine(), set(), stats)
+
+        self.assertNotIn("accenture", redacted.lower())
+        self.assertGreaterEqual(stats.get("private_word:accenture", 0), 3)
+
     def test_redact_text_removes_basic_auth_credentials(self) -> None:
         class NoopAnonymizer:
             @property

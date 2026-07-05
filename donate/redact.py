@@ -65,6 +65,11 @@ API_KEY_RES = [
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.DOTALL),
 ]
 
+# ContextEcho is maintained from Accenture infrastructure. Treat the employer
+# name as a built-in scrub term so donor-visible affiliation does not leak into
+# submitted artifacts by default.
+DEFAULT_SCRUB_TERMS = {"accenture"}
+
 
 def _salt() -> str:
     """Per-run salt so pseudonyms are stable within a session but not reversible
@@ -228,7 +233,7 @@ def redact_text(
             stats["username"] = stats.get("username", 0) + n
 
     # 2. Contributor-supplied scrub terms (local-only safety valve).
-    for term in sorted(scrub_terms, key=len, reverse=True):
+    for term in sorted(expanded_scrub_terms(scrub_terms), key=len, reverse=True):
         text, n, variant_counts = _replace_literal_case_insensitive(text, term, "<REDACTED>")
         if n:
             stats["scrub_term"] = stats.get("scrub_term", 0) + n
@@ -297,7 +302,7 @@ def redact_json_value(value: Any, analyzer, scrub_terms: set[str], stats: dict, 
 
 def expanded_scrub_terms(scrub_terms: set[str]) -> set[str]:
     """Expand donor-entered path fragments into common log variants."""
-    terms = {t for t in scrub_terms if t}
+    terms = {t for t in scrub_terms if t} | DEFAULT_SCRUB_TERMS
     for term in list(terms):
         for rx in (HOME_PATH_RE, SLUG_PATH_RE):
             for match in rx.finditer(term):
