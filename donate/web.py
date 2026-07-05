@@ -1553,7 +1553,7 @@ INDEX_HTML = r"""<!doctype html>
             </div>
           </div>
         </div>
-        <div id="resumeGuidance" class="resume-guidance" aria-live="polite"></div>
+        <div id="sessionGuidance" class="resume-guidance" aria-live="polite"></div>
         <div id="sessionList" class="session-list">
           <div class="session-table-head"><div>#</div><div><button type="button" class="sort-header" data-sort-key="session">Session<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="last_active">Last active<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="turns">User turns<span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="compactions" data-tooltip="Context compactions detected in local logs." aria-label="Context compactions detected in local logs.">Ctx cmp<span class="header-footnote">1</span><span class="sort-arrow"></span></button></div><div><button type="button" class="sort-header" data-sort-key="fit">Fit<span class="sort-arrow"></span></button></div><div></div></div>
             <div class="empty-sessions">Scanning local Claude/Codex sessions...</div>
@@ -1564,7 +1564,6 @@ INDEX_HTML = r"""<!doctype html>
             <button id="nextPage" class="secondary">Next &rsaquo;</button>
           </div>
         </div>
-        <div id="pickSessionInfoCard" class="selected-card"></div>
         <div class="pick-redact-row">
           <button id="pickNext" class="next-button" disabled>Next: Redact  -&gt;</button>
         </div>
@@ -2292,42 +2291,48 @@ function renderPickDonationCard(s, idx){
   const supportPill = donationInfo.supportId
     ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
     : '';
-  $('pickSessionInfoCard').innerHTML = `
-    <div class="selected-card-layout">
-      <div class="selected-card-main">
-        <div class="result-head">
-          <div><strong>Donation info #${idx + 1}: ${escapeHtml(s.project || 'unknown project')}</strong></div>
-          <span class="pill ${fit(s)}">${fit(s).charAt(0).toUpperCase() + fit(s).slice(1)}</span>
-        </div>
-        <div class="session-chip-row">${donationStatus}${supportPill}</div>
-        <div class="metrics donation-info">
-          <span class="metric">Public leaderboard: <strong>${escapeHtml(publicCredit)}</strong></span>
-          <span class="metric">Submitted name: <strong>${escapeHtml(contributor.creditName || 'Not available locally')}</strong></span>
-          <span class="metric">Email: <strong>${escapeHtml(contributor.email || 'Not available locally')}</strong></span>
-          <span class="metric">Institute: <strong>${escapeHtml(contributor.institute || 'Not available locally')}</strong></span>
-          ${contributor.submittedAt ? `<span class="metric">Submitted: <strong>${escapeHtml(contributor.submittedAt.slice(0, 10))}</strong></span>` : ''}
-          ${donationInfo.previousTurns ? `<span class="metric">Donated turns: <strong>${compactNumber(donationInfo.previousTurns)}</strong></span>` : ''}
-        </div>
-        <div class="metrics">
-          <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
-          <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
-          <span class="metric">User turns: <strong>${compactNumber(s.turns)}</strong></span>
-          <span class="metric">Context compactions: <strong>${s.compactions || 0}</strong></span>
-        </div>
-        <div class="hint">${contributor.publicAnonymous ? 'Public pages hide your name; maintainers can still use the submitted name, email, and institute for review and support.' : 'This is the donation identity saved locally or returned by the maintainer relay.'}</div>
+  const el = $('sessionGuidance');
+  el.innerHTML = `
+    <div class="resume-guidance-head">
+      <div>
+        <div class="resume-guidance-title">Donation info</div>
+        <div class="resume-guidance-subtitle">${escapeHtml(s.agent || 'Session')} · ${escapeHtml(s.session_label || s.project || 'unknown project')}</div>
       </div>
+      <button type="button" class="resume-guidance-dismiss" data-donation-info-dismiss aria-label="Dismiss donation info">Dismiss</button>
+    </div>
+    <div class="resume-guidance-body">
+      <div class="session-chip-row">${donationStatus}${supportPill}</div>
+      <div class="metrics donation-info">
+        <span class="metric">Public leaderboard: <strong>${escapeHtml(publicCredit)}</strong></span>
+        <span class="metric">Submitted name: <strong>${escapeHtml(contributor.creditName || 'Not available locally')}</strong></span>
+        <span class="metric">Email: <strong>${escapeHtml(contributor.email || 'Not available locally')}</strong></span>
+        <span class="metric">Institute: <strong>${escapeHtml(contributor.institute || 'Not available locally')}</strong></span>
+        ${contributor.submittedAt ? `<span class="metric">Submitted: <strong>${escapeHtml(contributor.submittedAt.slice(0, 10))}</strong></span>` : ''}
+        ${donationInfo.previousTurns ? `<span class="metric">Donated turns: <strong>${compactNumber(donationInfo.previousTurns)}</strong></span>` : ''}
+      </div>
+      <div class="metrics">
+        <span class="metric">Agent: <strong>${escapeHtml(s.agent || '?')}</strong></span>
+        <span class="metric">Model: <strong>${escapeHtml(s.model || '?')}</strong></span>
+        <span class="metric">User turns: <strong>${compactNumber(s.turns)}</strong></span>
+        <span class="metric">Context compactions: <strong>${s.compactions || 0}</strong></span>
+      </div>
+      <div class="hint">${contributor.publicAnonymous ? 'Public pages hide your name; maintainers can still use the submitted name, email, and institute for review and support.' : 'This is the donation identity saved locally or returned by the maintainer relay.'}</div>
     </div>
   `;
-  $('pickSessionInfoCard').classList.add('show');
-  $('pickSessionInfoCard').querySelectorAll('[data-copy-submission]').forEach(el => {
-    el.onclick = event => {
+  el.classList.add('show');
+  el.querySelector('[data-donation-info-dismiss]').onclick = event => {
+    event.stopPropagation();
+    clearResumeGuidance();
+  };
+  el.querySelectorAll('[data-copy-submission]').forEach(pill => {
+    pill.onclick = event => {
       event.stopPropagation();
-      const id = el.dataset.copySubmission || '';
+      const id = pill.dataset.copySubmission || '';
       navigator.clipboard?.writeText(id).catch(()=>{});
       status('discoverStatus', `Copied maintainer reset ID: ${id}`);
     };
   });
-  $('pickSessionInfoCard').scrollIntoView({behavior:'smooth', block:'nearest'});
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 function renderSearchResult(data){
   const hits = data.results || [];
@@ -2673,8 +2678,10 @@ function clearSelectedSession(){
   redactionCache = new Map();
   submitted = false;
   document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
-  $('pickSessionInfoCard').innerHTML = '';
-  $('pickSessionInfoCard').classList.remove('show');
+  if(!resumeGuidance){
+    $('sessionGuidance').innerHTML = '';
+    $('sessionGuidance').classList.remove('show');
+  }
   $('selectedCard').innerHTML = '';
   $('selectedCard').classList.remove('show');
   $('redactResult').classList.remove('show');
@@ -2945,7 +2952,7 @@ function resumeSessionKey(s){
   return sessionPathKey(s) || sessionLocalKey(s);
 }
 function renderResumeGuidance(){
-  const el = $('resumeGuidance');
+  const el = $('sessionGuidance');
   if(!el) return;
   if(!resumeGuidance){
     el.classList.remove('show');
@@ -3002,7 +3009,6 @@ function renderResumeGuidance(){
   };
 }
 function clearResumeGuidance({rerender=false} = {}){
-  if(!resumeGuidance) return;
   resumeGuidance = null;
   document.querySelectorAll('.resume-focus-row').forEach(x=>x.classList.remove('resume-focus-row'));
   renderResumeGuidance();
@@ -3189,8 +3195,6 @@ function renderSessions(){
         return;
       }
       if(!ready){
-        $('pickSessionInfoCard').innerHTML = '';
-        $('pickSessionInfoCard').classList.remove('show');
         clearSelectedSession();
         if(hasResumeActions){
           setResumeGuidance(s, resumeInfo, 'selected');
@@ -3202,8 +3206,7 @@ function renderSessions(){
       }
       document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
       row.classList.add('selected'); selected = s;
-      $('pickSessionInfoCard').innerHTML = '';
-      $('pickSessionInfoCard').classList.remove('show');
+      clearResumeGuidance();
       redacted = null; appliedScrubTerms = []; redactionCache = new Map(); submitted = !!donated;
       renderSelectedCard(s, idx);
       status('redactStatus', '');
@@ -3301,7 +3304,7 @@ document.addEventListener('click', event => {
   hideSessionMenu();
   if(!resumeGuidance) return;
   const target = event.target;
-  if(target?.closest?.('#resumeGuidance')) return;
+  if(target?.closest?.('#sessionGuidance')) return;
   const row = target?.closest?.('.session-row');
   if(row && row.dataset.sessionKey === resumeGuidance.key) return;
   clearResumeGuidance({rerender:true});

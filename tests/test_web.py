@@ -111,9 +111,12 @@ class WebTests(unittest.TestCase):
         self.assertIn("showSupportSessionMenu(event, s, donationInfo)", INDEX_HTML)
         self.assertIn("beginMetadataUpdate(session, donationInfo.supportId)", INDEX_HTML)
         self.assertIn("beginSupportRequest(session, donationInfo.supportId)", INDEX_HTML)
-        self.assertIn('id="pickSessionInfoCard" class="selected-card"', INDEX_HTML)
+        self.assertIn('id="sessionGuidance" class="resume-guidance" aria-live="polite"', INDEX_HTML)
         self.assertIn("function renderPickDonationCard(s, idx)", INDEX_HTML)
         self.assertIn("renderPickDonationCard(s, idx)", INDEX_HTML)
+        self.assertIn("data-donation-info-dismiss", INDEX_HTML)
+        self.assertIn("clearResumeGuidance();", INDEX_HTML)
+        self.assertNotIn("pickSessionInfoCard", INDEX_HTML)
         self.assertIn("Public leaderboard:", INDEX_HTML)
         self.assertIn("Submitted name:", INDEX_HTML)
         self.assertNotIn("function sessionDonationHoverText", INDEX_HTML)
@@ -153,7 +156,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("donated${donationInfo.newTurns ? ` · +", INDEX_HTML)
 
     def test_not_ready_sessions_offer_resume_project_actions(self):
-        self.assertIn('id="resumeGuidance" class="resume-guidance"', INDEX_HTML)
+        self.assertIn('id="sessionGuidance" class="resume-guidance"', INDEX_HTML)
         self.assertIn("let resumeGuidance = null", INDEX_HTML)
         self.assertIn("function sessionResumeInfo(s)", INDEX_HTML)
         self.assertIn("function setResumeGuidance(session, resumeInfo, action='selected')", INDEX_HTML)
