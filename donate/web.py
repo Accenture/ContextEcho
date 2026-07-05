@@ -1303,6 +1303,9 @@ INDEX_HTML = r"""<!doctype html>
     .session-menu button.danger { color:#7a2c1f; }
     .resume-guidance { display:none; margin:-2px 0 12px; border:2px solid #a75009; border-radius:12px; background:linear-gradient(135deg,#fff9ef,#f7ead9); box-shadow:0 12px 28px rgba(167,80,9,.14); padding:12px; color:#2d2115; }
     .resume-guidance.show { display:block; }
+    .resume-guidance.donation-guidance { border-color:#168147; background:linear-gradient(135deg,#f5fff2,#e6f5df); box-shadow:0 12px 28px rgba(23,113,63,.14); color:#13291d; }
+    .resume-guidance.donation-guidance .resume-guidance-title { color:#13552f; }
+    .resume-guidance.donation-guidance .resume-guidance-dismiss:hover { background:#dff1d9; }
     .resume-guidance-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
     .resume-guidance-title { font-size:15px; font-weight:950; color:#7a420a; }
     .resume-guidance-subtitle { margin-top:2px; color:#4f5e56; font-size:12px; font-weight:750; overflow-wrap:anywhere; }
@@ -2298,6 +2301,7 @@ function renderPickDonationCard(s, idx){
     ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>`
     : '';
   const el = $('sessionGuidance');
+  el.classList.add('donation-guidance');
   el.innerHTML = `
     <div class="resume-guidance-head">
       <div>
@@ -2962,9 +2966,11 @@ function renderResumeGuidance(){
   if(!el) return;
   if(!resumeGuidance){
     el.classList.remove('show');
+    el.classList.remove('donation-guidance');
     el.innerHTML = '';
     return;
   }
+  el.classList.remove('donation-guidance');
   const stateText = resumeGuidance.action === 'opened'
     ? 'Project folder opened'
     : (resumeGuidance.action === 'copied' ? 'Add-turns command copied' : 'Not ready yet: add turns first');
