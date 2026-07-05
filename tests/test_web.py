@@ -92,6 +92,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("pendingLeaderboardModel(publicCreditName, publicAnonymous, turns, compactions, localPending, publicCreditName)", INDEX_HTML)
         self.assertNotIn("<div class=\"leaderboard-preview\">\n          ${leaderboardPreviewHtml(model)}", INDEX_HTML)
         self.assertIn("You already reviewed the leaderboard preview before submitting", INDEX_HTML)
+        self.assertIn('<div class="receipt-card"><div class="receipt-head">Submitted files</div><div class="file-list">${uploads}</div></div>', INDEX_HTML)
+        self.assertNotIn('<div class="detail-heading"><span class="detail-icon">▱</span><span>Submitted files</span></div><div class="file-list">${uploads}</div>', INDEX_HTML)
 
     def test_session_discovery_runs_on_page_load(self):
         self.assertIn("async function discoverSessions()", INDEX_HTML)
@@ -135,6 +137,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("/api/metadata_update", INDEX_HTML)
         self.assertIn("Send Info Update", INDEX_HTML)
         self.assertIn("Editing contributor info for", INDEX_HTML)
+        self.assertIn("function metadataOrSupportRequestActive()", INDEX_HTML)
+        self.assertIn("$('submitPrev').disabled = requestMode;", INDEX_HTML)
+        self.assertIn("Info and support updates do not use the redaction step", INDEX_HTML)
+        self.assertIn("$('submitPrev').onclick = () => { if(!metadataOrSupportRequestActive()) goStep(2); };", INDEX_HTML)
         self.assertIn("prefillContributorFields(selected, false)", INDEX_HTML)
         self.assertIn("prefillContributorFields(session, true)", INDEX_HTML)
         self.assertIn("localContributorRecord", INDEX_HTML)

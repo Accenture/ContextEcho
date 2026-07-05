@@ -1740,6 +1740,9 @@ function resetMetadataUpdateUi(){
   $('supportMessage').value = '';
   $('metadataBackBtn').style.display = 'none';
 }
+function metadataOrSupportRequestActive(){
+  return !!(metadataUpdateSubmissionId || metadataUpdateComplete || supportRequestSubmissionId || supportRequestComplete);
+}
 function localDonationInfo(s){
   const pathKey = sessionPathKey(s);
   const record = pathKey ? (donatedRecords[pathKey] || {}) : {};
@@ -1764,7 +1767,7 @@ function beginMetadataUpdate(session, submissionId){
   $('metadataUpdateBtn').style.display = '';
   $('supportRequestBtn').style.display = 'none';
   $('supportRequestBox').style.display = 'none';
-  $('metadataBackBtn').style.display = 'none';
+  $('metadataBackBtn').style.display = '';
   metadataUpdateSubmissionId = submissionId;
   metadataUpdateSession = session || null;
   selected = session || selected;
@@ -1928,12 +1931,15 @@ function refreshButtons(){
   const selectedInfo = selected ? localDonationInfo(selected) : null;
   const selectedDonated = !!(selectedInfo && (selectedInfo.exactDonated || (selectedInfo.donatedBefore && !selectedInfo.updateReady)));
   const selectedActionable = !!(selected && sessionIsActionableReady(selected));
+  const requestMode = metadataOrSupportRequestActive();
   const canSubmitArtifact = !!(redacted && redacted.verify_passed) && !submitted && !selectedDonated && !metadataUpdateSubmissionId && !metadataUpdateComplete && !supportRequestSubmissionId && !supportRequestComplete;
   const contributorComplete = contributorFieldsComplete();
   $('pickNext').disabled = !selectedActionable;
   $('redactBtn').disabled = !(selected && $('safeConfirm').checked);
   $('reviewConfirm').disabled = !(redacted && redacted.verify_passed);
   $('redactNext').disabled = !(redacted && redacted.verify_passed && $('reviewConfirm').checked);
+  $('submitPrev').disabled = requestMode;
+  $('submitPrev').title = requestMode ? 'Info and support updates do not use the redaction step. Use Back to Sessions instead.' : '';
   $('submitBtn').disabled = !canSubmitArtifact || !contributorComplete;
   $('metadataUpdateBtn').disabled = !metadataUpdateSubmissionId;
   $('supportRequestBtn').disabled = !supportRequestSubmissionId;
@@ -2623,6 +2629,7 @@ function renderSubmitResult(data){
         </div>
         <div class="leader-note"><span><strong>Pending score: ${localPendingRange} points across ${localPendingSessions} pending session${localPendingSessions === 1 ? '' : 's'}.</strong> You already reviewed the leaderboard preview before submitting; accepted donations appear on the contributor leaderboard and release acknowledgments.</span></div>
         ${data.receipt_path ? `<div class="receipt-card"><div class="receipt-head">Receipt</div><div class="copybox"><span>${escapeHtml(data.receipt_path)}</span><button class="copy-mini" type="button" id="copyReceiptPath">Copy</button></div><div class="hint">Email opens your mail app with the receipt details; no email is sent by the local tool.</div></div>` : ''}
+        ${uploads ? `<div class="receipt-card"><div class="receipt-head">Submitted files</div><div class="file-list">${uploads}</div></div>` : ''}
       </div>
       <aside class="success-detail-card">
         <div class="detail-section">
@@ -2640,7 +2647,6 @@ function renderSubmitResult(data){
           <div class="hint">${escapeHtml(idHint)}</div>
         </div>
         ${data.receipt_path ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▤</span><span>Receipt</span></div><div class="row"><button id="revealReceipt" type="button">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary" type="button">Email Receipt</button></a>` : ''}</div><div class="hint">${emailHref ? 'Email opens your mail app with receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
-        ${uploads ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▱</span><span>Submitted files</span></div><div class="file-list">${uploads}</div></div>` : ''}
         <button id="submitAnother" class="secondary" style="width:100%">＋ Submit another session</button>
       </aside>
     </div>
@@ -3329,7 +3335,7 @@ document.querySelectorAll('input[name="privacyTier"]').forEach(el => {
 $('pickNext').onclick = () => goStep(2);
 $('redactPrev').onclick = () => goStep(1);
 $('redactNext').onclick = () => goStep(3);
-$('submitPrev').onclick = () => goStep(2);
+$('submitPrev').onclick = () => { if(!metadataOrSupportRequestActive()) goStep(2); };
 $('metadataUpdateBtn').onclick = () => sendMetadataUpdate();
 $('supportRequestBtn').onclick = () => sendSupportRequest();
 $('metadataBackBtn').onclick = () => goStep(1);
