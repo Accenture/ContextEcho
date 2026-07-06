@@ -1621,9 +1621,9 @@ INDEX_HTML = r"""<!doctype html>
     <p class="muted">Contributor info is required for credit, leaderboard accounting, duplicate handling, and release acknowledgments.</p>
     <p class="muted">The tool writes manifest + consent, confirms the verified redacted artifact, uploads it, and saves a local receipt.</p>
     <div class="submit-grid">
-      <div><label>Name or GitHub/HF handle <span class="muted">(required)</span></label><input id="contributorName" placeholder="your name or handle" required /></div>
-      <div><label>Email <span class="muted">(required)</span></label><input id="contributorEmail" type="email" list="emailSuggestions" placeholder="you@example.com" required /><datalist id="emailSuggestions"></datalist></div>
-      <div><label>Institute <span class="muted">(required)</span></label><input id="contributorInstitute" placeholder="University / company / independent" required /></div>
+      <div><label>Name or GitHub/HF handle <span class="muted">(required)</span></label><input id="contributorName" placeholder="your name or handle" autocomplete="off" required /></div>
+      <div><label>Email <span class="muted">(required)</span></label><input id="contributorEmail" type="email" list="emailSuggestions" placeholder="you@example.com" autocomplete="off" required /><datalist id="emailSuggestions"></datalist></div>
+      <div><label>Institute <span class="muted">(required)</span></label><input id="contributorInstitute" placeholder="University / company / independent" autocomplete="off" required /></div>
     </div>
     <div id="supportRequestBox" class="result" style="display:none">
       <label>Problem type</label>
@@ -1720,6 +1720,11 @@ function prefillContributorFields(session, overwrite=false){
   if(info.email && (overwrite || !$('contributorEmail').value)) $('contributorEmail').value = info.email;
   if(info.institute && (overwrite || !$('contributorInstitute').value)) $('contributorInstitute').value = info.institute;
   if($('publicAnonymous') && (overwrite || info.publicAnonymous)) $('publicAnonymous').checked = info.publicAnonymous;
+}
+function clearContributorFields(){
+  ['contributorName','contributorEmail','contributorInstitute'].forEach(id => { $(id).value = ''; });
+  if($('publicAnonymous')) $('publicAnonymous').checked = false;
+  updateEmailSuggestions();
 }
 function setContributorFieldsLocked(locked){
   ['contributorName','contributorEmail','contributorInstitute'].forEach(id => { $(id).disabled = !!locked; });
@@ -1925,7 +1930,6 @@ function goStep(n){
   $('progressRing').style.setProperty('--pct', pct);
   $('progressRingText').textContent = `${pct}%`;
   if(n === 3) {
-    prefillContributorFields(selected, false);
     renderSubmitLeaderboardPreview();
   }
 }
@@ -2676,6 +2680,7 @@ function resetSessionArtifacts(){
   $('searchPanel').classList.remove('show');
   $('reviewConfirm').checked = false;
   $('safeConfirm').checked = false;
+  clearContributorFields();
   ['redactStatus','submitStatus','discoverStatus'].forEach(id => status(id, ''));
   ['redactProgress','submitProgress','searchProgress'].forEach(id => setBusy(id, false));
   refreshButtons();
