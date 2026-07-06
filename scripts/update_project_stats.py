@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -12,14 +11,6 @@ import urllib.request
 
 DEFAULT_DATASET_ID = "contextecho2026/persona-drift-contextecho"
 DEFAULT_HISTORICAL_DOWNLOADS = 39_000
-
-
-@dataclass
-class DownloadRollup:
-    total: int
-    hf_last_month: int | None
-    previous_hf_last_month: int | None
-    delta_applied: int
 
 
 def as_int(value: Any) -> int | None:
@@ -36,39 +27,77 @@ def fetch_hf_dataset_stats(dataset_id: str, timeout: int = 30) -> dict[str, Any]
         return json.loads(resp.read().decode("utf-8"))
 
 
-def roll_download_total(current: dict[str, Any], hf_last_month: int | None) -> DownloadRollup:
-    total = as_int(current.get("dataset_total_downloads")) or 0
+def month_key(value: str) -> str | None:
+    if len(value) >= 7 and value[4] == "-":
+        return value[:7]
+    return None
+
+
+def previous_month(period: str) -> str | None:
+    if not month_key(period):
+        return None
+    year = int(period[:4])
+    month = int(period[5:7])
+    if month == 1:
+        return f"{year - 1:04d}-12"
+    return f"{year:04d}-{month - 1:02d}"
+
+
+def download_buckets(current: dict[str, Any]) -> dict[str, int]:
+    raw = current.get("dataset_hf_monthly_downloads")
+    buckets: dict[str, int] = {}
+    if isinstance(raw, dict):
+        for key, value in raw.items():
+            count = as_int(value)
+            if count is not None and count >= 0 and month_key(str(key)):
+                buckets[str(key)[:7]] = count
+    if buckets:
+        return buckets
+
+    previous_snapshot = as_int(current.get("dataset_hf_downloads_last_month_previous"))
     previous = as_int(current.get("dataset_hf_downloads_last_month"))
+    previous_period = month_key(str(current.get("dataset_total_downloads_updated") or ""))
+    if previous_snapshot is not None and previous_period:
+        prior_period = previous_month(previous_period)
+        if prior_period:
+            buckets[prior_period] = previous_snapshot
     if previous is None:
         historical = as_int(current.get("dataset_historical_downloads")) or DEFAULT_HISTORICAL_DOWNLOADS
+        total = as_int(current.get("dataset_total_downloads")) or historical
         inferred = total - historical
         previous = inferred if inferred >= 0 else None
+    if previous is not None and previous_period and previous_period not in buckets:
+        buckets[previous_period] = previous
+    return buckets
 
-    delta = 0
-    if hf_last_month is not None and previous is not None and hf_last_month > previous:
-        delta = hf_last_month - previous
-        total += delta
-    return DownloadRollup(
-        total=total,
-        hf_last_month=hf_last_month,
-        previous_hf_last_month=previous,
-        delta_applied=delta,
-    )
+
+def roll_download_total(current: dict[str, Any], hf_last_month: int | None, period: str) -> tuple[int, dict[str, int]]:
+    historical = as_int(current.get("dataset_historical_downloads")) or DEFAULT_HISTORICAL_DOWNLOADS
+    buckets = download_buckets(current)
+    if hf_last_month is not None:
+        existing = buckets.get(period)
+        buckets[period] = max(existing or 0, hf_last_month)
+    return historical + sum(buckets.values()), buckets
 
 
 def update_stats(current: dict[str, Any], hf: dict[str, Any] | None, today: str) -> dict[str, Any]:
     out = dict(current)
-    hf_last_month = as_int((hf or {}).get("downloads"))
-    rollup = roll_download_total(out, hf_last_month)
+    hf_last_month = as_int(hf.get("downloads")) if hf else as_int(current.get("dataset_hf_downloads_last_month"))
+    period = month_key(today) or datetime.now(timezone.utc).strftime("%Y-%m")
+    total, buckets = roll_download_total(out, hf_last_month, period)
+    if hf_last_month is None:
+        hf_last_month = buckets.get(period)
     out["dataset_historical_downloads"] = as_int(out.get("dataset_historical_downloads")) or DEFAULT_HISTORICAL_DOWNLOADS
-    out["dataset_hf_downloads_last_month"] = rollup.hf_last_month
-    out["dataset_hf_downloads_last_month_previous"] = rollup.previous_hf_last_month
-    out["dataset_hf_downloads_last_month_delta_applied"] = rollup.delta_applied
-    out["dataset_total_downloads"] = rollup.total
+    out["dataset_hf_monthly_downloads"] = dict(sorted(buckets.items()))
+    out["dataset_hf_downloads_last_month"] = hf_last_month
+    out["dataset_hf_downloads_last_month_period"] = period
+    out.pop("dataset_hf_downloads_last_month_previous", None)
+    out.pop("dataset_hf_downloads_last_month_delta_applied", None)
+    out["dataset_total_downloads"] = total
     out["dataset_total_downloads_updated"] = today
     out["dataset_total_downloads_note"] = (
         "Maintainer-tracked cumulative download count: historical public totals "
-        "plus positive increases in Hugging Face's rolling last-month downloads."
+        "plus one stored Hugging Face rolling last-month download bucket per month."
     )
     if hf:
         out["dataset_hf_likes"] = as_int(hf.get("likes"))
