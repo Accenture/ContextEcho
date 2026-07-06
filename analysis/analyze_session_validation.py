@@ -12,6 +12,10 @@ CODING = {"C01", "C02", "C03", "C04", "C05"}
 ARMS = ("claude_session", "filler")
 
 
+def valid_score(value) -> bool:
+    return isinstance(value, int) and value in {0, 1, 2, 3}
+
+
 def iter_cells(root: Path):
     for path in sorted(root.rglob("*.json")):
         if path.name == "validation_manifest.json":
@@ -41,7 +45,8 @@ def summarize(root: Path, expected_positions: int = 12, probes: int = 25) -> dic
     rows = list(iter_cells(root))
     expected = expected_positions * probes * len(ARMS)
     parse_errors = [r for r in rows if r.get("error")]
-    scored = [r for r in rows if isinstance(r.get("score"), int)]
+    scored = [r for r in rows if valid_score(r.get("score"))]
+    invalid_scores = [r for r in rows if "score" in r and not valid_score(r.get("score"))]
 
     by_arm = defaultdict(list)
     by_pos_arm = defaultdict(list)
@@ -81,6 +86,7 @@ def summarize(root: Path, expected_positions: int = 12, probes: int = 25) -> dic
         "expected_cells": expected,
         "json_files": len(rows),
         "parse_errors": len(parse_errors),
+        "invalid_scores": len(invalid_scores),
         "scored_cells": len(scored),
         "completion_rate": len(scored) / expected if expected else 0.0,
         "arm_means": arm_means,
@@ -90,6 +96,7 @@ def summarize(root: Path, expected_positions: int = 12, probes: int = 25) -> dic
         "missing": missing,
         "acceptable": (
             len(parse_errors) == 0
+            and len(invalid_scores) == 0
             and len(scored) / expected >= 0.95
             and all(arm in arm_means for arm in ARMS)
             and len(positions) >= max(2, expected_positions - 1)
@@ -117,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"scored cells     : {report['scored_cells']}")
     print(f"completion       : {report['completion_rate']:.1%}")
     print(f"parse errors     : {report['parse_errors']}")
+    print(f"invalid scores   : {report['invalid_scores']}")
     print(f"positions        : {report['positions_observed']}")
     print(f"arm means        : {report['arm_means']}")
     print(f"gap filler-claude: {report['gap_filler_minus_claude']:+.3f}")

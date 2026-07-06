@@ -190,6 +190,32 @@ def append_review_record(dataset_root: Path, record: dict) -> None:
     )
 
 
+def reviewed_acceptable_unpromoted(previous: dict | None, fingerprint: str, *, require_quick: bool = False) -> bool:
+    return bool(
+        previous
+        and previous.get("fingerprint") == fingerprint
+        and previous.get("decision") == "ACCEPTABLE"
+        and (not require_quick or previous.get("quick_validation") is True)
+        and not previous.get("promoted")
+    )
+
+
+def needs_quick_rereview(previous: dict | None, fingerprint: str) -> bool:
+    return bool(
+        previous
+        and previous.get("fingerprint") == fingerprint
+        and previous.get("decision") == "ACCEPTABLE"
+        and previous.get("quick_validation") is not True
+    )
+
+
+def enforce_promotion_requires_quick(args: argparse.Namespace) -> bool:
+    if args.promote and not args.run_quick:
+        args.run_quick = True
+        return True
+    return False
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Download and review all staged donations.")
     p.add_argument("--staging-dir", type=Path, default=Path("hf_staging_download"))
@@ -209,6 +235,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if enforce_promotion_requires_quick(args):
+        print("[intake] promotion requires quick validation; enabling --run-quick")
     if not args.skip_download:
         rc = run([args.python, "scripts/download_donations.py", "--local-dir", str(args.staging_dir)])
         if rc != 0:
@@ -240,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
                 lineage_duplicate_record = session_lineage.get(f"{key}:{value}", {})
                 if lineage_duplicate_record:
                     break
-        if sub.name in already_promoted and not (args.include_promoted or args.include_reviewed):
+        if sub.name in already_promoted and not args.include_promoted:
             skipped_promoted += 1
             print(f"[intake] skip already promoted: {sub.name}")
             continue
@@ -272,10 +300,15 @@ def main(argv: list[str] | None = None) -> int:
             })
             continue
         previous = reviewed.get(sub.name)
+        if args.promote and reviewed_acceptable_unpromoted(previous, fingerprint, require_quick=args.run_quick):
+            accepted.append((sub, fingerprint, session_hash))
+            print(f"[intake] promote previously reviewed acceptable: {sub.name}")
+            continue
         if (
             previous
             and previous.get("fingerprint") == fingerprint
             and not args.include_reviewed
+            and not (args.promote and args.run_quick and needs_quick_rereview(previous, fingerprint))
         ):
             skipped_reviewed += 1
             print(f"[intake] skip already reviewed: {sub.name} ({previous.get('decision', 'unknown')})")

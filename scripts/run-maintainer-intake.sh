@@ -108,6 +108,17 @@ fi
 echo "[ContextEcho] running full maintainer intake: download, duplicate/lineage check, review, quick validation, promote..."
 "$PY" scripts/intake_donations.py "${intake_args[@]}"
 
+backfill_args=()
+if [[ -n "${DATASET_ROOT:-}" ]]; then
+  backfill_args+=(--dataset-root "$DATASET_ROOT")
+fi
+if [[ -n "${STAGING_DIR:-}" ]]; then
+  backfill_args+=(--staging-dir "$STAGING_DIR")
+fi
+
+echo "[ContextEcho] backfilling quick validation for promoted sessions missing validation output..."
+"$PY" scripts/backfill_promoted_validation.py "${backfill_args[@]}"
+
 echo "[ContextEcho] updating public release metadata..."
 "$PY" scripts/update_contributors.py
 "$PY" scripts/update_dataset_card.py

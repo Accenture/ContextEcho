@@ -275,7 +275,7 @@ Maintainers convert accepted private staging submissions into the next public
 dataset candidate with one command:
 
 ```bash
-bash scripts/run-maintainer-intake.sh
+make maintainer-intake
 ```
 
 This bootstraps a Python 3.14 maintainer environment, downloads staged
@@ -283,8 +283,8 @@ submissions, checks duplicate/session lineage, runs technical review and quick
 validation, promotes accepted sessions, and regenerates/checks public metadata.
 Accepted sessions are copied into `data_archive_release_v2/data/sessions/`,
 with consent, manifests, review reports, and a donation ledger under
-`data_archive_release_v2/data/donations/`. The lower-level Make targets remain
-available for debugging individual stages.
+`data_archive_release_v2/data/donations/`. Use lower-level Make targets only
+for debugging individual stages; promotion enforces quick validation.
 After approving contributor metadata changes in the maintainer console, run
 `make update-release-metadata`; it first syncs approved relay updates into the
 local release ledger/manifests, then regenerates `CONTRIBUTORS.md` and

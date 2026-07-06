@@ -8,7 +8,7 @@
         fig-app-anchor-decay fig-app-anchor-size fig-app-crossjudge \
         fig-app-crosssession fig-app-full25 fig-app-onset \
         download-donations intake-donations promote-donation reset-donation-test-state \
-        maintainer-intake \
+        maintainer-intake backfill-promoted-validation \
         update-contributors check-contributors update-dataset-card check-dataset-card \
         sync-approved-metadata update-release-metadata check-release-metadata \
         review-donation review-donation-quick \
@@ -33,10 +33,11 @@ help:
 	@echo "    make verify-pii       run PII redaction grep audit on data_archive_release/"
 	@echo "    make smoke-test       run a 1-cell harness check"
 	@echo "    make download-donations                  download private HF staging donations"
-	@echo "    make maintainer-intake                   one-command full intake + promotion + metadata"
+	@echo "    make maintainer-intake                   full intake: review + quick validation + promotion + metadata"
+	@echo "    make backfill-promoted-validation        run quick validation for promoted sessions missing outputs"
 	@echo "    make intake-donations                    download + technical-review all pending donations"
-	@echo "    make intake-donations RUN_QUICK=1        include quick validation gate"
-	@echo "    make intake-donations PROMOTE=1          promote accepted donations into data_archive_release_v2/"
+	@echo "    make intake-donations RUN_QUICK=1        debug path: include quick validation gate"
+	@echo "    make intake-donations PROMOTE=1          debug path: promote with quick validation enforced"
 	@echo "    make intake-donations INCLUDE_PROMOTED=1 re-review already promoted submissions"
 	@echo "    make intake-donations INCLUDE_REVIEWED=1 re-review unchanged processed submissions"
 	@echo "    make intake-donations INCLUDE_DUPLICATES=1 review duplicate session artifacts"
@@ -137,6 +138,9 @@ intake-donations:
 	  $(if $(INCLUDE_PROMOTED),--include-promoted,) \
 	  $(if $(INCLUDE_REVIEWED),--include-reviewed,) \
 	  $(if $(INCLUDE_DUPLICATES),--include-duplicates,)
+
+backfill-promoted-validation:
+	$(PYTHON) scripts/backfill_promoted_validation.py
 
 review-donation:
 	@if [ -z "$(SUBMISSION)" ]; then \

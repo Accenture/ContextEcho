@@ -196,15 +196,16 @@ make review-donation-quick \
 Maintainers can run the full staging-to-public-candidate intake with:
 
 ```bash
-make download-donations
-make intake-donations RUN_QUICK=1 PROMOTE=1
+make maintainer-intake
 ```
 
 This downloads private staging submissions, reviews each pending donation,
 runs the quick validation gate, and promotes accepted sessions into
 `data_archive_release_v2/`. That tree is the candidate for the next public
 dataset release; it includes all accepted redacted sessions plus manifests,
-consent files, review reports, and `data/donations/ledger.jsonl`.
+consent files, review reports, and `data/donations/ledger.jsonl`. The lower
+level `make intake-donations` target is for debugging; promotion through that
+path still enforces quick validation.
 
 ```bash
 # 1. First check that the approved redacted file is structurally usable.

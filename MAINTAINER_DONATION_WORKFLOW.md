@@ -76,16 +76,14 @@ export CONTEXTECHO_RELAY_URL=https://your-relay.example.org
 
 See [`DONATION_RELAY.md`](DONATION_RELAY.md) for deployment details.
 
-Use the repo virtualenv so all maintainer dependencies are available:
+Use the one-command maintainer intake path for real collection:
 
 ```bash
-make setup-maintainer PYTHON=.venv/bin/python
-make intake-donations RUN_QUICK=1 PROMOTE=1 PYTHON=.venv/bin/python
-make update-release-metadata PYTHON=.venv/bin/python
-make check-release-metadata PYTHON=.venv/bin/python
+make maintainer-intake
 ```
 
-`make intake-donations RUN_QUICK=1 PROMOTE=1` does the maintainer work:
+That command bootstraps the maintainer environment, then runs the full
+submission-to-release-candidate workflow:
 
 1. Downloads private Hugging Face staging submissions into `hf_staging_download/`.
 2. Skips already promoted submissions.
@@ -95,6 +93,21 @@ make check-release-metadata PYTHON=.venv/bin/python
 6. Runs quick 30-cell validation.
 7. Promotes accepted submissions into `data_archive_release_v2/`, marking older same-lineage sessions as superseded when the update has enough new turns/records.
 8. Appends accepted rows to `data_archive_release_v2/data/donations/ledger.jsonl`.
+9. Backfills quick validation for any already-promoted accepted sessions that are missing acceptable quick-validation output.
+10. Regenerates `CONTRIBUTORS.md`, `DATASET_CARD.md`, and `docs/project_stats.json`.
+11. Runs metadata freshness checks.
+
+Do not use the lower-level `make intake-donations PROMOTE=1` path for normal
+collection. It exists for debugging individual stages. The script enforces
+quick validation before promotion, including when `PROMOTE=1` is used directly
+or when a previous acceptable review is found in the review registry.
+
+If a prior interrupted or lower-level run promoted sessions before quick
+validation output existed, repair them with:
+
+```bash
+make backfill-promoted-validation PYTHON=.venv/bin/python
+```
 
 Accepted artifacts are written to:
 

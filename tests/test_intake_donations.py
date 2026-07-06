@@ -1,15 +1,19 @@
 import json
 import unittest
+from argparse import Namespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from scripts.intake_donations import (
     append_review_record,
+    enforce_promotion_requires_quick,
     enough_lineage_growth,
     known_session_lineage,
     known_session_hashes,
     load_review_registry,
+    needs_quick_rereview,
     promoted_submission_ids,
+    reviewed_acceptable_unpromoted,
     sha256_file,
     submission_fingerprint,
     submission_lineage,
@@ -55,6 +59,70 @@ class IntakeDonationTests(unittest.TestCase):
             registry = load_review_registry(root)
             self.assertEqual(registry["submission-failed"]["decision"], "CHECK_REQUIRED")
             self.assertEqual(registry["submission-accepted"]["fingerprint"], "def")
+
+    def test_reviewed_acceptable_unpromoted_requires_quick_when_requested(self):
+        self.assertTrue(reviewed_acceptable_unpromoted({
+            "fingerprint": "abc",
+            "decision": "ACCEPTABLE",
+            "quick_validation": True,
+            "promoted": False,
+        }, "abc", require_quick=True))
+        self.assertTrue(reviewed_acceptable_unpromoted({
+            "fingerprint": "abc",
+            "decision": "ACCEPTABLE",
+            "promoted": False,
+        }, "abc", require_quick=False))
+        self.assertFalse(reviewed_acceptable_unpromoted({
+            "fingerprint": "abc",
+            "decision": "ACCEPTABLE",
+            "quick_validation": False,
+            "promoted": False,
+        }, "abc", require_quick=True))
+        self.assertFalse(reviewed_acceptable_unpromoted({
+            "fingerprint": "abc",
+            "decision": "ACCEPTABLE",
+            "promoted": True,
+        }, "abc"))
+        self.assertFalse(reviewed_acceptable_unpromoted({
+            "fingerprint": "abc",
+            "decision": "CHECK_REQUIRED",
+            "promoted": False,
+        }, "abc"))
+        self.assertFalse(reviewed_acceptable_unpromoted({
+            "fingerprint": "old",
+            "decision": "ACCEPTABLE",
+            "promoted": False,
+        }, "abc"))
+
+    def test_needs_quick_rereview_detects_accepted_without_quick(self):
+        self.assertTrue(needs_quick_rereview({
+            "fingerprint": "abc",
+            "decision": "ACCEPTABLE",
+            "quick_validation": False,
+        }, "abc"))
+        self.assertTrue(needs_quick_rereview({
+            "fingerprint": "abc",
+            "decision": "ACCEPTABLE",
+        }, "abc"))
+        self.assertFalse(needs_quick_rereview({
+            "fingerprint": "abc",
+            "decision": "ACCEPTABLE",
+            "quick_validation": True,
+        }, "abc"))
+        self.assertFalse(needs_quick_rereview({
+            "fingerprint": "old",
+            "decision": "ACCEPTABLE",
+            "quick_validation": False,
+        }, "abc"))
+
+    def test_promote_enables_quick_validation(self):
+        args = Namespace(promote=True, run_quick=False)
+        self.assertTrue(enforce_promotion_requires_quick(args))
+        self.assertTrue(args.run_quick)
+
+        args = Namespace(promote=False, run_quick=False)
+        self.assertFalse(enforce_promotion_requires_quick(args))
+        self.assertFalse(args.run_quick)
 
     def test_submission_fingerprint_changes_when_files_change(self):
         with TemporaryDirectory() as td:
