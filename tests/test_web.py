@@ -94,6 +94,10 @@ class WebTests(unittest.TestCase):
         self.assertIn("You already reviewed the leaderboard preview before submitting", INDEX_HTML)
         self.assertIn('<div class="receipt-card"><div class="receipt-head">Submitted files</div><div class="file-list">${uploads}</div></div>', INDEX_HTML)
         self.assertNotIn('<div class="detail-heading"><span class="detail-icon">▱</span><span>Submitted files</span></div><div class="file-list">${uploads}</div>', INDEX_HTML)
+        self.assertIn(".receipt-action-row button { background:#e8eddc; color:var(--ink); box-shadow:none; }", INDEX_HTML)
+        self.assertIn('<div class="row receipt-action-row"><button id="revealReceipt" type="button">Reveal Receipt</button>', INDEX_HTML)
+        self.assertIn('<button id="submitAnother" class="submit-another">＋ Submit another session</button>', INDEX_HTML)
+        self.assertIn(".submit-another { width:100%; background:var(--accent); color:white;", INDEX_HTML)
 
     def test_session_discovery_runs_on_page_load(self):
         self.assertIn("async function discoverSessions()", INDEX_HTML)

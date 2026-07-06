@@ -1380,6 +1380,8 @@ INDEX_HTML = r"""<!doctype html>
     .detail-icon { flex:0 0 26px; color:#178047; font-size:22px; text-align:center; }
     .detail-value { color:#4d5852; font-size:15px; }
     .detail-chip { display:inline-block; border-radius:999px; padding:9px 14px; background:#e6f5e4; color:#13552f; font-weight:900; }
+    .receipt-action-row button { background:#e8eddc; color:var(--ink); box-shadow:none; }
+    .submit-another { width:100%; background:var(--accent); color:white; box-shadow:0 10px 20px rgba(23,113,63,.2); }
     .copybox { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:12px; background:#fbfbf8; padding:10px 12px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; overflow:hidden; }
     .copybox span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .copy-mini { flex:0 0 auto; border:1px solid #d9dfd4; background:white; color:#5f6662; box-shadow:none; padding:4px 7px; border-radius:8px; font-size:12px; }
@@ -2608,8 +2610,8 @@ function renderSubmitResult(data){
             <div class="detail-value">Already received</div>
             <div class="hint">The maintainer relay recognized this redacted session content and skipped the repeat submission.</div>
           </div>
-          ${data.receipt_path ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▤</span><span>Receipt</span></div><div class="row"><button id="revealReceipt" type="button">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary" type="button">Email Receipt</button></a>` : ''}</div><div class="hint">${emailHref ? 'Email opens your mail app with receipt details; no email is sent by the local tool.' : 'No email was provided, so the duplicate receipt was saved locally only.'}</div></div>` : ''}
-          <button id="submitAnother" class="secondary" style="width:100%">＋ Submit another session</button>
+          ${data.receipt_path ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▤</span><span>Receipt</span></div><div class="row receipt-action-row"><button id="revealReceipt" type="button">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button type="button">Email Receipt</button></a>` : ''}</div><div class="hint">${emailHref ? 'Email opens your mail app with receipt details; no email is sent by the local tool.' : 'No email was provided, so the duplicate receipt was saved locally only.'}</div></div>` : ''}
+          <button id="submitAnother" class="submit-another">＋ Submit another session</button>
         </aside>
       </div>
     `;
@@ -2654,8 +2656,8 @@ function renderSubmitResult(data){
           <div class="copybox"><span>${escapeHtml(publicId)}</span><button class="copy-mini" type="button" id="copySubmissionId">Copy</button></div>
           <div class="hint">${escapeHtml(idHint)}</div>
         </div>
-        ${data.receipt_path ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▤</span><span>Receipt</span></div><div class="row"><button id="revealReceipt" type="button">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button class="secondary" type="button">Email Receipt</button></a>` : ''}</div><div class="hint">${emailHref ? 'Email opens your mail app with receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
-        <button id="submitAnother" class="secondary" style="width:100%">＋ Submit another session</button>
+        ${data.receipt_path ? `<div class="detail-section"><div class="detail-heading"><span class="detail-icon">▤</span><span>Receipt</span></div><div class="row receipt-action-row"><button id="revealReceipt" type="button">Reveal Receipt</button>${emailHref ? `<a href="${escapeHtml(emailHref)}"><button type="button">Email Receipt</button></a>` : ''}</div><div class="hint">${emailHref ? 'Email opens your mail app with receipt details; no email is sent by the local tool.' : 'No email was provided, so the receipt was saved locally only.'}</div></div>` : ''}
+        <button id="submitAnother" class="submit-another">＋ Submit another session</button>
       </aside>
     </div>
   `;
