@@ -1678,6 +1678,7 @@ const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonated
 let donatedRecords = JSON.parse(localStorage.getItem('contextechoDonatedRecordsV1') || '{}');
 let publicStats = {};
 let leaderboardPreviewPage = null;
+let lastContributorInfo = null;
 const statIcons = {
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 2.4l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.47l-5.9 3.1 1.13-6.57-4.78-4.66 6.6-.96L12 2.4z"/></svg>',
   download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 17.5V20h14v-2.5"/></svg>',
@@ -1727,6 +1728,27 @@ function clearContributorFields(){
   ['contributorName','contributorEmail','contributorInstitute'].forEach(id => { $(id).value = ''; });
   if($('publicAnonymous')) $('publicAnonymous').checked = false;
   updateEmailSuggestions();
+}
+function currentContributorInfo(){
+  return {
+    creditName: ($('contributorName')?.value || '').trim(),
+    email: ($('contributorEmail')?.value || '').trim(),
+    institute: ($('contributorInstitute')?.value || '').trim(),
+    publicAnonymous: !!$('publicAnonymous')?.checked
+  };
+}
+function rememberContributorFields(){
+  lastContributorInfo = currentContributorInfo();
+}
+function restoreLastContributorFields(){
+  if(!lastContributorInfo) return;
+  $('contributorName').value = lastContributorInfo.creditName || '';
+  $('contributorEmail').value = lastContributorInfo.email || '';
+  $('contributorInstitute').value = lastContributorInfo.institute || '';
+  if($('publicAnonymous')) $('publicAnonymous').checked = !!lastContributorInfo.publicAnonymous;
+  updateEmailSuggestions();
+  renderSubmitLeaderboardPreview();
+  refreshButtons();
 }
 function setContributorFieldsLocked(locked){
   ['contributorName','contributorEmail','contributorInstitute'].forEach(id => { $(id).disabled = !!locked; });
@@ -2618,7 +2640,7 @@ function renderSubmitResult(data){
     $('submitResult').classList.add('show', 'success-panel');
     if(data.receipt_path && $('revealReceipt')) $('revealReceipt').onclick = () => post('/api/open_path', {path:data.receipt_path, reveal:true}).catch(e => status('submitStatus','ERROR: '+e.message));
     if($('copyReceiptPath') && data.receipt_path) $('copyReceiptPath').onclick = () => navigator.clipboard?.writeText(data.receipt_path).catch(()=>{});
-    $('submitAnother').onclick = () => { resetSessionArtifacts(); goStep(1); };
+    $('submitAnother').onclick = () => { resetSessionArtifacts(); restoreLastContributorFields(); goStep(1); };
     scrollToSubmitResult();
     return;
   }
@@ -2665,7 +2687,7 @@ function renderSubmitResult(data){
   if(data.receipt_path) $('revealReceipt').onclick = () => post('/api/open_path', {path:data.receipt_path, reveal:true}).catch(e => status('submitStatus','ERROR: '+e.message));
   if($('copySubmissionId')) $('copySubmissionId').onclick = () => navigator.clipboard?.writeText(publicId).catch(()=>{});
   if($('copyReceiptPath') && data.receipt_path) $('copyReceiptPath').onclick = () => navigator.clipboard?.writeText(data.receipt_path).catch(()=>{});
-  $('submitAnother').onclick = () => { resetSessionArtifacts(); goStep(1); };
+  $('submitAnother').onclick = () => { resetSessionArtifacts(); restoreLastContributorFields(); goStep(1); };
   scrollToSubmitResult();
 }
 function resetSessionArtifacts(){
@@ -3562,6 +3584,7 @@ $('submitBtn').onclick = async () => {
     if(!data) throw new Error('submit did not return a result');
     setBusy('submitProgress', true, 100);
     submitted = true;
+    rememberContributorFields();
     if(selected && selected.path){
       selected.donated = true;
       selected.donated_before = true;
