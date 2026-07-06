@@ -1,7 +1,7 @@
 {
   "dataset_total_downloads": 47350,
-  "dataset_total_downloads_updated": "2026-06-26",
-  "dataset_total_downloads_note": "Maintainer-tracked cumulative download count: current public Hugging Face downloads plus historical 13,000 and 26,000 totals.",
+  "dataset_total_downloads_updated": "2026-07-06",
+  "dataset_total_downloads_note": "Maintainer-tracked cumulative download count: historical public totals plus positive increases in Hugging Face's rolling last-month downloads.",
   "accepted_submission_ids": [
     "submission-10498453",
     "submission-27249dbf",
@@ -40,5 +40,11 @@
     "submission-fbacc0ea"
   ],
   "accepted_submission_count": 35,
-  "accepted_submission_ids_note": "Public accepted staging IDs used by the local donor wizard to avoid showing already-reviewed local receipts as pending."
+  "accepted_submission_ids_note": "Public accepted staging IDs used by the local donor wizard to avoid showing already-reviewed local receipts as pending.",
+  "dataset_historical_downloads": 39000,
+  "dataset_hf_downloads_last_month": 5029,
+  "dataset_hf_downloads_last_month_previous": 8350,
+  "dataset_hf_downloads_last_month_delta_applied": 0,
+  "dataset_hf_likes": 5,
+  "dataset_hf_last_modified": "2026-06-25T00:39:26.000Z"
 }

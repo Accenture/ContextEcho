@@ -120,6 +120,7 @@ echo "[ContextEcho] backfilling quick validation for promoted sessions missing v
 "$PY" scripts/backfill_promoted_validation.py "${backfill_args[@]}"
 
 echo "[ContextEcho] updating public release metadata..."
+"$PY" scripts/update_project_stats.py --allow-offline
 "$PY" scripts/update_contributors.py
 "$PY" scripts/update_dataset_card.py
 

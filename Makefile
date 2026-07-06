@@ -9,7 +9,7 @@
         fig-app-crosssession fig-app-full25 fig-app-onset \
         download-donations intake-donations promote-donation reset-donation-test-state \
         maintainer-intake backfill-promoted-validation \
-        update-contributors check-contributors update-dataset-card check-dataset-card \
+        update-project-stats update-contributors check-contributors update-dataset-card check-dataset-card \
         sync-approved-metadata update-release-metadata check-release-metadata \
         review-donation review-donation-quick \
         fig-session-validation session-validation-dry-run session-validation-quick \
@@ -45,6 +45,7 @@ help:
 	@echo "    make review-donation-quick SUBMISSION=... run review + 30-cell quick validation"
 	@echo "    make promote-donation SUBMISSION=...      promote one accepted donation"
 	@echo "    make reset-donation-test-state            archive + clear local test intake state"
+	@echo "    make update-project-stats                 refresh tracked Hugging Face download stats"
 	@echo "    make update-contributors                  regenerate CONTRIBUTORS.md from accepted ledger"
 	@echo "    make check-contributors                   verify CONTRIBUTORS.md is up to date"
 	@echo "    make update-dataset-card                  regenerate DATASET_CARD.md from release metadata"
@@ -171,6 +172,9 @@ reset-donation-test-state:
 sync-approved-metadata:
 	$(PYTHON) scripts/sync_approved_metadata_updates.py
 
+update-project-stats:
+	$(PYTHON) scripts/update_project_stats.py --allow-offline
+
 update-contributors:
 	$(PYTHON) scripts/update_contributors.py
 
@@ -183,7 +187,7 @@ update-dataset-card:
 check-dataset-card:
 	$(PYTHON) scripts/update_dataset_card.py --check
 
-update-release-metadata: sync-approved-metadata update-contributors update-dataset-card
+update-release-metadata: sync-approved-metadata update-project-stats update-contributors update-dataset-card
 
 check-release-metadata: check-contributors check-dataset-card
 
