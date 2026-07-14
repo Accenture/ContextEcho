@@ -20,7 +20,7 @@ not included.
 | Active public/candidate sessions tracked locally | 38 |
 | Active public/candidate user turns tracked locally | 28,510 |
 | Active public/candidate context compactions tracked locally | 123 |
-| Public contributors in leaderboard | 26 |
+| Public contributors in leaderboard | 25 |
 | V2 promotion ledger status | 35 promoted accepted donation(s) |
 
 ## Composition

@@ -20,7 +20,7 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | Rank | Contributor | Sessions | Turns | Agents | Models | Points |
 |:----:|-------------|:--------:|------:|--------|--------|:------:|
 | 🥇 | Anonymous donor 38ccb48b | 5 | 1,214 | Claude Code · Codex CLI | claude-opus-4.x (mixed) · claude-sonnet-4-6 · +1 | 25 |
-| 🥈 | Anonymous donor 9f3e1e40 | 3 | 267 | Codex CLI | gpt-5.5 | 15 |
+| 🥈 | Anonymous donor 9f3e1e40 | 4 | 380 | Claude Code · Codex CLI | claude-sonnet-4-6 · gpt-5.5 | 20 |
 | 🥉 | Anonymous donor 86ff44fe | 3 | 174 | Claude Code | claude-opus-4.x (mixed) · claude-sonnet-4-6 · +1 | 14 |
 | 4 | Anonymous donor 6ad76f41 | 3 | 204 | Claude Code | claude-opus-4-8 · claude-opus-4.x (mixed) | 12 |
 | 5 | Anonymous donor ae4ddeac | 2 | 916 | Claude Code | claude-opus-4-5.x (mixed) · claude-opus-4.x (mixed) | 10 |
@@ -37,14 +37,13 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | 16 | Anonymous donor d9b5dd55 | 1 | 307 | Codex CLI | gpt-5.5 | 5 |
 | 17 | Anonymous donor 3c6f1e05 | 1 | 168 | Claude Code | claude-sonnet-4-6 | 5 |
 | 18 | Anonymous donor 27249dbf | 1 | 118 | Claude Code | claude-sonnet-4-6 | 5 |
-| 19 | Xianzhong Ding | 1 | 113 | Claude Code | claude-sonnet-4-6 | 5 |
-| 20 | Anonymous donor 484a6f7f | 1 | 109 | Codex CLI | gpt-5.5 | 5 |
-| 21 | Anonymous donor 37744e94 | 1 | 101 | Codex CLI | gpt-5.3-codex | 5 |
-| 22 | Anonymous donor d65ef8ed | 1 | 57 | Claude Code | claude-sonnet-4-6 | 5 |
-| 23 | Anonymous donor 607d8b75 | 1 | 56 | Claude Code | claude-sonnet-4-6 | 5 |
-| 24 | Anonymous donor 716afc47 | 1 | 56 | Codex CLI | gpt-5.5 | 5 |
-| 25 | Anonymous donor 10498453 | 1 | 54 | Codex CLI | gpt-5.5 | 5 |
-| 26 | Anonymous donor 6d97690b | 1 | 54 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
+| 19 | Anonymous donor 484a6f7f | 1 | 109 | Codex CLI | gpt-5.5 | 5 |
+| 20 | Anonymous donor 37744e94 | 1 | 101 | Codex CLI | gpt-5.3-codex | 5 |
+| 21 | Anonymous donor d65ef8ed | 1 | 57 | Claude Code | claude-sonnet-4-6 | 5 |
+| 22 | Anonymous donor 607d8b75 | 1 | 56 | Claude Code | claude-sonnet-4-6 | 5 |
+| 23 | Anonymous donor 716afc47 | 1 | 56 | Codex CLI | gpt-5.5 | 5 |
+| 24 | Anonymous donor 10498453 | 1 | 54 | Codex CLI | gpt-5.5 | 5 |
+| 25 | Anonymous donor 6d97690b | 1 | 54 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
 
 *Corpus total: **38 sessions · 28,510 user turns**.*
 
@@ -92,7 +91,7 @@ per contributor counts toward points.
 | S25 | submission-a1bc35ea | Anonymous donor a1bc35ea | anonymous | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 441 | 11 | 5 | v2 |
 | S26 | submission-a997ebe1 | Anonymous donor 6ad76f41 | anonymous | Claude Code | claude-opus-4-8 | Anthropic | agentic-coding | mixed | 81 | 0 | 4 | v2 |
 | S27 | submission-ae4ddeac | Anonymous donor ae4ddeac | anonymous | Claude Code | claude-opus-4.x (mixed) | Anthropic | agentic-coding | mixed | 829 | 10 | 5 | v2 |
-| S28 | submission-afb6ad6d | Xianzhong Ding | named | Claude Code | claude-sonnet-4-6 | Anthropic | web-frontend | mixed | 113 | 2 | 5 | v2 |
+| S28 | submission-afb6ad6d | Anonymous donor afb6ad6d | anonymous | Claude Code | claude-sonnet-4-6 | Anthropic | web-frontend | mixed | 113 | 2 | 5 | v2 |
 | S29 | submission-b2a90d8c | Anonymous donor 38ccb48b | anonymous | Codex CLI | gpt-5.5 | OpenAI | web-frontend | mixed | 100 | 0 | 5 | v2 |
 | S30 | submission-b73f8795 | Anonymous donor b73f8795 | anonymous | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 81 | 4 | 5 | v2 |
 | S31 | submission-c453a55e | Anonymous donor c453a55e | anonymous | Claude Code | claude-sonnet-4.x (mixed) | Anthropic | web-frontend | mixed | 127 | 2 | 5 | v2 |
