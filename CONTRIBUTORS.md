@@ -20,24 +20,24 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | Rank | Contributor | Sessions | Turns | Agents | Models | Points |
 |:----:|-------------|:--------:|------:|--------|--------|:------:|
 | 🥇 | Anonymous donor 38ccb48b | 5 | 1,214 | Claude Code · Codex CLI | claude-opus-4.x (mixed) · claude-sonnet-4-6 · +1 | 25 |
-| 🥈 | Anonymous donor 86ff44fe | 3 | 174 | Claude Code | claude-opus-4.x (mixed) · claude-sonnet-4-6 · +1 | 14 |
-| 🥉 | Anonymous donor 6ad76f41 | 3 | 204 | Claude Code | claude-opus-4-8 · claude-opus-4.x (mixed) | 12 |
-| 4 | Anonymous donor ae4ddeac | 2 | 916 | Claude Code | claude-opus-4-5.x (mixed) · claude-opus-4.x (mixed) | 10 |
-| 5 | Anonymous donor 38bd5d46 | 2 | 233 | Claude Code · Codex CLI | claude-sonnet-4.x (mixed) · gpt-5.5 | 10 |
-| 6 | Anonymous donor b73f8795 | 2 | 204 | Codex CLI | gpt-5.5 | 10 |
-| 7 | Xianzhong Ding | 2 | 176 | Claude Code · Codex CLI | claude-sonnet-4-6 · gpt-5.5 | 10 |
-| 8 | Anonymous donor S1 | 1 | 9,716 | Claude Code | Opus 4.x (mixed) | 5 |
-| 9 | Anonymous donor S3 | 1 | 4,918 | Claude Code | Opus 4.x (mixed) | 5 |
-| 10 | Anonymous donor S2 | 1 | 3,746 | Claude Code | Opus 4.x (mixed) | 5 |
-| 11 | Anonymous donor 95c3332b | 1 | 2,509 | Claude Code | claude-opus-4.x (mixed) | 5 |
-| 12 | Anonymous donor d016759e | 1 | 1,611 | Claude Code | claude-opus-4.x (mixed) | 5 |
-| 13 | Anonymous donor 97289703 | 1 | 564 | Codex CLI | gpt-5.5 | 5 |
-| 14 | Anonymous donor 5102291c | 1 | 449 | Codex CLI | gpt-5.4 | 5 |
-| 15 | Anonymous donor a1bc35ea | 1 | 441 | Codex CLI | gpt-5.5 | 5 |
-| 16 | Anonymous donor 443d0148 | 1 | 355 | Claude Code | claude-opus-4.x (mixed) | 5 |
-| 17 | Anonymous donor d9b5dd55 | 1 | 307 | Codex CLI | gpt-5.5 | 5 |
-| 18 | Anonymous donor 3c6f1e05 | 1 | 168 | Claude Code | claude-sonnet-4-6 | 5 |
-| 19 | Anonymous donor 27249dbf | 1 | 118 | Claude Code | claude-sonnet-4-6 | 5 |
+| 🥈 | Anonymous donor 9f3e1e40 | 3 | 267 | Codex CLI | gpt-5.5 | 15 |
+| 🥉 | Anonymous donor 86ff44fe | 3 | 174 | Claude Code | claude-opus-4.x (mixed) · claude-sonnet-4-6 · +1 | 14 |
+| 4 | Anonymous donor 6ad76f41 | 3 | 204 | Claude Code | claude-opus-4-8 · claude-opus-4.x (mixed) | 12 |
+| 5 | Anonymous donor ae4ddeac | 2 | 916 | Claude Code | claude-opus-4-5.x (mixed) · claude-opus-4.x (mixed) | 10 |
+| 6 | Anonymous donor 38bd5d46 | 2 | 233 | Claude Code · Codex CLI | claude-sonnet-4.x (mixed) · gpt-5.5 | 10 |
+| 7 | Anonymous donor S1 | 1 | 9,716 | Claude Code | Opus 4.x (mixed) | 5 |
+| 8 | Anonymous donor S3 | 1 | 4,918 | Claude Code | Opus 4.x (mixed) | 5 |
+| 9 | Anonymous donor S2 | 1 | 3,746 | Claude Code | Opus 4.x (mixed) | 5 |
+| 10 | Anonymous donor 95c3332b | 1 | 2,509 | Claude Code | claude-opus-4.x (mixed) | 5 |
+| 11 | Anonymous donor d016759e | 1 | 1,611 | Claude Code | claude-opus-4.x (mixed) | 5 |
+| 12 | Anonymous donor 97289703 | 1 | 564 | Codex CLI | gpt-5.5 | 5 |
+| 13 | Anonymous donor 5102291c | 1 | 449 | Codex CLI | gpt-5.4 | 5 |
+| 14 | Anonymous donor a1bc35ea | 1 | 441 | Codex CLI | gpt-5.5 | 5 |
+| 15 | Anonymous donor 443d0148 | 1 | 355 | Claude Code | claude-opus-4.x (mixed) | 5 |
+| 16 | Anonymous donor d9b5dd55 | 1 | 307 | Codex CLI | gpt-5.5 | 5 |
+| 17 | Anonymous donor 3c6f1e05 | 1 | 168 | Claude Code | claude-sonnet-4-6 | 5 |
+| 18 | Anonymous donor 27249dbf | 1 | 118 | Claude Code | claude-sonnet-4-6 | 5 |
+| 19 | Xianzhong Ding | 1 | 113 | Claude Code | claude-sonnet-4-6 | 5 |
 | 20 | Anonymous donor 484a6f7f | 1 | 109 | Codex CLI | gpt-5.5 | 5 |
 | 21 | Anonymous donor 37744e94 | 1 | 101 | Codex CLI | gpt-5.3-codex | 5 |
 | 22 | Anonymous donor d65ef8ed | 1 | 57 | Claude Code | claude-sonnet-4-6 | 5 |
@@ -88,7 +88,7 @@ per contributor counts toward points.
 | S21 | Anonymous donor 95c3332b | Claude Code | claude-opus-4.x (mixed) | Anthropic | agentic-coding | mixed | 2,509 | 17 | 5 | v2 |
 | S22 | Anonymous donor 97289703 | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 564 | 8 | 5 | v2 |
 | S23 | Anonymous donor 38ccb48b | Claude Code | claude-sonnet-4-6 | Anthropic | agentic-coding | mixed | 161 | 1 | 5 | v2 |
-| S24 | Xianzhong Ding | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 63 | 1 | 5 | v2 |
+| S24 | Anonymous donor 9f3e1e40 | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 63 | 1 | 5 | v2 |
 | S25 | Anonymous donor a1bc35ea | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 441 | 11 | 5 | v2 |
 | S26 | Anonymous donor 6ad76f41 | Claude Code | claude-opus-4-8 | Anthropic | agentic-coding | mixed | 81 | 0 | 4 | v2 |
 | S27 | Anonymous donor ae4ddeac | Claude Code | claude-opus-4.x (mixed) | Anthropic | agentic-coding | mixed | 829 | 10 | 5 | v2 |
