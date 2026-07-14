@@ -1682,7 +1682,16 @@ const donatedPaths = new Set(JSON.parse(localStorage.getItem('contextechoDonated
 let donatedRecords = JSON.parse(localStorage.getItem('contextechoDonatedRecordsV1') || '{}');
 let publicStats = {};
 let leaderboardPreviewPage = null;
-let lastContributorInfo = null;
+const lastContributorInfoKey = 'contextechoLastContributorInfoV1';
+function loadLastContributorInfo(){
+  try {
+    const info = JSON.parse(localStorage.getItem(lastContributorInfoKey) || 'null');
+    return info && typeof info === 'object' ? info : null;
+  } catch(_e) {
+    return null;
+  }
+}
+let lastContributorInfo = loadLastContributorInfo();
 const statIcons = {
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-fill" d="M12 2.4l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.47l-5.9 3.1 1.13-6.57-4.78-4.66 6.6-.96L12 2.4z"/></svg>',
   download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M5 17.5V20h14v-2.5"/></svg>',
@@ -1745,12 +1754,18 @@ function publicIdentityPill(contributor, submissionId){
   const mode = contributor.publicAnonymous ? 'anonymous' : 'named';
   return `<span class="pill ${contributor.publicAnonymous ? 'warn' : ''}">${mode} · ${escapeHtml(label)}</span>`;
 }
-function prefillContributorFields(session, overwrite=false){
-  const info = localContributorRecord(session || {});
+function contributorInfoHasFields(info){
+  return !!(info && (info.creditName || info.email || info.institute || info.publicAnonymous));
+}
+function applyContributorInfo(info, overwrite=false){
+  if(!info) return;
   if(info.creditName && (overwrite || !$('contributorName').value)) $('contributorName').value = info.creditName;
   if(info.email && (overwrite || !$('contributorEmail').value)) $('contributorEmail').value = info.email;
   if(info.institute && (overwrite || !$('contributorInstitute').value)) $('contributorInstitute').value = info.institute;
   if($('publicAnonymous') && (overwrite || info.publicAnonymous)) $('publicAnonymous').checked = info.publicAnonymous;
+}
+function prefillContributorFields(session, overwrite=false){
+  applyContributorInfo(localContributorRecord(session || {}), overwrite);
 }
 function clearContributorFields(){
   ['contributorName','contributorEmail','contributorInstitute'].forEach(id => { $(id).value = ''; });
@@ -1767,13 +1782,11 @@ function currentContributorInfo(){
 }
 function rememberContributorFields(){
   lastContributorInfo = currentContributorInfo();
+  localStorage.setItem(lastContributorInfoKey, JSON.stringify(lastContributorInfo));
 }
 function restoreLastContributorFields(){
   if(!lastContributorInfo) return;
-  $('contributorName').value = lastContributorInfo.creditName || '';
-  $('contributorEmail').value = lastContributorInfo.email || '';
-  $('contributorInstitute').value = lastContributorInfo.institute || '';
-  if($('publicAnonymous')) $('publicAnonymous').checked = !!lastContributorInfo.publicAnonymous;
+  applyContributorInfo(lastContributorInfo, true);
   updateEmailSuggestions();
   renderSubmitLeaderboardPreview();
   refreshButtons();
@@ -1982,7 +1995,15 @@ function goStep(n){
   $('progressRing').style.setProperty('--pct', pct);
   $('progressRingText').textContent = `${pct}%`;
   if(n === 3) {
+    const selectedContributor = selected ? localContributorRecord(selected) : null;
+    if(contributorInfoHasFields(selectedContributor)) {
+      applyContributorInfo(selectedContributor, false);
+    } else if(!contributorFieldsComplete()) {
+      applyContributorInfo(lastContributorInfo, false);
+    }
+    updateEmailSuggestions();
     renderSubmitLeaderboardPreview();
+    refreshButtons();
   }
 }
 function refreshButtons(){
