@@ -17,22 +17,22 @@ not included.
 | Public v1 founding sessions | 3 |
 | Public v1 per-cell evaluations | 41,921 |
 | Public v1 data size | 310 MB redacted sessions + 705 MB per-cell evaluations |
-| Active public/candidate sessions tracked locally | 38 |
-| Active public/candidate user turns tracked locally | 28,510 |
-| Active public/candidate context compactions tracked locally | 123 |
-| Public contributors in leaderboard | 25 |
-| V2 promotion ledger status | 35 promoted accepted donation(s) |
+| Active public/candidate sessions tracked locally | 39 |
+| Active public/candidate user turns tracked locally | 28,855 |
+| Active public/candidate context compactions tracked locally | 128 |
+| Public contributors in leaderboard | 26 |
+| V2 promotion ledger status | 36 promoted accepted donation(s) |
 
 ## Composition
 
 | Axis | Values |
 |------|--------|
-| Agent / harness | Claude Code (23), Codex CLI (15) |
-| Model family | gpt-5.5 (13), claude-opus-4.x (mixed) (8), claude-sonnet-4-6 (7), Opus 4.x (mixed) (3), claude-sonnet-4.x (mixed) (3), gpt-5.3-codex (1), gpt-5.4 (1), claude-opus-4-8 (1), +1 more |
-| Model organization | Anthropic (23), OpenAI (15) |
-| Task domain | agentic-coding (26), web-frontend (10), manuscript-writing (1), non-coding-docs (1) |
-| Primary language | mixed (37), Python (1) |
-| Privacy tier | full_redacted (32), user_minimized (3) |
+| Agent / harness | Claude Code (24), Codex CLI (15) |
+| Model family | gpt-5.5 (13), claude-opus-4.x (mixed) (8), claude-sonnet-4-6 (6), claude-sonnet-4.x (mixed) (5), Opus 4.x (mixed) (3), gpt-5.3-codex (1), gpt-5.4 (1), claude-opus-4-8 (1), +1 more |
+| Model organization | Anthropic (24), OpenAI (15) |
+| Task domain | agentic-coding (27), web-frontend (10), manuscript-writing (1), non-coding-docs (1) |
+| Primary language | mixed (38), Python (1) |
+| Privacy tier | full_redacted (33), user_minimized (3) |
 | Institution coverage | 19 institutions |
 
 ## Donation And Promotion Pipeline
@@ -64,9 +64,9 @@ composition.
 
 | Ledger state | Count |
 |--------------|------:|
-| Total rows | 35 |
-| ACCEPTABLE | 35 |
-| SUPERSEDED | 0 |
+| Total rows | 37 |
+| ACCEPTABLE | 36 |
+| SUPERSEDED | 1 |
 | CHECK_REQUIRED | 0 |
 | DUPLICATE | 0 |
 

@@ -117,7 +117,7 @@ if [[ -n "${STAGING_DIR:-}" ]]; then
 fi
 
 echo "[ContextEcho] backfilling quick validation for promoted sessions missing validation output..."
-"$PY" scripts/backfill_promoted_validation.py "${backfill_args[@]}"
+"$PY" scripts/backfill_promoted_validation.py "${backfill_args[@]+"${backfill_args[@]}"}"
 
 echo "[ContextEcho] updating public release metadata..."
 "$PY" scripts/update_project_stats.py --allow-offline

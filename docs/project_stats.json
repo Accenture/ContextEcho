@@ -6,6 +6,7 @@
     "submission-10498453",
     "submission-27249dbf",
     "submission-297da79a",
+    "submission-29ca0f27",
     "submission-37744e94",
     "submission-38bd5d46",
     "submission-38ccb48b",
@@ -13,7 +14,6 @@
     "submission-443d0148",
     "submission-484a6f7f",
     "submission-5102291c",
-    "submission-607d8b75",
     "submission-6ad76f41",
     "submission-6b493dd1",
     "submission-6d97690b",
@@ -24,6 +24,7 @@
     "submission-97289703",
     "submission-9ccc8b68",
     "submission-9f3e1e40",
+    "submission-9f5fa5fe",
     "submission-a1bc35ea",
     "submission-a997ebe1",
     "submission-ae4ddeac",
@@ -39,7 +40,7 @@
     "submission-d9b5dd55",
     "submission-fbacc0ea"
   ],
-  "accepted_submission_count": 35,
+  "accepted_submission_count": 36,
   "accepted_submission_ids_note": "Public accepted staging IDs used by the local donor wizard to avoid showing already-reviewed local receipts as pending.",
   "dataset_historical_downloads": 39000,
   "dataset_hf_downloads_last_month": 17786,
@@ -61,6 +62,10 @@
     },
     "submission-297da79a": {
       "public_display_name": "Anonymous donor 86ff44fe",
+      "public_anonymous": true
+    },
+    "submission-29ca0f27": {
+      "public_display_name": "Anonymous donor 29ca0f27",
       "public_anonymous": true
     },
     "submission-37744e94": {
@@ -89,10 +94,6 @@
     },
     "submission-5102291c": {
       "public_display_name": "Anonymous donor 5102291c",
-      "public_anonymous": true
-    },
-    "submission-607d8b75": {
-      "public_display_name": "Anonymous donor 607d8b75",
       "public_anonymous": true
     },
     "submission-6ad76f41": {
@@ -133,6 +134,10 @@
     },
     "submission-9f3e1e40": {
       "public_display_name": "Anonymous donor 9f3e1e40",
+      "public_anonymous": true
+    },
+    "submission-9f5fa5fe": {
+      "public_display_name": "Anonymous donor 9f5fa5fe",
       "public_anonymous": true
     },
     "submission-a1bc35ea": {

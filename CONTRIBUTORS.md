@@ -34,18 +34,19 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | 13 | Anonymous donor 5102291c | 1 | 449 | Codex CLI | gpt-5.4 | 5 |
 | 14 | Anonymous donor a1bc35ea | 1 | 441 | Codex CLI | gpt-5.5 | 5 |
 | 15 | Anonymous donor 443d0148 | 1 | 355 | Claude Code | claude-opus-4.x (mixed) | 5 |
-| 16 | Anonymous donor d9b5dd55 | 1 | 307 | Codex CLI | gpt-5.5 | 5 |
-| 17 | Anonymous donor 3c6f1e05 | 1 | 168 | Claude Code | claude-sonnet-4-6 | 5 |
-| 18 | Anonymous donor 27249dbf | 1 | 118 | Claude Code | claude-sonnet-4-6 | 5 |
-| 19 | Anonymous donor 484a6f7f | 1 | 109 | Codex CLI | gpt-5.5 | 5 |
-| 20 | Anonymous donor 37744e94 | 1 | 101 | Codex CLI | gpt-5.3-codex | 5 |
-| 21 | Anonymous donor d65ef8ed | 1 | 57 | Claude Code | claude-sonnet-4-6 | 5 |
-| 22 | Anonymous donor 607d8b75 | 1 | 56 | Claude Code | claude-sonnet-4-6 | 5 |
+| 16 | Anonymous donor 29ca0f27 | 1 | 338 | Claude Code | claude-sonnet-4.x (mixed) | 5 |
+| 17 | Anonymous donor d9b5dd55 | 1 | 307 | Codex CLI | gpt-5.5 | 5 |
+| 18 | Anonymous donor 3c6f1e05 | 1 | 168 | Claude Code | claude-sonnet-4-6 | 5 |
+| 19 | Anonymous donor 27249dbf | 1 | 118 | Claude Code | claude-sonnet-4-6 | 5 |
+| 20 | Anonymous donor 484a6f7f | 1 | 109 | Codex CLI | gpt-5.5 | 5 |
+| 21 | Anonymous donor 37744e94 | 1 | 101 | Codex CLI | gpt-5.3-codex | 5 |
+| 22 | Anonymous donor d65ef8ed | 1 | 57 | Claude Code | claude-sonnet-4-6 | 5 |
 | 23 | Anonymous donor 716afc47 | 1 | 56 | Codex CLI | gpt-5.5 | 5 |
 | 24 | Anonymous donor 10498453 | 1 | 54 | Codex CLI | gpt-5.5 | 5 |
-| 25 | Anonymous donor 6d97690b | 1 | 54 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
+| 25 | Anonymous donor 9f5fa5fe | 1 | 63 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
+| 26 | Anonymous donor 6d97690b | 1 | 54 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
 
-*Corpus total: **38 sessions · 28,510 user turns**.*
+*Corpus total: **39 sessions · 28,855 user turns**.*
 
 > Public-anonymous donors are grouped under a stable anonymous alias when
 > maintainer-known identity fields match exactly after normalization.
@@ -78,7 +79,6 @@ per contributor counts toward points.
 | S12 | submission-443d0148 | Anonymous donor 443d0148 | anonymous | Claude Code | claude-opus-4.x (mixed) | Anthropic | web-frontend | mixed | 355 | 2 | 5 | v2 |
 | S13 | submission-484a6f7f | Anonymous donor 484a6f7f | anonymous | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 109 | 3 | 5 | v2 |
 | S14 | submission-5102291c | Anonymous donor 5102291c | anonymous | Codex CLI | gpt-5.4 | OpenAI | agentic-coding | mixed | 449 | 5 | 5 | v2 |
-| S15 | submission-607d8b75 | Anonymous donor 607d8b75 | anonymous | Claude Code | claude-sonnet-4-6 | Anthropic | web-frontend | mixed | 56 | 2 | 5 | v2 |
 | S16 | submission-6ad76f41 | Anonymous donor 6ad76f41 | anonymous | Claude Code | claude-opus-4.x (mixed) | Anthropic | agentic-coding | mixed | 53 | 0 | 4 | v2 |
 | S17 | submission-6b493dd1 | Anonymous donor 38ccb48b | anonymous | Claude Code | claude-opus-4.x (mixed) | Anthropic | agentic-coding | mixed | 114 | 0 | 5 | v2 |
 | S18 | submission-6d97690b | Anonymous donor 6d97690b | anonymous | Claude Code | claude-sonnet-4.x (mixed) | Anthropic | agentic-coding | mixed | 54 | 0 | 4 | v2 |
@@ -102,6 +102,8 @@ per contributor counts toward points.
 | S36 | submission-d7410aa4 | Anonymous donor d7410aa4 | anonymous | Claude Code | claude-opus-4-5.x (mixed) | Anthropic | agentic-coding | mixed | 87 | 2 | 5 | v2 |
 | S37 | submission-d9b5dd55 | Anonymous donor d9b5dd55 | anonymous | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 307 | 5 | 5 | v2 |
 | S38 | submission-fbacc0ea | Anonymous donor fbacc0ea | anonymous | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 123 | 0 | 5 | v2 |
+| S39 | submission-29ca0f27 | Anonymous donor 29ca0f27 | anonymous | Claude Code | claude-sonnet-4.x (mixed) | Anthropic | web-frontend | mixed | 338 | 7 | 5 | v2 |
+| S40 | submission-9f5fa5fe | Anonymous donor 9f5fa5fe | anonymous | Claude Code | claude-sonnet-4.x (mixed) | Anthropic | agentic-coding | mixed | 63 | 0 | 4 | v2 |
 
 ---
 
