@@ -108,6 +108,12 @@ class WebTests(unittest.TestCase):
 
     def test_donated_rows_show_copyable_support_submission_id(self):
         self.assertIn("support-id", INDEX_HTML)
+        self.assertIn("function anonymousAlias", INDEX_HTML)
+        self.assertIn("function publicContributorLabel", INDEX_HTML)
+        self.assertIn("function publicIdentityPill", INDEX_HTML)
+        self.assertIn("accepted_submission_public_identities", INDEX_HTML)
+        self.assertIn("const mode = contributor.publicAnonymous ? 'anonymous' : 'named';", INDEX_HTML)
+        self.assertIn("${mode} · ${escapeHtml(label)}", INDEX_HTML)
         self.assertNotIn("local-record", INDEX_HTML)
         self.assertNotIn("Local receipt only; relay does not currently have this submission", INDEX_HTML)
         self.assertIn("data-copy-submission", INDEX_HTML)
@@ -129,6 +135,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("clearResumeGuidance();", INDEX_HTML)
         self.assertNotIn("pickSessionInfoCard", INDEX_HTML)
         self.assertIn("Public leaderboard:", INDEX_HTML)
+        self.assertIn("Visibility:", INDEX_HTML)
         self.assertIn("Submitted name:", INDEX_HTML)
         self.assertNotIn("function sessionDonationHoverText", INDEX_HTML)
         self.assertNotIn("row.dataset.tooltip", INDEX_HTML)
@@ -220,6 +227,12 @@ class WebTests(unittest.TestCase):
 
     def test_maintainer_metadata_updates_can_be_approved(self):
         html = Path("docs/maintainer/index.html").read_text(encoding="utf-8")
+        self.assertIn("function publicIdentity", html)
+        self.assertIn("function publicVisibilityPill", html)
+        self.assertIn("function privateDonorCell", html)
+        self.assertIn("function identitySearchText", html)
+        self.assertIn("Public ID", html)
+        self.assertIn("Private donor", html)
         self.assertIn("/api/admin/metadata-updates/approve", html)
         self.assertIn("data-approve-metadata", html)
         self.assertIn("function approveMetadata", html)
@@ -279,7 +292,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("function setPendingSort", html)
         self.assertIn("function sortHeader", html)
         self.assertIn("data-pending-sort", html)
-        self.assertIn("sortHeader('Institute', 'institute')", html)
+        self.assertIn("sortHeader('Private donor', 'donor')", html)
         self.assertIn("sort(comparePendingRows)", html)
         self.assertIn('id="pendingStats"', html)
         self.assertIn("Staging snapshot", html)

@@ -976,6 +976,7 @@ def project_stats() -> dict:
         "dataset_likes": None,
         "accepted_submission_ids": [],
         "accepted_submission_count": 0,
+        "accepted_submission_public_identities": {},
         "leaderboard": [],
         "coverage": {},
     }
@@ -996,6 +997,9 @@ def project_stats() -> dict:
         if isinstance(accepted_ids, list):
             stats["accepted_submission_ids"] = accepted_ids
             stats["accepted_submission_count"] = tracked.get("accepted_submission_count", len(accepted_ids))
+        identities = tracked.get("accepted_submission_public_identities", {})
+        if isinstance(identities, dict):
+            stats["accepted_submission_public_identities"] = identities
     except Exception:
         pass
     try:
@@ -1700,6 +1704,18 @@ function sessionPathKey(s){ return String(s?.path || ''); }
 function normalizeSubmissionId(value){
   return String(value || '').replace(/^pending\//, '').replace(/\/$/, '');
 }
+function anonymousAlias(submissionId){
+  const id = normalizeSubmissionId(submissionId);
+  return id.startsWith('submission-') ? `Anonymous donor ${id.replace(/^submission-/, '')}` : 'Anonymous donor';
+}
+function publicIdentityFromStats(submissionId){
+  const id = normalizeSubmissionId(submissionId);
+  const identity = publicStats?.accepted_submission_public_identities?.[id] || {};
+  return {
+    name: identity.public_display_name || '',
+    publicAnonymous: !!identity.public_anonymous,
+  };
+}
 function sessionUpdateReady(currentTurns, previousTurns){
   const previous = Number(previousTurns || 0);
   const delta = Math.max(0, Number(currentTurns || 0) - previous);
@@ -1709,13 +1725,25 @@ function sessionUpdateReady(currentTurns, previousTurns){
 function localContributorRecord(s){
   const pathKey = sessionPathKey(s);
   const record = pathKey ? donatedRecords[pathKey] : {};
+  const submissionId = normalizeSubmissionId(s?.relay_submission_id || record?.submission_id || record?.submission || '');
+  const publicIdentity = publicIdentityFromStats(submissionId);
   return {
-    creditName: s?.local_credit_name || record?.credit_name || '',
+    creditName: s?.local_credit_name || record?.credit_name || publicIdentity.name || '',
     email: s?.local_contributor_email || record?.contributor_email || '',
     institute: s?.local_institute || record?.institute || '',
-    publicAnonymous: !!(s?.local_public_anonymous || record?.public_anonymous),
-    submittedAt: s?.local_submitted_at || record?.submitted_at || ''
+    publicAnonymous: !!(s?.local_public_anonymous || record?.public_anonymous || publicIdentity.publicAnonymous),
+    submittedAt: s?.local_submitted_at || record?.submitted_at || '',
+    submissionId,
   };
+}
+function publicContributorLabel(contributor, submissionId){
+  if(contributor.publicAnonymous) return publicIdentityFromStats(submissionId).name || anonymousAlias(submissionId);
+  return contributor.creditName || publicIdentityFromStats(submissionId).name || 'Named donor';
+}
+function publicIdentityPill(contributor, submissionId){
+  const label = publicContributorLabel(contributor, submissionId);
+  const mode = contributor.publicAnonymous ? 'anonymous' : 'named';
+  return `<span class="pill ${contributor.publicAnonymous ? 'warn' : ''}">${mode} · ${escapeHtml(label)}</span>`;
 }
 function prefillContributorFields(session, overwrite=false){
   const info = localContributorRecord(session || {});
@@ -2278,11 +2306,12 @@ function renderSelectedCard(s, idx){
     ? `<div class="session-chip-row">${donationStatus}${donationInfo.supportId ? `<span class="pill support-id" data-copy-submission="${escapeHtml(donationInfo.supportId)}" title="Click to copy maintainer reset ID">ID ${escapeHtml(donationInfo.supportId)}</span>` : ''}</div>`
     : '';
   const publicCredit = contributor.publicAnonymous
-    ? 'Anonymous donor'
-    : (contributor.creditName || 'Not available locally');
+    ? publicContributorLabel(contributor, donationInfo.supportId)
+    : (publicContributorLabel(contributor, donationInfo.supportId) || 'Not available locally');
   const donationDetails = donationInfo.donatedBefore ? `
         <div class="metrics donation-info">
           <span class="metric">Public leaderboard: <strong>${escapeHtml(publicCredit)}</strong></span>
+          <span class="metric">Visibility: <strong>${contributor.publicAnonymous ? 'anonymous' : 'named'}</strong></span>
           <span class="metric">Submitted name: <strong>${escapeHtml(contributor.creditName || 'Not available locally')}</strong></span>
           <span class="metric">Email: <strong>${escapeHtml(contributor.email || 'Not available locally')}</strong></span>
           <span class="metric">Institute: <strong>${escapeHtml(contributor.institute || 'Not available locally')}</strong></span>
@@ -2320,8 +2349,8 @@ function renderPickDonationCard(s, idx){
   const donationInfo = localDonationInfo(s);
   const contributor = localContributorRecord(s);
   const publicCredit = contributor.publicAnonymous
-    ? 'Anonymous donor'
-    : (contributor.creditName || 'Not available locally');
+    ? publicContributorLabel(contributor, donationInfo.supportId)
+    : (publicContributorLabel(contributor, donationInfo.supportId) || 'Not available locally');
   const donationStatus = donationInfo.updateReady
     ? `<span class="pill best">update ready · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns</span>`
     : `<span class="pill donated">donated${donationInfo.newTurns ? ` · +${escapeHtml(compactNumber(donationInfo.newTurns))} turns` : ''}</span>`;
@@ -2342,6 +2371,7 @@ function renderPickDonationCard(s, idx){
       <div class="session-chip-row">${donationStatus}${supportPill}</div>
       <div class="metrics donation-info">
         <span class="metric">Public leaderboard: <strong>${escapeHtml(publicCredit)}</strong></span>
+        <span class="metric">Visibility: <strong>${contributor.publicAnonymous ? 'anonymous' : 'named'}</strong></span>
         <span class="metric">Submitted name: <strong>${escapeHtml(contributor.creditName || 'Not available locally')}</strong></span>
         <span class="metric">Email: <strong>${escapeHtml(contributor.email || 'Not available locally')}</strong></span>
         <span class="metric">Institute: <strong>${escapeHtml(contributor.institute || 'Not available locally')}</strong></span>
@@ -2875,6 +2905,8 @@ function sessionGroupValue(s){
 }
 function sessionSearchText(s){
   const donationInfo = localDonationInfo(s);
+  const contributor = localContributorRecord(s);
+  const publicLabel = publicContributorLabel(contributor, donationInfo.supportId);
   return [
     s?.agent || '',
     s?.model || '',
@@ -2885,6 +2917,11 @@ function sessionSearchText(s){
     s?.path || '',
     s?.relay_submission_id || '',
     donationInfo.supportId || '',
+    publicLabel,
+    contributor.publicAnonymous ? 'anonymous' : 'named',
+    contributor.creditName || '',
+    contributor.email || '',
+    contributor.institute || '',
     fitLabel(fit(s)),
   ].map(x => String(x).toLowerCase()).join(' ');
 }
@@ -3174,6 +3211,7 @@ function renderSessions(){
     const resumeKey = resumeSessionKey(s);
     row.dataset.sessionKey = resumeKey;
     const donationInfo = localDonationInfo(s);
+    const contributor = localContributorRecord(s);
     const donated = donationInfo.exactDonated || (donationInfo.donatedBefore && !donationInfo.updateReady);
     const ready = sessionReady(s);
     const updateReady = donationInfo.updateReady;
@@ -3197,7 +3235,8 @@ function renderSessions(){
     if(resumeGuidance?.key === resumeKey) row.classList.add('resume-focus-row');
     if(donationInfo.donatedBefore) row.classList.add('donated-history-row');
     const currentFit = fit(s);
-    const chipLine = [statusPill, supportPill, resumePill].filter(Boolean).join(' ');
+    const identityPill = donationInfo.donatedBefore ? publicIdentityPill(contributor, donationInfo.supportId) : '';
+    const chipLine = [statusPill, supportPill, identityPill, resumePill].filter(Boolean).join(' ');
     row.innerHTML = `
       <div class="session-icon">${idx + 1}</div>
       <div class="session-main">

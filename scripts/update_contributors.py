@@ -306,6 +306,21 @@ def compact_status(session: SessionEntry) -> str:
     return session.status.replace(" candidate", "") or "—"
 
 
+def public_visibility(session: SessionEntry) -> str:
+    return "anonymous" if session.public_anonymous else "named"
+
+
+def public_identity_map(sessions: list[SessionEntry]) -> dict[str, dict[str, Any]]:
+    return {
+        s.submission_id: {
+            "public_display_name": s.contributor,
+            "public_anonymous": bool(s.public_anonymous),
+        }
+        for s in sorted(sessions, key=lambda item: item.submission_id)
+        if s.submission_id
+    }
+
+
 def render_contributors(contributors: list[Contributor], sessions: list[SessionEntry]) -> str:
     counted = [s for s in sessions if s.counted]
     total_sessions = len(counted)
@@ -365,14 +380,16 @@ def render_contributors(contributors: list[Contributor], sessions: list[SessionE
         "variants can be accepted for analysis, but only the first unique source session",
         "per contributor counts toward points.",
         "",
-        "| ID | Donor | Agent | Model | Org | Domain | Lang | Turns | Cmp | Pts | Status |",
-        "|----|-------|-------|-------|-----|--------|------|------:|:---:|:---:|--------|",
+        "| ID | Submission | Public Identity | Visibility | Agent | Model | Org | Domain | Lang | Turns | Cmp | Pts | Status |",
+        "|----|------------|-----------------|------------|-------|-------|-----|--------|------|------:|:---:|:---:|--------|",
     ])
     for session in sessions:
         lines.append(
-            "| {sid} | {contributor} | {agent} | {model} | {org} | {domain} | {language} | {turns:,} | {compactions} | {points} | {status} |".format(
+            "| {sid} | {submission} | {contributor} | {visibility} | {agent} | {model} | {org} | {domain} | {language} | {turns:,} | {compactions} | {points} | {status} |".format(
                 sid=session.sid,
+                submission=md_escape(session.submission_id or "—"),
                 contributor=md_escape(session.contributor),
+                visibility=public_visibility(session),
                 agent=md_escape(session.agent or "—"),
                 model=md_escape(compact_model(session.model)),
                 org=md_escape(session.org or "—"),
@@ -442,6 +459,11 @@ def render_project_stats(current: dict[str, Any], sessions: list[SessionEntry]) 
     payload["accepted_submission_ids_note"] = (
         "Public accepted staging IDs used by the local donor wizard to avoid "
         "showing already-reviewed local receipts as pending."
+    )
+    payload["accepted_submission_public_identities"] = public_identity_map(sessions)
+    payload["accepted_submission_public_identities_note"] = (
+        "Public-safe lookup for accepted submissions. Anonymous rows use stable "
+        "anonymous aliases; private donor names, emails, and institutes are not included."
     )
     return json.dumps(payload, indent=2) + "\n"
 

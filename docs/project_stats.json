@@ -49,5 +49,148 @@
     "2026-06": 8350,
     "2026-07": 17786
   },
-  "dataset_hf_downloads_last_month_period": "2026-07"
+  "dataset_hf_downloads_last_month_period": "2026-07",
+  "accepted_submission_public_identities": {
+    "submission-10498453": {
+      "public_display_name": "Anonymous donor 10498453",
+      "public_anonymous": true
+    },
+    "submission-27249dbf": {
+      "public_display_name": "Anonymous donor 27249dbf",
+      "public_anonymous": true
+    },
+    "submission-297da79a": {
+      "public_display_name": "Anonymous donor 86ff44fe",
+      "public_anonymous": true
+    },
+    "submission-37744e94": {
+      "public_display_name": "Anonymous donor 37744e94",
+      "public_anonymous": true
+    },
+    "submission-38bd5d46": {
+      "public_display_name": "Anonymous donor 38bd5d46",
+      "public_anonymous": true
+    },
+    "submission-38ccb48b": {
+      "public_display_name": "Anonymous donor 38ccb48b",
+      "public_anonymous": true
+    },
+    "submission-3c6f1e05": {
+      "public_display_name": "Anonymous donor 3c6f1e05",
+      "public_anonymous": true
+    },
+    "submission-443d0148": {
+      "public_display_name": "Anonymous donor 443d0148",
+      "public_anonymous": true
+    },
+    "submission-484a6f7f": {
+      "public_display_name": "Anonymous donor 484a6f7f",
+      "public_anonymous": true
+    },
+    "submission-5102291c": {
+      "public_display_name": "Anonymous donor 5102291c",
+      "public_anonymous": true
+    },
+    "submission-607d8b75": {
+      "public_display_name": "Anonymous donor 607d8b75",
+      "public_anonymous": true
+    },
+    "submission-6ad76f41": {
+      "public_display_name": "Anonymous donor 6ad76f41",
+      "public_anonymous": true
+    },
+    "submission-6b493dd1": {
+      "public_display_name": "Anonymous donor 38ccb48b",
+      "public_anonymous": true
+    },
+    "submission-6d97690b": {
+      "public_display_name": "Anonymous donor 6d97690b",
+      "public_anonymous": true
+    },
+    "submission-709bb557": {
+      "public_display_name": "Anonymous donor 6ad76f41",
+      "public_anonymous": true
+    },
+    "submission-716afc47": {
+      "public_display_name": "Anonymous donor 716afc47",
+      "public_anonymous": true
+    },
+    "submission-86ff44fe": {
+      "public_display_name": "Anonymous donor 86ff44fe",
+      "public_anonymous": true
+    },
+    "submission-95c3332b": {
+      "public_display_name": "Anonymous donor 95c3332b",
+      "public_anonymous": true
+    },
+    "submission-97289703": {
+      "public_display_name": "Anonymous donor 97289703",
+      "public_anonymous": true
+    },
+    "submission-9ccc8b68": {
+      "public_display_name": "Anonymous donor 38ccb48b",
+      "public_anonymous": true
+    },
+    "submission-9f3e1e40": {
+      "public_display_name": "Anonymous donor 9f3e1e40",
+      "public_anonymous": true
+    },
+    "submission-a1bc35ea": {
+      "public_display_name": "Anonymous donor a1bc35ea",
+      "public_anonymous": true
+    },
+    "submission-a997ebe1": {
+      "public_display_name": "Anonymous donor 6ad76f41",
+      "public_anonymous": true
+    },
+    "submission-ae4ddeac": {
+      "public_display_name": "Anonymous donor ae4ddeac",
+      "public_anonymous": true
+    },
+    "submission-afb6ad6d": {
+      "public_display_name": "Xianzhong Ding",
+      "public_anonymous": false
+    },
+    "submission-b2a90d8c": {
+      "public_display_name": "Anonymous donor 38ccb48b",
+      "public_anonymous": true
+    },
+    "submission-b73f8795": {
+      "public_display_name": "Anonymous donor b73f8795",
+      "public_anonymous": true
+    },
+    "submission-c453a55e": {
+      "public_display_name": "Anonymous donor c453a55e",
+      "public_anonymous": true
+    },
+    "submission-cb9b3ae7": {
+      "public_display_name": "Anonymous donor 86ff44fe",
+      "public_anonymous": true
+    },
+    "submission-cd9b41f2": {
+      "public_display_name": "Anonymous donor 38ccb48b",
+      "public_anonymous": true
+    },
+    "submission-d016759e": {
+      "public_display_name": "Anonymous donor d016759e",
+      "public_anonymous": true
+    },
+    "submission-d65ef8ed": {
+      "public_display_name": "Anonymous donor d65ef8ed",
+      "public_anonymous": true
+    },
+    "submission-d7410aa4": {
+      "public_display_name": "Anonymous donor d7410aa4",
+      "public_anonymous": true
+    },
+    "submission-d9b5dd55": {
+      "public_display_name": "Anonymous donor d9b5dd55",
+      "public_anonymous": true
+    },
+    "submission-fbacc0ea": {
+      "public_display_name": "Anonymous donor fbacc0ea",
+      "public_anonymous": true
+    }
+  },
+  "accepted_submission_public_identities_note": "Public-safe lookup for accepted submissions. Anonymous rows use stable anonymous aliases; private donor names, emails, and institutes are not included."
 }

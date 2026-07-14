@@ -401,6 +401,43 @@ function formatMinute(value){
   if(match) return `${match[1]} ${match[2]} UTC`;
   return text.length > 16 ? text.slice(0, 16) : text;
 }
+function anonymousAlias(submissionId){
+  const id = String(submissionId || '').trim();
+  return id.startsWith('submission-') ? `Anonymous donor ${id.replace(/^submission-/, '')}` : 'Anonymous donor';
+}
+function publicIdentity(row){
+  if(row?.public_anonymous) return anonymousAlias(row.submission_id);
+  return String(row?.public_display_name || row?.credit_name || row?.contributor || row?.name || '').trim() || 'Named donor';
+}
+function publicVisibilityPill(row){
+  return row?.public_anonymous ? '<span class="pill warn">anonymous</span>' : '<span class="pill">named</span>';
+}
+function privateDonorCell(row){
+  const name = String(row?.credit_name || row?.contributor || row?.name || '').trim();
+  const email = String(row?.contributor_email || row?.email || '').trim();
+  const institute = String(row?.contributor_institute || row?.institute || '').trim();
+  const parts = [
+    name ? escapeHtml(name) : '<span class="hint">No name</span>',
+    email ? `<div class="hint">${escapeHtml(email)}</div>` : '',
+    institute ? `<div class="hint">${escapeHtml(institute)}</div>` : '',
+  ];
+  return parts.join('');
+}
+function identitySearchText(row){
+  return [
+    publicIdentity(row),
+    row?.public_anonymous ? 'anonymous' : 'named',
+    anonymousAlias(row?.submission_id),
+    row?.submission_id || '',
+    row?.credit_name || '',
+    row?.contributor || '',
+    row?.name || '',
+    row?.contributor_email || '',
+    row?.email || '',
+    row?.contributor_institute || '',
+    row?.institute || '',
+  ].map(value => String(value || '').toLowerCase()).join(' ');
+}
 function status(id, text, kind=''){
   const el = $(id);
   el.className = `status ${kind}`.trim();
@@ -679,7 +716,7 @@ function pendingRows(){
     const promoted = row.review_status === 'promoted' || row.promoted;
     if(state.pendingStatusFilter === 'needs_validation' && promoted) return false;
     if(state.pendingStatusFilter === 'promoted' && !promoted) return false;
-    return !q || JSON.stringify(row).toLowerCase().includes(q);
+    return !q || `${JSON.stringify(row)} ${identitySearchText(row)}`.toLowerCase().includes(q);
   }).sort(comparePendingRows);
 }
 function donorGroupKey(row){
@@ -753,12 +790,13 @@ function groupSortButton(label, key){
   return `<button class="${active ? 'primary' : ''}" type="button" data-group-sort="${escapeHtml(key)}">${escapeHtml(label)}${mark}</button>`;
 }
 function renderPendingSessionCells(row){
+  const publicCell = `${escapeHtml(publicIdentity(row))}<div class="hint">${publicVisibilityPill(row)}</div>`;
   return [
     `<label class="row-select"><input type="checkbox" data-redaction-select="${escapeHtml(row.submission_id || '')}" ${state.selectedRedactionSubmissions.has(row.submission_id || '') ? 'checked' : ''}><span class="sr-only">Select ${escapeHtml(row.submission_id || '')}</span></label>`,
     `<code>${escapeHtml(row.submission_id)}</code>`,
     reviewStatusPill(row),
-    `${escapeHtml(row.contributor || '')}<div class="hint">${escapeHtml(row.email || '')}</div>`,
-    escapeHtml(row.institute || ''),
+    publicCell,
+    privateDonorCell(row),
     `${escapeHtml(row.agent || '')}<div class="hint">${escapeHtml(row.model || '')}</div>`,
     `${compact(row.turns)} turns<div class="hint">${compact(row.records)} records · ${compact(row.compactions)} ctx${row.submitted_utc ? ` · ${escapeHtml(formatMinute(row.submitted_utc))}` : ''}</div>`,
     `${filePill(row.has_session, 'session')} ${filePill(row.has_manifest, 'manifest')} ${filePill(row.has_consent, 'consent')}`,
@@ -767,7 +805,7 @@ function renderPendingSessionCells(row){
   ];
 }
 function pendingTableHead(){
-  return ['Select', sortHeader('Submission', 'submission'), sortHeader('Review', 'review'), sortHeader('Donor', 'donor'), sortHeader('Institute', 'institute'), sortHeader('Session', 'session'), sortHeader('Stats', 'submitted_utc'), 'Files', sortHeader('History', 'history'), 'Action'];
+  return ['Select', sortHeader('Submission', 'submission'), sortHeader('Review', 'review'), 'Public ID', sortHeader('Private donor', 'donor'), sortHeader('Session', 'session'), sortHeader('Stats', 'submitted_utc'), 'Files', sortHeader('History', 'history'), 'Action'];
 }
 function renderFlatPendingTable(rows){
   return table(pendingTableHead(), rows.map(renderPendingSessionCells));
@@ -1227,20 +1265,18 @@ async function loadMetadata(){
 }
 function metadataRows(){
   const q = $('metadataFilter').value.toLowerCase().trim();
-  return state.metadataUpdates.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
+  return state.metadataUpdates.filter(row => !q || `${JSON.stringify(row)} ${identitySearchText(row)}`.toLowerCase().includes(q));
 }
 function renderMetadata(){
   const rows = metadataRows();
   $('metadataTable').innerHTML = table(
-    ['Submitted', 'Request', 'Submission', 'Name', 'Email', 'Institute', 'Public', 'Action'],
+    ['Submitted', 'Request', 'Submission', 'Public ID', 'Private donor', 'Action'],
     rows.map(row => [
       `<code>${escapeHtml(formatMinute(row.submitted_utc))}</code>`,
       `<code>${escapeHtml(row.request_id || '')}</code><div class="hint">${escapeHtml(row.status || 'pending')}${row.approved_utc ? ` · ${escapeHtml(formatMinute(row.approved_utc))}` : ''}</div>`,
       `<code>${escapeHtml(row.submission_id || '')}</code>`,
-      escapeHtml(row.credit_name || ''),
-      escapeHtml(row.contributor_email || ''),
-      escapeHtml(row.contributor_institute || ''),
-      row.public_anonymous ? '<span class="pill warn">anonymous</span>' : '<span class="pill">public</span>',
+      `${escapeHtml(publicIdentity(row))}<div class="hint">${publicVisibilityPill(row)}</div>`,
+      privateDonorCell(row),
       row.status === 'approved'
         ? '<span class="pill">approved</span>'
         : `<button data-approve-metadata="${escapeHtml(row.request_id || '')}">Approve</button>`,
@@ -1348,7 +1384,7 @@ async function autoloadAll(){
 }
 function recordRows(){
   const q = $('recordFilter').value.toLowerCase().trim();
-  return state.records.filter(row => !q || JSON.stringify(row).toLowerCase().includes(q));
+  return state.records.filter(row => !q || `${JSON.stringify(row)} ${identitySearchText(row)}`.toLowerCase().includes(q));
 }
 function shortHash(value){
   const text = String(value || '');
@@ -1357,9 +1393,11 @@ function shortHash(value){
 function renderRecords(){
   const rows = recordRows();
   $('recordTable').innerHTML = table(
-    ['Submission', 'Turns', 'Records', 'Source', 'Fingerprint', 'Artifact', 'Action'],
+    ['Submission', 'Public ID', 'Private donor', 'Turns', 'Records', 'Source', 'Fingerprint', 'Artifact', 'Action'],
     rows.map(row => [
       `<code>${escapeHtml(row.submission_id || '')}</code>`,
+      `${escapeHtml(publicIdentity(row))}<div class="hint">${publicVisibilityPill(row)}</div>`,
+      privateDonorCell(row),
       compact(row.turns),
       compact(row.records),
       `<code>${escapeHtml(shortHash(row.source_session_id))}</code>`,

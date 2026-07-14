@@ -829,6 +829,7 @@ def _pending_submissions_from_hf() -> dict:
             "contributor": manifest.get("credit_name") or manifest.get("contributor") or "",
             "email": manifest.get("contributor_email", ""),
             "institute": manifest.get("contributor_institute", ""),
+            "public_anonymous": bool(manifest.get("public_anonymous")),
             "submitted_utc": manifest.get("submitted_utc", ""),
             "privacy_tier": manifest.get("privacy_tier", ""),
         })

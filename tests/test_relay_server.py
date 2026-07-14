@@ -736,6 +736,7 @@ class RelayServerTests(unittest.TestCase):
                     "credit_name": "Donor",
                     "contributor_email": "donor@example.com",
                     "contributor_institute": "Institute",
+                    "public_anonymous": True,
                     "privacy_tier": "full_redacted",
                     "maintenance_redaction_updated_utc": "2026-06-29T22:00:00Z",
                     "maintenance_redaction_terms": ["Accenture"],
@@ -774,6 +775,7 @@ class RelayServerTests(unittest.TestCase):
         self.assertEqual(row["maintenance_redaction_terms"], ["Accenture"])
         self.assertEqual(row["maintenance_redaction_stats"], {"private_word:Accenture": 2284})
         self.assertEqual(row["maintenance_redaction_note"], "donor requested extra scrub")
+        self.assertTrue(row["public_anonymous"])
 
     def test_redaction_update_rewrites_staging_artifact_and_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as td:

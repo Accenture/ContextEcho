@@ -78,7 +78,7 @@ class UpdateContributorsTests(unittest.TestCase):
     def test_project_stats_preserves_downloads_and_publishes_accepted_submission_ids(self):
         sessions = [
             SessionEntry(sid="S4", contributor="Dana Contributor", submission_id="submission-b", source_key="b"),
-            SessionEntry(sid="S5", contributor="Dana Contributor", submission_id="submission-a", source_key="a"),
+            SessionEntry(sid="S5", contributor="Anonymous donor a", public_anonymous=True, submission_id="submission-a", source_key="a"),
             SessionEntry(sid="S6", contributor="Founding", source_key="founding"),
         ]
         self.assertEqual(accepted_submission_ids(sessions), ["submission-a", "submission-b"])
@@ -89,6 +89,33 @@ class UpdateContributorsTests(unittest.TestCase):
         self.assertIn('"accepted_submission_count": 2', rendered)
         self.assertIn('"submission-a"', rendered)
         self.assertIn('"submission-b"', rendered)
+        self.assertIn('"accepted_submission_public_identities"', rendered)
+        self.assertIn('"public_display_name": "Anonymous donor a"', rendered)
+        self.assertIn('"public_anonymous": true', rendered)
+
+    def test_contributors_session_ledger_includes_submission_and_visibility(self):
+        from scripts.update_contributors import group_contributors, render_contributors
+
+        sessions = [
+            SessionEntry(
+                sid="S4",
+                contributor="Anonymous donor d51e3f33",
+                public_anonymous=True,
+                submission_id="submission-d51e3f33",
+                agent="Codex",
+                model="gpt",
+                org="OpenAI",
+                domain="coding",
+                language="Python",
+                turns=100,
+                compactions=1,
+                source_key="a",
+            )
+        ]
+        score_sessions(sessions)
+        rendered = render_contributors(group_contributors(sessions), sessions)
+        self.assertIn("| ID | Submission | Public Identity | Visibility |", rendered)
+        self.assertIn("| S4 | submission-d51e3f33 | Anonymous donor d51e3f33 | anonymous |", rendered)
 
 
 if __name__ == "__main__":
