@@ -115,6 +115,8 @@ class WebTests(unittest.TestCase):
         self.assertIn("data-session-action=\"report-issue\"", INDEX_HTML)
         self.assertIn("session-chevron", INDEX_HTML)
         self.assertIn("showSupportSessionMenu(event, s, donationInfo)", INDEX_HTML)
+        self.assertIn("if(event.target?.closest?.('.session-chevron,[data-copy-submission]')) return;", INDEX_HTML)
+        self.assertIn("justify-self:stretch; align-self:stretch;", INDEX_HTML)
         self.assertIn("beginMetadataUpdate(session, donationInfo.supportId)", INDEX_HTML)
         self.assertIn("beginSupportRequest(session, donationInfo.supportId)", INDEX_HTML)
         self.assertIn('id="sessionGuidance" class="resume-guidance" aria-live="polite"', INDEX_HTML)

@@ -1294,7 +1294,7 @@ INDEX_HTML = r"""<!doctype html>
     .session-num { font-weight:950; font-size:15px; color:#07110d; }
     .session-fit { display:flex; justify-content:center; }
     .session-fit .pill { text-transform:capitalize; }
-    .session-chevron { color:#5f6662; font-size:20px; line-height:1; justify-self:end; border:0; background:transparent; box-shadow:none; padding:2px 4px; min-width:0; border-radius:8px; }
+    .session-chevron { color:#5f6662; font-size:20px; line-height:1; justify-self:stretch; align-self:stretch; border:0; background:transparent; box-shadow:none; padding:0 10px; min-width:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
     .session-chevron:hover:not(:disabled), .session-row:hover .session-chevron { color:#13552f; background:#eaf4e5; transform:none; }
     .session-menu { position:fixed; z-index:1000; min-width:168px; padding:6px; border:1px solid var(--line); border-radius:12px; background:#fffef8; box-shadow:0 16px 42px rgba(25,38,31,.18); display:none; }
     .session-menu.show { display:block; }
@@ -3222,7 +3222,8 @@ function renderSessions(){
     const chevron = row.querySelector('.session-chevron');
     if(chevron && hasSupportActions) chevron.onclick = event => showSupportSessionMenu(event, s, donationInfo);
     if (selected && selected.path === s.path) row.classList.add('selected');
-    row.onclick = () => {
+    row.onclick = event => {
+      if(event.target?.closest?.('.session-chevron,[data-copy-submission]')) return;
       clearResumeGuidance();
       if(donated){
         document.querySelectorAll('.session-row.selected').forEach(x=>x.classList.remove('selected'));
