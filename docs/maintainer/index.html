@@ -60,6 +60,11 @@
     .tabs { margin-top:24px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:10px; }
     .tab { background:transparent; border-radius:10px; }
     .tab.active { background:var(--green); color:white; }
+    .lookup-bar { margin-top:14px; border:1px solid #dce4df; border-radius:14px; background:#fbfdf8; padding:14px; display:grid; grid-template-columns:minmax(180px,.7fr) minmax(280px,1.3fr); gap:12px 16px; align-items:end; }
+    .lookup-bar label { margin:0 0 5px; }
+    .lookup-bar .toolbar { margin:0; }
+    .lookup-bar input { min-width:260px; }
+    .lookup-status { grid-column:1 / -1; margin-top:0; min-height:0; }
     .panel { display:none; margin-top:22px; }
     .panel.active { display:block; }
     .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
@@ -239,6 +244,17 @@
       <button class="tab" data-tab="lineage">Lineage Check</button>
       <button class="tab" data-tab="danger">Danger Zone</button>
     </nav>
+    <section class="lookup-bar" aria-label="Find a donation across maintainer data">
+      <div>
+        <label for="globalLookup">Find donation</label>
+        <div class="hint">Search submission ID, anonymous alias, public name, private donor name, email, or institute.</div>
+      </div>
+      <div class="toolbar">
+        <input id="globalLookup" placeholder="e.g. 9f3e1e40 or Xianzhong Ding">
+        <button id="globalLookupBtn" type="button">Find</button>
+      </div>
+      <div id="globalLookupStatus" class="status lookup-status"></div>
+    </section>
 
     <section id="overview" class="panel active">
       <div class="section-head">
@@ -1448,6 +1464,79 @@ function renderEvents(){
     })
   );
 }
+function globalLookupText(row){
+  return `${JSON.stringify(row)} ${identitySearchText(row)}`.toLowerCase();
+}
+function globalLookupSections(){
+  return [
+    {
+      label:'Pending',
+      tab:'pending',
+      filterId:'pendingFilter',
+      rows:() => state.pending,
+      load:() => loadPending(),
+      apply:() => { state.pendingStatusFilter = 'all'; renderPending(); },
+    },
+    {
+      label:'Metadata Updates',
+      tab:'metadata',
+      filterId:'metadataFilter',
+      rows:() => state.metadataUpdates,
+      load:() => loadMetadata(),
+      apply:() => renderMetadata(),
+    },
+    {
+      label:'Support Requests',
+      tab:'support',
+      filterId:'supportFilter',
+      rows:() => state.supportRequests,
+      load:() => loadSupport(),
+      apply:() => renderSupport(),
+    },
+    {
+      label:'Relay Records',
+      tab:'records',
+      filterId:'recordFilter',
+      rows:() => state.records,
+      load:() => loadRecords(),
+      apply:() => renderRecords(),
+    },
+    {
+      label:'Audit',
+      tab:'audit',
+      filterId:'eventFilter',
+      rows:() => state.events,
+      load:() => loadEvents(),
+      apply:() => renderEvents(),
+    },
+  ];
+}
+function findGlobalLookupMatch(query){
+  const q = query.toLowerCase();
+  return globalLookupSections().find(section => section.rows().some(row => globalLookupText(row).includes(q)));
+}
+function applyGlobalLookupMatch(section, query){
+  showTab(section.tab);
+  if($(section.filterId)) $(section.filterId).value = query;
+  section.apply();
+  status('globalLookupStatus', `Found "${query}" in ${section.label}.`, 'ok');
+  const panel = $(section.tab);
+  if(panel) panel.scrollIntoView({behavior:'smooth', block:'start'});
+}
+async function runGlobalLookup(){
+  const query = $('globalLookup').value.trim();
+  if(!query) return status('globalLookupStatus', 'Enter a submission ID, alias, donor name, email, or institute.', 'warn');
+  let match = findGlobalLookupMatch(query);
+  if(!match){
+    if(!adminToken()) return status('globalLookupStatus', 'Connect to the relay first, then search again.', 'warn');
+    status('globalLookupStatus', `Loading relay data to find "${query}"...`);
+    const loaders = globalLookupSections().map(section => section.load().catch(() => null));
+    await Promise.all(loaders);
+    match = findGlobalLookupMatch(query);
+  }
+  if(match) return applyGlobalLookupMatch(match, query);
+  status('globalLookupStatus', `No maintainer item matched "${query}". Try the full submission ID, donor name, email, or institute.`, 'warn');
+}
 function table(heads, rows){
   if(!rows.length) return '<div class="card"><div class="hint">No rows found.</div></div>';
   const headMarkup = heads.map(h => `<th>${h && typeof h === 'object' && h.html ? h.html : escapeHtml(h)}</th>`).join('');
@@ -1534,6 +1623,10 @@ $('metadataFilter').oninput = renderMetadata;
 $('supportFilter').oninput = renderSupport;
 $('recordFilter').oninput = renderRecords;
 $('eventFilter').oninput = renderEvents;
+$('globalLookupBtn').onclick = () => runGlobalLookup().catch(e => status('globalLookupStatus', `ERROR: ${e.message}`, 'error'));
+$('globalLookup').onkeydown = event => {
+  if(event.key === 'Enter') runGlobalLookup().catch(e => status('globalLookupStatus', `ERROR: ${e.message}`, 'error'));
+};
 $('runLineage').onclick = () => runLineage().catch(e => status('lineageStatus', `ERROR: ${e.message}`, 'error'));
 $('openRedactionRepair').onclick = () => {
   const shouldOpen = $('redactionRepairCard').hidden;
