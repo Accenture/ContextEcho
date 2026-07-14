@@ -398,7 +398,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { summary:null, pending:[], acceptedSubmissionIds:new Set(), pendingStatusFilter:'needs_validation', pendingSortKey:'submitted_utc', pendingSortDir:'desc', pendingGroupByDonor:true, pendingGroupSortKey:'donation_date', pendingGroupSortDir:'desc', expandedDonorGroups:new Set(), selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
+const state = { summary:null, pending:[], acceptedSubmissionIds:new Set(), acceptedSubmissionPublicIdentities:{}, pendingStatusFilter:'needs_validation', pendingSortKey:'submitted_utc', pendingSortDir:'desc', pendingGroupByDonor:true, pendingGroupSortKey:'donation_date', pendingGroupSortDir:'desc', expandedDonorGroups:new Set(), selectedRedactionSubmissions:new Set(), metadataUpdates:[], supportRequests:[], records:[], events:[] };
 const tokenKey = 'contextechoMaintainerToken';
 const relayKey = 'contextechoMaintainerRelayUrl';
 
@@ -483,29 +483,41 @@ async function api(path, opts={}){
   if(!res.ok) throw new Error(data.detail || data.error || res.statusText);
   return data;
 }
-async function loadPublicAcceptedSubmissionIds(){
+async function loadPublicAcceptedSubmissionMetadata(){
   try {
     const res = await fetch('../project_stats.json', {cache:'no-store'});
-    if(!res.ok) return new Set();
+    if(!res.ok) return {ids:new Set(), identities:{}};
     const data = await res.json();
-    return new Set((data.accepted_submission_ids || []).map(id => String(id || '').trim()).filter(Boolean));
+    return {
+      ids:new Set((data.accepted_submission_ids || []).map(id => String(id || '').trim()).filter(Boolean)),
+      identities:data.accepted_submission_public_identities || {},
+    };
   } catch (e) {
-    return new Set();
+    return {ids:new Set(), identities:{}};
   }
 }
 async function loadPendingPayload(){
-  const [pendingData, acceptedSubmissionIds] = await Promise.all([
+  const [pendingData, acceptedMetadata] = await Promise.all([
     api('/api/admin/submissions'),
-    loadPublicAcceptedSubmissionIds(),
+    loadPublicAcceptedSubmissionMetadata(),
   ]);
-  state.acceptedSubmissionIds = acceptedSubmissionIds;
+  state.acceptedSubmissionIds = acceptedMetadata.ids;
+  state.acceptedSubmissionPublicIdentities = acceptedMetadata.identities || {};
   return pendingData;
 }
 function normalizePendingRows(rows){
   return (rows || []).map(row => {
     const submissionId = String(row.submission_id || '').trim();
     if(submissionId && state.acceptedSubmissionIds.has(submissionId)){
-      return {...row, promoted:true, review_status:'promoted', review_decision:row.review_decision || 'accepted release ledger'};
+      const publicIdentity = state.acceptedSubmissionPublicIdentities[submissionId] || {};
+      return {
+        ...row,
+        promoted:true,
+        review_status:'promoted',
+        review_decision:row.review_decision || 'accepted release ledger',
+        public_display_name:publicIdentity.public_display_name || row.public_display_name || '',
+        public_anonymous:'public_anonymous' in publicIdentity ? !!publicIdentity.public_anonymous : !!row.public_anonymous,
+      };
     }
     return row;
   });
