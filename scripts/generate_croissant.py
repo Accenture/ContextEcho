@@ -222,7 +222,7 @@ def build_croissant() -> dict:
             "session-prefix set for measuring persona drift in long "
             "agentic-coding sessions across 23 frontier LLM targets from "
             "10 organizations. Includes 3 redacted real Claude Code "
-            "sessions (3,746–9,716 turns) and ~41,921 per-cell JSON "
+            "sessions (445–1,242 user turns) and ~41,921 per-cell JSON "
             "evaluations spanning probe-surface (judge-scored), "
             "stressor-surface (judge-free regex compliance + length "
             "ratio), A-anchor mitigation, cross-judge audit, drift-onset "

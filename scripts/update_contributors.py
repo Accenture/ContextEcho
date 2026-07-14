@@ -26,6 +26,11 @@ class SessionEntry:
     domain: str = ""
     language: str = ""
     turns: int = 0
+    # Experiment provenance for founding sessions only: the transcript/record
+    # position the paper experiments ran at. This is a checkpoint index into the
+    # transcript stream, NOT a count of human turns. Kept separate so it is never
+    # reported or summed as "user turns". 0 for community donations.
+    paper_position: int = 0
     compactions: int = 0
     status: str = ""
     submission_id: str = ""
@@ -66,7 +71,11 @@ FOUNDING_SESSIONS = [
         org="Anthropic",
         domain="agentic-coding",
         language="Python",
-        turns=9716,
+        turns=1242,  # real user turns (human prompts) on redacted release file
+        # experiment conversation-turn total (user+assistant), the index space the
+        # cross-compaction experiments map to transcript lines. Matches
+        # experiments/e08_cross_compaction/run.py TOTAL_TURNS=9643. NOT user turns.
+        paper_position=9643,
         compactions=6,
         status="v1.0",
         source_key="founding-s1",
@@ -80,7 +89,8 @@ FOUNDING_SESSIONS = [
         org="Anthropic",
         domain="manuscript-writing",
         language="mixed",
-        turns=3746,
+        turns=445,  # real user turns (human prompts) on redacted release file
+        paper_position=3746,  # experiment checkpoint index — NOT user turns
         compactions=3,
         status="v1.0",
         source_key="founding-s2",
@@ -94,7 +104,8 @@ FOUNDING_SESSIONS = [
         org="Anthropic",
         domain="non-coding-docs",
         language="mixed",
-        turns=4918,
+        turns=458,  # real user turns (human prompts) on redacted release file
+        paper_position=4918,  # experiment checkpoint index — NOT user turns
         compactions=4,
         status="v1.0",
         source_key="founding-s3",

@@ -18,7 +18,7 @@ not included.
 | Public v1 per-cell evaluations | 41,921 |
 | Public v1 data size | 310 MB redacted sessions + 705 MB per-cell evaluations |
 | Active public/candidate sessions tracked locally | 39 |
-| Active public/candidate user turns tracked locally | 28,855 |
+| Active public/candidate user turns tracked locally | 12,620 |
 | Active public/candidate context compactions tracked locally | 128 |
 | Public contributors in leaderboard | 26 |
 | V2 promotion ledger status | 36 promoted accepted donation(s) |

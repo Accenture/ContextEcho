@@ -343,15 +343,19 @@ def make_figure(out_path: Path):
     cy = sep_y - 0.018
     ax.text(cx_side, cy, "3 Donor Sessions", ha="center", va="top", fontsize=9.5, fontweight="bold", color=COL_HEADER)
     cy -= 0.022
+    # `conv` = conversation-turn index (user+assistant); this is the position the
+    # cross-compaction experiments map to transcript lines and MUST stay verbatim
+    # for reproducibility (see experiments/e08_cross_compaction/run.py TOTAL_TURNS).
+    # `user` = real human-prompt count (the dataset's "user turns").
     sessions = [
-        ("Session 1", "9,643 turns", "agentic coding"),
-        ("Session 2", "3,746 turns", "manuscript writing"),
-        ("Session 3", "4,918 turns", "non-coding docs"),
+        ("Session 1", "9,643 conv. turns", "1,242 user turns", "agentic coding"),
+        ("Session 2", "3,746 conv. turns", "445 user turns", "manuscript writing"),
+        ("Session 3", "4,918 conv. turns", "458 user turns", "non-coding docs"),
     ]
-    for s, turns, kind in sessions:
-        ax.text(pad + 0.012, cy, s, fontsize=7.4, fontweight="bold", color=COL_TEXT, va="top")
-        ax.text(pad + 0.055, cy, turns, fontsize=7.0, color=COL_MUTED, va="top")
-        ax.text(pad + 0.012, cy - 0.014, kind, fontsize=6.6, color=COL_MUTED, va="top", style="italic")
+    for s, conv_turns, user_turns, kind in sessions:
+        ax.text(pad + 0.012, cy, s, fontsize=7.2, fontweight="bold", color=COL_TEXT, va="top")
+        ax.text(pad + 0.055, cy, f"{conv_turns} · {user_turns}", fontsize=6.2, color=COL_MUTED, va="top")
+        ax.text(pad + 0.012, cy - 0.012, kind, fontsize=6.4, color=COL_MUTED, va="top", style="italic")
         cy -= 0.030
 
     # Separator

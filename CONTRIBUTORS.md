@@ -25,13 +25,13 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | 4 | Anonymous donor 6ad76f41 | 3 | 204 | Claude Code | claude-opus-4-8 · claude-opus-4.x (mixed) | 12 |
 | 5 | Anonymous donor ae4ddeac | 2 | 916 | Claude Code | claude-opus-4-5.x (mixed) · claude-opus-4.x (mixed) | 10 |
 | 6 | Anonymous donor 38bd5d46 | 2 | 233 | Claude Code · Codex CLI | claude-sonnet-4.x (mixed) · gpt-5.5 | 10 |
-| 7 | Anonymous donor S1 | 1 | 9,716 | Claude Code | Opus 4.x (mixed) | 5 |
-| 8 | Anonymous donor S3 | 1 | 4,918 | Claude Code | Opus 4.x (mixed) | 5 |
-| 9 | Anonymous donor S2 | 1 | 3,746 | Claude Code | Opus 4.x (mixed) | 5 |
-| 10 | Anonymous donor 95c3332b | 1 | 2,509 | Claude Code | claude-opus-4.x (mixed) | 5 |
-| 11 | Anonymous donor d016759e | 1 | 1,611 | Claude Code | claude-opus-4.x (mixed) | 5 |
-| 12 | Anonymous donor 97289703 | 1 | 564 | Codex CLI | gpt-5.5 | 5 |
-| 13 | Anonymous donor 5102291c | 1 | 449 | Codex CLI | gpt-5.4 | 5 |
+| 7 | Anonymous donor 95c3332b | 1 | 2,509 | Claude Code | claude-opus-4.x (mixed) | 5 |
+| 8 | Anonymous donor d016759e | 1 | 1,611 | Claude Code | claude-opus-4.x (mixed) | 5 |
+| 9 | Anonymous donor S1 | 1 | 1,242 | Claude Code | Opus 4.x (mixed) | 5 |
+| 10 | Anonymous donor 97289703 | 1 | 564 | Codex CLI | gpt-5.5 | 5 |
+| 11 | Anonymous donor S3 | 1 | 458 | Claude Code | Opus 4.x (mixed) | 5 |
+| 12 | Anonymous donor 5102291c | 1 | 449 | Codex CLI | gpt-5.4 | 5 |
+| 13 | Anonymous donor S2 | 1 | 445 | Claude Code | Opus 4.x (mixed) | 5 |
 | 14 | Anonymous donor a1bc35ea | 1 | 441 | Codex CLI | gpt-5.5 | 5 |
 | 15 | Anonymous donor 443d0148 | 1 | 355 | Claude Code | claude-opus-4.x (mixed) | 5 |
 | 16 | Anonymous donor 29ca0f27 | 1 | 338 | Claude Code | claude-sonnet-4.x (mixed) | 5 |
@@ -46,7 +46,7 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | 25 | Anonymous donor 9f5fa5fe | 1 | 63 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
 | 26 | Anonymous donor 6d97690b | 1 | 54 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
 
-*Corpus total: **39 sessions · 28,855 user turns**.*
+*Corpus total: **39 sessions · 12,620 user turns**.*
 
 > Public-anonymous donors are grouped under a stable anonymous alias when
 > maintainer-known identity fields match exactly after normalization.
@@ -65,9 +65,9 @@ per contributor counts toward points.
 
 | ID | Submission | Public Identity | Visibility | Agent | Model | Org | Domain | Lang | Turns | Cmp | Pts | Status |
 |----|------------|-----------------|------------|-------|-------|-----|--------|------|------:|:---:|:---:|--------|
-| S1 | — | Anonymous donor S1 | named | Claude Code | Opus 4.x | Anthropic | agentic-coding | Python | 9,716 | 6 | 5 | v1.0 |
-| S2 | — | Anonymous donor S2 | named | Claude Code | Opus 4.x | Anthropic | manuscript-writing | mixed | 3,746 | 3 | 5 | v1.0 |
-| S3 | — | Anonymous donor S3 | named | Claude Code | Opus 4.x | Anthropic | non-coding-docs | mixed | 4,918 | 4 | 5 | v1.0 |
+| S1 | — | Anonymous donor S1 | named | Claude Code | Opus 4.x | Anthropic | agentic-coding | Python | 1,242 | 6 | 5 | v1.0 |
+| S2 | — | Anonymous donor S2 | named | Claude Code | Opus 4.x | Anthropic | manuscript-writing | mixed | 445 | 3 | 5 | v1.0 |
+| S3 | — | Anonymous donor S3 | named | Claude Code | Opus 4.x | Anthropic | non-coding-docs | mixed | 458 | 4 | 5 | v1.0 |
 | S4 | submission-86ff44fe | Anonymous donor 86ff44fe | anonymous | Claude Code | claude-sonnet-4-6 | Anthropic | agentic-coding | mixed | 61 | 1 | 5 | v2 |
 | S5 | submission-10498453 | Anonymous donor 10498453 | anonymous | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 54 | 1 | 5 | v2 |
 | S6 | submission-27249dbf | Anonymous donor 27249dbf | anonymous | Claude Code | claude-sonnet-4-6 | Anthropic | web-frontend | mixed | 118 | 3 | 5 | v2 |
