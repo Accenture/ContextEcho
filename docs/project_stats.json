@@ -1,25 +1,37 @@
 {
   "dataset_total_downloads": 65136,
-  "dataset_total_downloads_updated": "2026-07-14",
+  "dataset_total_downloads_updated": "2026-07-15",
   "dataset_total_downloads_note": "Maintainer-tracked cumulative download count: historical public totals plus one stored Hugging Face rolling last-month download bucket per month.",
   "accepted_submission_ids": [
+    "submission-054f26b0",
+    "submission-05e6b956",
     "submission-10498453",
     "submission-27249dbf",
     "submission-297da79a",
     "submission-29ca0f27",
+    "submission-328afeb3",
+    "submission-34586d99",
+    "submission-3523bd2b",
     "submission-37744e94",
     "submission-38bd5d46",
     "submission-38ccb48b",
     "submission-3c6f1e05",
     "submission-443d0148",
     "submission-484a6f7f",
+    "submission-5086bdbe",
     "submission-5102291c",
+    "submission-529add14",
+    "submission-5699051d",
+    "submission-57942eb8",
     "submission-6ad76f41",
     "submission-6b493dd1",
+    "submission-6d48af2b",
     "submission-6d97690b",
     "submission-709bb557",
     "submission-716afc47",
     "submission-86ff44fe",
+    "submission-8731f4ea",
+    "submission-8f2ad995",
     "submission-95c3332b",
     "submission-97289703",
     "submission-9ccc8b68",
@@ -30,17 +42,23 @@
     "submission-ae4ddeac",
     "submission-afb6ad6d",
     "submission-b2a90d8c",
+    "submission-b39b136a",
+    "submission-b4dedb91",
     "submission-b73f8795",
     "submission-c453a55e",
     "submission-cb9b3ae7",
     "submission-cd9b41f2",
+    "submission-cf218b06",
+    "submission-cf40e7b3",
     "submission-d016759e",
+    "submission-d629ea4c",
     "submission-d65ef8ed",
     "submission-d7410aa4",
     "submission-d9b5dd55",
+    "submission-ef7f6c53",
     "submission-fbacc0ea"
   ],
-  "accepted_submission_count": 36,
+  "accepted_submission_count": 54,
   "accepted_submission_ids_note": "Public accepted staging IDs used by the local donor wizard to avoid showing already-reviewed local receipts as pending.",
   "dataset_historical_downloads": 39000,
   "dataset_hf_downloads_last_month": 17786,
@@ -52,6 +70,14 @@
   },
   "dataset_hf_downloads_last_month_period": "2026-07",
   "accepted_submission_public_identities": {
+    "submission-054f26b0": {
+      "public_display_name": "Anonymous donor 054f26b0",
+      "public_anonymous": true
+    },
+    "submission-05e6b956": {
+      "public_display_name": "Anonymous donor 05e6b956",
+      "public_anonymous": true
+    },
     "submission-10498453": {
       "public_display_name": "Anonymous donor 10498453",
       "public_anonymous": true
@@ -66,6 +92,18 @@
     },
     "submission-29ca0f27": {
       "public_display_name": "Anonymous donor 29ca0f27",
+      "public_anonymous": true
+    },
+    "submission-328afeb3": {
+      "public_display_name": "Anonymous donor 328afeb3",
+      "public_anonymous": true
+    },
+    "submission-34586d99": {
+      "public_display_name": "Anonymous donor 34586d99",
+      "public_anonymous": true
+    },
+    "submission-3523bd2b": {
+      "public_display_name": "Anonymous donor 3523bd2b",
       "public_anonymous": true
     },
     "submission-37744e94": {
@@ -92,8 +130,24 @@
       "public_display_name": "Anonymous donor 484a6f7f",
       "public_anonymous": true
     },
+    "submission-5086bdbe": {
+      "public_display_name": "Anonymous donor 5086bdbe",
+      "public_anonymous": true
+    },
     "submission-5102291c": {
       "public_display_name": "Anonymous donor 5102291c",
+      "public_anonymous": true
+    },
+    "submission-529add14": {
+      "public_display_name": "Anonymous donor 529add14",
+      "public_anonymous": true
+    },
+    "submission-5699051d": {
+      "public_display_name": "Anonymous donor 5699051d",
+      "public_anonymous": true
+    },
+    "submission-57942eb8": {
+      "public_display_name": "Anonymous donor 57942eb8",
       "public_anonymous": true
     },
     "submission-6ad76f41": {
@@ -102,6 +156,10 @@
     },
     "submission-6b493dd1": {
       "public_display_name": "Anonymous donor 38ccb48b",
+      "public_anonymous": true
+    },
+    "submission-6d48af2b": {
+      "public_display_name": "Anonymous donor 6d48af2b",
       "public_anonymous": true
     },
     "submission-6d97690b": {
@@ -118,6 +176,14 @@
     },
     "submission-86ff44fe": {
       "public_display_name": "Anonymous donor 86ff44fe",
+      "public_anonymous": true
+    },
+    "submission-8731f4ea": {
+      "public_display_name": "Anonymous donor 8731f4ea",
+      "public_anonymous": true
+    },
+    "submission-8f2ad995": {
+      "public_display_name": "Anonymous donor 8f2ad995",
       "public_anonymous": true
     },
     "submission-95c3332b": {
@@ -160,6 +226,14 @@
       "public_display_name": "Anonymous donor 38ccb48b",
       "public_anonymous": true
     },
+    "submission-b39b136a": {
+      "public_display_name": "Anonymous donor b39b136a",
+      "public_anonymous": true
+    },
+    "submission-b4dedb91": {
+      "public_display_name": "Anonymous donor b4dedb91",
+      "public_anonymous": true
+    },
     "submission-b73f8795": {
       "public_display_name": "Anonymous donor b73f8795",
       "public_anonymous": true
@@ -176,8 +250,20 @@
       "public_display_name": "Anonymous donor 38ccb48b",
       "public_anonymous": true
     },
+    "submission-cf218b06": {
+      "public_display_name": "Anonymous donor cf218b06",
+      "public_anonymous": true
+    },
+    "submission-cf40e7b3": {
+      "public_display_name": "Anonymous donor cf40e7b3",
+      "public_anonymous": true
+    },
     "submission-d016759e": {
       "public_display_name": "Anonymous donor d016759e",
+      "public_anonymous": true
+    },
+    "submission-d629ea4c": {
+      "public_display_name": "Anonymous donor d629ea4c",
       "public_anonymous": true
     },
     "submission-d65ef8ed": {
@@ -190,6 +276,10 @@
     },
     "submission-d9b5dd55": {
       "public_display_name": "Anonymous donor d9b5dd55",
+      "public_anonymous": true
+    },
+    "submission-ef7f6c53": {
+      "public_display_name": "Anonymous donor ef7f6c53",
       "public_anonymous": true
     },
     "submission-fbacc0ea": {

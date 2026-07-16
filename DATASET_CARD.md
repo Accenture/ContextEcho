@@ -17,23 +17,23 @@ not included.
 | Public v1 founding sessions | 3 |
 | Public v1 per-cell evaluations | 41,921 |
 | Public v1 data size | 310 MB redacted sessions + 705 MB per-cell evaluations |
-| Active public/candidate sessions tracked locally | 39 |
-| Active public/candidate user turns tracked locally | 12,620 |
-| Active public/candidate context compactions tracked locally | 128 |
-| Public contributors in leaderboard | 26 |
-| V2 promotion ledger status | 36 promoted accepted donation(s) |
+| Active public/candidate sessions tracked locally | 57 |
+| Active public/candidate user turns tracked locally | 14,426 |
+| Active public/candidate context compactions tracked locally | 168 |
+| Public contributors in leaderboard | 31 |
+| V2 promotion ledger status | 54 promoted accepted donation(s) |
 
 ## Composition
 
 | Axis | Values |
 |------|--------|
-| Agent / harness | Claude Code (24), Codex CLI (15) |
-| Model family | gpt-5.5 (13), claude-opus-4.x (mixed) (8), claude-sonnet-4-6 (6), claude-sonnet-4.x (mixed) (5), Opus 4.x (mixed) (3), gpt-5.3-codex (1), gpt-5.4 (1), claude-opus-4-8 (1), +1 more |
-| Model organization | Anthropic (24), OpenAI (15) |
-| Task domain | agentic-coding (27), web-frontend (10), manuscript-writing (1), non-coding-docs (1) |
-| Primary language | mixed (38), Python (1) |
-| Privacy tier | full_redacted (33), user_minimized (3) |
-| Institution coverage | 19 institutions |
+| Agent / harness | Claude Code (32), Codex CLI (25) |
+| Model family | gpt-5.5 (21), claude-opus-4.x (mixed) (10), claude-sonnet-4-6 (9), claude-sonnet-4.x (mixed) (6), Opus 4.x (mixed) (3), claude-opus-4-8 (3), gpt-5.4 (2), gpt-5.3-codex (1), +2 more |
+| Model organization | Anthropic (32), OpenAI (25) |
+| Task domain | agentic-coding (38), web-frontend (17), manuscript-writing (1), non-coding-docs (1) |
+| Primary language | mixed (56), Python (1) |
+| Privacy tier | full_redacted (51), user_minimized (3) |
+| Institution coverage | 24 institutions |
 
 ## Donation And Promotion Pipeline
 
@@ -64,8 +64,8 @@ composition.
 
 | Ledger state | Count |
 |--------------|------:|
-| Total rows | 37 |
-| ACCEPTABLE | 36 |
+| Total rows | 55 |
+| ACCEPTABLE | 54 |
 | SUPERSEDED | 1 |
 | CHECK_REQUIRED | 0 |
 | DUPLICATE | 0 |

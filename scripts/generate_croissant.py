@@ -26,11 +26,11 @@ OUT_PATH = RELEASE_ROOT / "croissant.json"
 # The Croissant @id of each FileObject inside the dataset.
 SESSION_FILES = [
     ("session_raw_transcript.jsonl",
-     "Headline 9,716-turn donated Claude Code session (Donor 1)"),
+     "Headline S1 donated Claude Code session, 1,242 user turns / 9,643 conv. turns (Donor 1)"),
     ("session_chainassemble.jsonl",
-     "ChainAssemble 3,746-turn replication session (Donor 2)"),
+     "ChainAssemble S3 replication session, 458 user turns / 4,918 conv. turns (Donor 2)"),
     ("session_proeng.jsonl",
-     "ProEng 4,918-turn replication session (Donor 3)"),
+     "ProEng S2 replication session, 445 user turns / 3,746 conv. turns (Donor 3)"),
 ]
 
 
