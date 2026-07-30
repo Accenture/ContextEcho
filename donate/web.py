@@ -283,6 +283,19 @@ def source_path_key(path: str | Path) -> str:
     return hashlib.sha256(str(Path(path).expanduser()).encode("utf-8", errors="replace")).hexdigest()
 
 
+def donated_lifetime_count() -> int:
+    """Distinct donations recorded on this machine (local registry receipts).
+
+    Unlike the discovered-session badges, this survives transcript rotation:
+    a session whose source log was pruned from disk still counts here.
+    """
+    seen: set[str] = set()
+    for index, item in enumerate(load_donation_registry().get("submissions", [])):
+        sid = normalize_submission_id(item.get("submission_id") or item.get("submission"))
+        seen.add(sid or str(item.get("source_path_key") or item.get("source_key") or f"row-{index}"))
+    return len(seen)
+
+
 def load_donated_source_records() -> dict[str, dict]:
     records: dict[str, dict] = {}
     for item in load_donation_registry().get("submissions", []):
@@ -316,35 +329,48 @@ def relay_url() -> str:
     return os.environ.get("CONTEXTECHO_RELAY_URL", DEFAULT_RELAY_URL).strip().rstrip("/")
 
 
+# The relay answers at most this many session statuses per request; deeper
+# scans must be chunked or rows past the cap silently lose donated badges.
+RELAY_STATUS_CHUNK = 200
+
+
 def relay_donation_status(sessions: list[dict]) -> list[dict]:
     url = relay_url()
     if not url or not sessions:
         return []
-    payload = {
-        "sessions": [
-            {
-                "source_session_id": describe_mod.source_session_id(row),
-                "conversation_fingerprint": row.get("conversation_fingerprint", ""),
-                "turns": row.get("turns", 0),
-                "records": row.get("records", 0),
-            }
-            for row in sessions
-        ]
-    }
-    data = json.dumps(payload).encode("utf-8")
-    req = Request(
-        f"{url}/api/status",
-        data=data,
-        headers={"content-type": "application/json", "user-agent": "contextecho-donate"},
-        method="POST",
-    )
-    try:
-        with urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
-    except Exception:
-        return []
-    statuses = result.get("statuses", []) if isinstance(result, dict) else []
-    return [x if isinstance(x, dict) else {} for x in statuses]
+    statuses: list[dict] = []
+    for start in range(0, len(sessions), RELAY_STATUS_CHUNK):
+        chunk = sessions[start : start + RELAY_STATUS_CHUNK]
+        payload = {
+            "sessions": [
+                {
+                    "source_session_id": describe_mod.source_session_id(row),
+                    "conversation_fingerprint": row.get("conversation_fingerprint", ""),
+                    "turns": row.get("turns", 0),
+                    "records": row.get("records", 0),
+                }
+                for row in chunk
+            ]
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = Request(
+            f"{url}/api/status",
+            data=data,
+            headers={"content-type": "application/json", "user-agent": "contextecho-donate"},
+            method="POST",
+        )
+        try:
+            with urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            return []
+        got = result.get("statuses", []) if isinstance(result, dict) else []
+        got = [x if isinstance(x, dict) else {} for x in got]
+        # Keep 1:1 alignment with the chunk even if the relay truncates.
+        if len(got) < len(chunk):
+            got.extend({} for _ in range(len(chunk) - len(got)))
+        statuses.extend(got[: len(chunk)])
+    return statuses
 
 
 def relay_metadata_update(payload: dict) -> dict:
@@ -1792,6 +1818,7 @@ INDEX_HTML = r"""<!doctype html>
 </main>
 <script>
 let sessions = [];
+let donatedLifetime = 0;
 let selected = null;
 let redacted = null;
 let metadataUpdateSubmissionId = '';
@@ -3376,14 +3403,19 @@ function renderSessions(){
   const agentCounts = agentFamilyCounts();
   const sessionSummaryTitle = `Claude: ${agentCounts.claude}\nCodex: ${agentCounts.codex}\nOther: ${agentCounts.other}`;
   const readySummaryTitle = `Best: ${readyCounts.best || 0}\nExcellent: ${readyCounts.good || 0}`;
-  const donatedSummaryTitle = donatedModelSummary();
+  // Lifetime receipts on this machine can exceed the rows shown: discovery
+  // is depth-limited and old transcripts get rotated off disk.
+  const donatedDisplay = Math.max(donatedTotal, donatedLifetime);
+  const donatedSummaryTitle = donatedDisplay > donatedTotal
+    ? `${donatedDisplay} sessions donated from this machine; ${donatedTotal} of them appear in the current list (click to filter).\n${donatedModelSummary()}`
+    : donatedModelSummary();
   $('sessionCount').dataset.tooltip = sessionSummaryTitle;
   $('sessionCount').setAttribute('aria-label', sessionSummaryTitle);
   $('sessionCount').classList.toggle('active', sessionStatusFilter === 'all');
   $('sessionCount').setAttribute('aria-pressed', sessionStatusFilter === 'all' ? 'true' : 'false');
   $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
   $('fitSummary').innerHTML = sessions.length
-    ? `<button type="button" class="fit-chip donated${sessionStatusFilter === 'donated' ? ' active' : ''}" data-session-filter="donated" data-tooltip="${escapeHtml(donatedSummaryTitle)}" aria-label="${escapeHtml(donatedSummaryTitle)}" aria-pressed="${sessionStatusFilter === 'donated' ? 'true' : 'false'}">Donated ${donatedTotal}</button><button type="button" class="fit-chip ready${sessionStatusFilter === 'ready' ? ' active' : ''}" data-session-filter="ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}" aria-pressed="${sessionStatusFilter === 'ready' ? 'true' : 'false'}">Ready ${readyCount}</button><button type="button" class="fit-chip improve${sessionStatusFilter === 'improve' ? ' active' : ''}" data-session-filter="improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction" aria-pressed="${sessionStatusFilter === 'improve' ? 'true' : 'false'}">Keep chatting ${improveCount}</button>`
+    ? `<button type="button" class="fit-chip donated${sessionStatusFilter === 'donated' ? ' active' : ''}" data-session-filter="donated" data-tooltip="${escapeHtml(donatedSummaryTitle)}" aria-label="${escapeHtml(donatedSummaryTitle)}" aria-pressed="${sessionStatusFilter === 'donated' ? 'true' : 'false'}">Donated ${donatedDisplay}</button><button type="button" class="fit-chip ready${sessionStatusFilter === 'ready' ? ' active' : ''}" data-session-filter="ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}" aria-pressed="${sessionStatusFilter === 'ready' ? 'true' : 'false'}">Ready ${readyCount}</button><button type="button" class="fit-chip improve${sessionStatusFilter === 'improve' ? ' active' : ''}" data-session-filter="improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction" aria-pressed="${sessionStatusFilter === 'improve' ? 'true' : 'false'}">Keep chatting ${improveCount}</button>`
     : '';
   bindSessionFilterControls();
   if(!rows.length){
@@ -3554,6 +3586,7 @@ async function discoverSessions(){
       }
     }
     sessions = (final && final.sessions) || [];
+    donatedLifetime = (final && final.donated_lifetime) || 0;
     page = 0;
     discoverTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
     status('discoverStatus', sessions.length === 0
@@ -3953,7 +3986,10 @@ class Handler(BaseHTTPRequestHandler):
             raw_max = qs.get("max_per_agent", ["50"])[0]
             max_per_agent = None if raw_max == "all" else int(raw_max)
             sessions = discover_mod.discover(max_per_agent=max_per_agent, progress=False)
-            self._json({"sessions": annotate_donated(sessions)})
+            self._json({
+                "sessions": annotate_donated(sessions),
+                "donated_lifetime": donated_lifetime_count(),
+            })
             return
         if parsed.path == "/api/project_stats":
             self._json(project_stats(), no_store=True)
@@ -3971,6 +4007,7 @@ class Handler(BaseHTTPRequestHandler):
                     if event.get("event") == "done":
                         event = dict(event)
                         event["sessions"] = annotate_donated(list(event.get("sessions") or []))
+                        event["donated_lifetime"] = donated_lifetime_count()
                     self._write_body((json.dumps(event) + "\n").encode(), stream=True)
             except ClientDisconnected:
                 return

@@ -467,7 +467,9 @@ class WebTests(unittest.TestCase):
         self.assertIn('aria-pressed="${sessionStatusFilter === \'donated\' ? \'true\' : \'false\'}"', INDEX_HTML)
         self.assertIn('aria-pressed="${sessionStatusFilter === \'ready\' ? \'true\' : \'false\'}"', INDEX_HTML)
         self.assertIn('aria-pressed="${sessionStatusFilter === \'improve\' ? \'true\' : \'false\'}"', INDEX_HTML)
-        self.assertIn('>Donated ${donatedTotal}</button>', INDEX_HTML)
+        self.assertIn('>Donated ${donatedDisplay}</button>', INDEX_HTML)
+        self.assertIn("const donatedDisplay = Math.max(donatedTotal, donatedLifetime)", INDEX_HTML)
+        self.assertIn("donatedLifetime = (final && final.donated_lifetime) || 0", INDEX_HTML)
         self.assertIn('>Ready ${readyCount}</button>', INDEX_HTML)
         self.assertIn('>Keep chatting ${improveCount}</button>', INDEX_HTML)
         self.assertIn("function sessionIsBlockedDonation(s)", INDEX_HTML)
@@ -773,6 +775,57 @@ class WebTests(unittest.TestCase):
         self.assertEqual(actual_port, 8767)
         self.assertEqual(server_cls.call_args_list[0].args[0], ("127.0.0.1", 8766))
         self.assertEqual(server_cls.call_args_list[1].args[0], ("127.0.0.1", 8767))
+
+    def test_donated_lifetime_count_survives_pruned_transcripts(self):
+        from donate.web import donated_lifetime_count
+
+        registry = {
+            "submissions": [
+                {"submission_id": "submission-aaa", "source_path_key": "k1"},
+                {"submission_id": "submission-bbb", "source_path_key": "k2"},
+                # duplicate submission id (metadata update) counts once
+                {"submission_id": "submission-aaa", "source_path_key": "k1"},
+                # legacy receipt without a submission id still counts by source key
+                {"submission_id": "", "source_path_key": "k3"},
+            ]
+        }
+        with mock.patch("donate.web.load_donation_registry", return_value=registry):
+            self.assertEqual(donated_lifetime_count(), 3)
+        with mock.patch("donate.web.load_donation_registry", return_value={}):
+            self.assertEqual(donated_lifetime_count(), 0)
+
+    def test_relay_donation_status_chunks_large_scans(self):
+        from donate.web import RELAY_STATUS_CHUNK, relay_donation_status
+
+        sessions = [{"turns": i, "records": i, "conversation_fingerprint": f"f{i}"} for i in range(RELAY_STATUS_CHUNK + 50)]
+        calls = []
+
+        class FakeResp:
+            def __init__(self, n):
+                self._n = n
+
+            def read(self):
+                return json.dumps({"statuses": [{"received": False} for _ in range(self._n)]}).encode()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def fake_urlopen(req, timeout=0):
+            payload = json.loads(req.data.decode("utf-8"))
+            n = len(payload["sessions"])
+            calls.append(n)
+            return FakeResp(n)
+
+        with mock.patch("donate.web.relay_url", return_value="https://relay.example"), \
+                mock.patch("donate.web.urlopen", side_effect=fake_urlopen), \
+                mock.patch("donate.web.describe_mod.source_session_id", return_value="sid"):
+            statuses = relay_donation_status(sessions)
+
+        self.assertEqual(calls, [RELAY_STATUS_CHUNK, 50])
+        self.assertEqual(len(statuses), len(sessions))
 
     def test_annotate_donated_ignores_local_source_key_status(self):
         path = "/tmp/example-session.jsonl"
