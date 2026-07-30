@@ -168,7 +168,7 @@
     .mascot-laptop { position:absolute; left:43px; top:67px; width:48px; height:34px; border-radius:7px 7px 3px 3px; background:#d7d8d3; transform:skew(-8deg); box-shadow:0 5px 0 #b9bbb5; }
     .mascot-laptop:after { content:""; position:absolute; left:20px; top:14px; width:6px; height:6px; border-radius:50%; background:white; opacity:.9; }
     .mascot-star { position:absolute; right:12px; top:4px; color:var(--gold); font-size:30px; line-height:1; }
-    .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
     .stat-card {
       min-height:112px;
       padding:12px 10px;
@@ -198,7 +198,10 @@
     }
     .stat-icon[data-icon="star"] { background:#f6edd6; color:var(--gold); }
     .stat-icon[data-icon="heart"] { background:#f6eadb; color:var(--red); }
-    .stat-value { font-size:23px; line-height:1; font-weight:950; }
+    .stat-value { font-size:23px; line-height:1; font-weight:950; max-width:100%; font-variant-numeric:tabular-nums; }
+    /* long counts (6+ digits) shrink instead of overflowing the card */
+    .stat-value.long { font-size:18px; }
+    .stat-value.very-long { font-size:15px; }
     .stat-label { margin-top:6px; color:#2f3833; font-size:11px; line-height:1.12; font-weight:900; }
     button, a.button {
       border:0;
@@ -498,7 +501,7 @@
           <div class="stats" aria-live="polite">
             <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer">
               <div class="stat-icon" data-icon="download"></div>
-              <div class="stat-value" data-stat-value="total-downloads">47,350</div>
+              <div class="stat-value" data-stat-value="total-downloads">65,136</div>
               <div class="stat-label">Total Downloads<br>Tracked</div>
             </a>
             <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer">
@@ -749,7 +752,11 @@ function formatStat(value) {
 async function refreshProjectStats() {
   const setValue = (name, value) => {
     const el = document.querySelector(`[data-stat-value="${name}"]`);
-    if (el) el.textContent = formatStat(value);
+    if (!el) return;
+    const text = formatStat(value);
+    el.textContent = text;
+    el.classList.toggle('long', text.length >= 7 && text.length < 10);
+    el.classList.toggle('very-long', text.length >= 10);
   };
   try {
     const tracked = await fetch('../project_stats.json', {cache:'no-store'});
