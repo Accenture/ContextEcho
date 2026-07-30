@@ -19,16 +19,17 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 CODING = {"C01", "C02", "C03", "C04", "C05"}
 
-# Sessions:
+# Sessions (neutral descriptors; project names must not appear in the
+# released figure, and lengths are AGENT STEPS, not user turns):
 # Session 1 = original (probes_at_crosscompaction)
-# Session 2 = chainassemble
-# Session 3 = proeng
+# Session 2 = second donated session
+# Session 3 = third donated session
 SESSIONS = [
-    ("Session 1 (drift research, 9,643 turns)",
+    ("Session 1 (agentic coding, 9,643 agent steps)",
      REPO_ROOT / "results" / "probes_at_crosscompaction" / "claude-sonnet-4-5"),
-    ("Session 2 (chainassemble, 3,746 turns)",
+    ("Session 2 (manuscript writing, 3,746 agent steps)",
      REPO_ROOT / "results" / "probes_at_crosscompaction_chainassemble" / "claude-sonnet-4-5"),
-    ("Session 3 (proeng, 4,918 turns)",
+    ("Session 3 (document work, 4,918 agent steps)",
      REPO_ROOT / "results" / "probes_at_crosscompaction_proeng" / "claude-sonnet-4-5"),
 ]
 

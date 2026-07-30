@@ -40,12 +40,23 @@ class LedgerCounts:
     superseded: int = 0
     check_required: int = 0
     duplicate: int = 0
+    # User turns summed over ALL community ledger rows (incl. SUPERSEDED) — the
+    # "N community sessions" population, distinct from the counted/accepted one.
+    turns: int = 0
+
+
+def as_int(value) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def load_ledger_counts(dataset_root: Path) -> LedgerCounts:
     counts = LedgerCounts()
     for row in iter_jsonl(dataset_root / "data" / "donations" / "ledger.jsonl"):
         counts.rows += 1
+        counts.turns += as_int(row.get("turns"))
         decision = norm(row.get("decision"))
         if decision == "ACCEPTABLE":
             counts.acceptable += 1
@@ -89,6 +100,10 @@ def render_dataset_card(dataset_root: Path = Path("data_archive_release_v2")) ->
     contributors = group_contributors(sessions)
     counted = [s for s in sessions if s.counted]
     counts = load_ledger_counts(dataset_root)
+    founding_counted = sum(1 for s in counted if s.source_key.startswith("founding-"))
+    community_counted = len(counted) - founding_counted
+    compaction_sessions = sum(1 for s in counted if s.compactions >= 1)
+    total_compactions = sum(s.compactions for s in counted)
     v2_note = (
         f"{counts.acceptable} promoted accepted donation(s)"
         if counts.acceptable
@@ -115,9 +130,9 @@ def render_dataset_card(dataset_root: Path = Path("data_archive_release_v2")) ->
         "| Public v1 founding sessions | 3 |",
         f"| Public v1 per-cell evaluations | {FOUNDING_CELL_JSONS:,} |",
         f"| Public v1 data size | {FOUNDING_DATA_SIZE} |",
-        f"| Active public/candidate sessions tracked locally | {len(counted)} |",
-        f"| Active public/candidate user turns tracked locally | {sum(s.turns for s in counted):,} |",
-        f"| Active public/candidate context compactions tracked locally | {sum(s.compactions for s in counted):,} |",
+        f"| Active public/candidate sessions tracked locally ({community_counted} accepted community + {founding_counted} founding) | {len(counted)} |",
+        f"| User turns in the community donation ledger ({counts.rows} community sessions) | {counts.turns:,} |",
+        f"| Context compactions in the accepted population ({compaction_sessions} of {len(counted)} sessions) | {total_compactions:,} |",
         f"| Public contributors in leaderboard | {len(contributors)} |",
         f"| V2 promotion ledger status | {v2_note} |",
         "",

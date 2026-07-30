@@ -49,7 +49,7 @@ I attest that:
 **Tool version:** {tool_version}
 """
 
-TOOL_VERSION = "contextecho-donate 0.3 (multi-agent-discovery)"
+TOOL_VERSION = "contextecho-donate 0.4 (identity-seeded-redaction)"
 
 
 def session_fingerprint(session: Path) -> str:

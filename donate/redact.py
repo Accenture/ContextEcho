@@ -36,6 +36,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+try:
+    from donate import identity_redaction  # type: ignore
+except ImportError:  # direct invocation from inside the package dir
+    import identity_redaction  # type: ignore
+
 # ---------------------------------------------------------------------------
 # Custom detectors (the pieces Presidio does not ship)
 # ---------------------------------------------------------------------------
@@ -210,17 +215,34 @@ def discover_usernames(text: str) -> set[str]:
     return users
 
 
+def _merge_identity_counts(stats: dict, counts) -> None:
+    """Merge identity-engine counters into stats. Keys are aggregates only —
+    identity TERMS must never become stat keys (manifests record stats)."""
+    for key, value in counts.items():
+        if value:
+            out_key = key if key.startswith(("identity", "structured", "blob")) else f"identity:{key}"
+            stats[out_key] = stats.get(out_key, 0) + value
+
+
 def redact_text(
     text: str,
     analyzer,
     scrub_terms: set[str],
     stats: dict,
     known_usernames: set[str] | None = None,
+    identity_map: dict[str, str] | None = None,
 ) -> str:
     from presidio_anonymizer import AnonymizerEngine
     from presidio_anonymizer.entities import OperatorConfig
 
     anonymizer = AnonymizerEngine()
+
+    # 0. Donor identity terms (consent-form seeded) -> salted pseudonyms.
+    # Runs FIRST so structured rules (git Author lines, `Name <email>`)
+    # see the pristine text before any other substitution.
+    if identity_map:
+        text, id_counts = identity_redaction.scrub_text(text, identity_map)
+        _merge_identity_counts(stats, id_counts)
 
     # 1. Auto-discovered usernames -> stable pseudonyms (do first; before paths).
     usernames = set(known_usernames or set()) | discover_usernames(text)
@@ -289,14 +311,30 @@ def redact_text(
     return "".join(out_parts)
 
 
-def redact_json_value(value: Any, analyzer, scrub_terms: set[str], stats: dict, usernames: set[str]) -> Any:
+def redact_json_value(value: Any, analyzer, scrub_terms: set[str], stats: dict, usernames: set[str], identity_map: dict[str, str] | None = None) -> Any:
     """Redact string leaves while preserving JSON structure."""
     if isinstance(value, str):
-        return redact_text(value, analyzer, scrub_terms, stats, known_usernames=usernames)
+        return redact_text(value, analyzer, scrub_terms, stats, known_usernames=usernames, identity_map=identity_map)
     if isinstance(value, list):
-        return [redact_json_value(v, analyzer, scrub_terms, stats, usernames) for v in value]
+        return [redact_json_value(v, analyzer, scrub_terms, stats, usernames, identity_map) for v in value]
     if isinstance(value, dict):
-        return {k: redact_json_value(v, analyzer, scrub_terms, stats, usernames) for k, v in value.items()}
+        # Dict KEYS can be file paths carrying the donor identity (Claude Code
+        # snapshot.trackedFileBackups keys absolute paths). Identity terms are
+        # scrubbed from keys too; deterministic suffixing avoids collisions.
+        out: dict = {}
+        for k, v in value.items():
+            new_k = k
+            if identity_map and isinstance(k, str):
+                counter: dict = {}
+                new_k, counter = identity_redaction.scrub_text(k, identity_map)
+                _merge_identity_counts(stats, counter)
+                if new_k != k and new_k in out:
+                    base, n = new_k, 2
+                    while new_k in out:
+                        new_k = f"{base}~{n}"
+                        n += 1
+            out[new_k] = redact_json_value(v, analyzer, scrub_terms, stats, usernames, identity_map)
+        return out
     return value
 
 
@@ -313,9 +351,15 @@ def expanded_scrub_terms(scrub_terms: set[str]) -> set[str]:
     return terms
 
 
-def apply_scrub_terms_to_file(src: Path, dst: Path, scrub_terms: set[str]) -> dict:
+def apply_scrub_terms_to_file(src: Path, dst: Path, scrub_terms: set[str], identity_map: dict[str, str] | None = None) -> dict:
     """Fast repair pass for already-redacted files with newly added scrub terms."""
     stats: dict = {}
+    if identity_map:
+        # JSONL-safe identity pass (parses each line; scrubs string values only).
+        id_counts = identity_redaction.scrub_file(src, src if src == dst else dst, identity_map)
+        _merge_identity_counts(stats, id_counts)
+        if src != dst:
+            src = dst
     terms = expanded_scrub_terms(scrub_terms)
     text = src.read_text(encoding="utf-8", errors="replace")
     for term in sorted(terms, key=len, reverse=True):
@@ -366,8 +410,8 @@ def _progress_iter(items, total, show):
     sys.stderr.flush()
 
 
-def redact_file(src: Path, dst: Path, scrub_terms: set[str], progress: bool = False) -> dict:
-    return redact_file_with_progress(src, dst, scrub_terms, progress=progress)
+def redact_file(src: Path, dst: Path, scrub_terms: set[str], progress: bool = False, identity_map: dict[str, str] | None = None) -> dict:
+    return redact_file_with_progress(src, dst, scrub_terms, progress=progress, identity_map=identity_map)
 
 
 def redact_file_with_progress(
@@ -376,6 +420,7 @@ def redact_file_with_progress(
     scrub_terms: set[str],
     progress: bool = False,
     progress_callback=None,
+    identity_map: dict[str, str] | None = None,
 ) -> dict:
     analyzer = build_analyzer()
     stats: dict = {}
@@ -397,13 +442,13 @@ def redact_file_with_progress(
             except Exception:
                 # Unknown/non-JSON logs are still handled as raw text, but the
                 # donated artifact must remain valid JSONL for relay intake.
-                redacted_text = redact_text(line, analyzer, scrub_terms, stats, known_usernames=usernames)
+                redacted_text = redact_text(line, analyzer, scrub_terms, stats, known_usernames=usernames, identity_map=identity_map)
                 wrapped = {"type": "redacted_raw_line", "line_number": i, "text": redacted_text}
                 fout.write(json.dumps(wrapped, ensure_ascii=False, separators=(",", ":")) + "\n")
                 if progress_callback:
                     progress_callback(i, total)
                 continue
-            redacted_obj = redact_json_value(obj, analyzer, scrub_terms, stats, usernames)
+            redacted_obj = redact_json_value(obj, analyzer, scrub_terms, stats, usernames, identity_map)
             fout.write(json.dumps(redacted_obj, ensure_ascii=False, separators=(",", ":")) + "\n")
             if progress_callback:
                 progress_callback(i, total)
@@ -419,6 +464,9 @@ def main(argv: list[str]) -> int:
     p.add_argument("session", type=Path, help="Path to the session .jsonl")
     p.add_argument("--out", type=Path, default=None, help="Output path (default: <session>.redacted.jsonl)")
     p.add_argument("--scrub", type=str, default="", help="Optional comma-separated extra terms to remove (local-only)")
+    p.add_argument("--donor-name", type=str, default="", help="Donor name (identity-seeded scrub; local-only, never uploaded)")
+    p.add_argument("--donor-email", type=str, default="", help="Donor email (identity-seeded scrub; local-only)")
+    p.add_argument("--donor-institute", type=str, default="", help="Donor institute (identity-seeded scrub; local-only)")
     args = p.parse_args(argv)
 
     if not args.session.exists():
@@ -427,11 +475,16 @@ def main(argv: list[str]) -> int:
 
     out = args.out or args.session.with_suffix(".redacted.jsonl")
     scrub_terms = {t.strip() for t in args.scrub.split(",") if t.strip()}
+    identity_map = identity_redaction.build_identity_terms(
+        args.donor_name, args.donor_email, args.donor_institute
+    ) if (args.donor_name or args.donor_email or args.donor_institute) else {}
 
     print(f"[redact] {args.session}  ->  {out}")
     if scrub_terms:
         print(f"[redact] extra scrub terms (local-only): {sorted(scrub_terms)}")
-    stats = redact_file(args.session, out, scrub_terms)
+    if identity_map:
+        print(f"[redact] identity-seeded scrub: {len(identity_map)} donor identity term(s) (values never printed)")
+    stats = redact_file(args.session, out, scrub_terms, identity_map=identity_map)
 
     print("\n[redact] removed:")
     if stats:

@@ -30,8 +30,10 @@ from pathlib import Path
 # what redact targeted. Works both as `python -m donate.verify` and direct run.
 try:
     from donate.redact import API_KEY_RES  # type: ignore
+    from donate import identity_redaction  # type: ignore
 except ImportError:  # direct invocation from inside the package dir
     from redact import API_KEY_RES  # type: ignore
+    import identity_redaction  # type: ignore
 
 # Email: local part must START with alphanumeric (rejects code like
 # `@click.option` and `something-@x`), and the TLD must be a real-looking
@@ -233,10 +235,14 @@ def verify_text_stream(path: Path) -> dict[str, list[str]]:
     return findings
 
 
-def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, list[str]], Path | None, dict[int, int]]:
+def _scan_builtin_and_write_detect_candidates(
+    path: Path,
+    identity_map: dict[str, str] | None = None,
+) -> tuple[dict[str, list[str]], Path | None, dict[int, int]]:
     """Single pass for built-in checks and detect-secrets candidate extraction."""
     merged: dict[str, set[str]] = {}
     entropy_hits: set[str] = set()
+    identity_hits: Counter = Counter()
     line_map: dict[int, int] = {}
     candidate_no = 0
     tmp = _new_candidate_file()
@@ -251,6 +257,8 @@ def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, lis
                         merged.setdefault("malformed_jsonl", set()).add(f"line {original_no}: {exc.msg}")
                 _merge_findings(merged, verify_text(line))
                 _add_entropy_hits(entropy_hits, line)
+                if identity_map:
+                    identity_hits.update(identity_redaction.find_identity_hits(line, identity_map))
                 for snippet in _detect_secret_candidate_snippets(line):
                     candidate_no += 1
                     line_map[candidate_no] = original_no
@@ -261,6 +269,13 @@ def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, lis
         raise
     findings = {category: sorted(samples)[:10] for category, samples in merged.items() if samples}
     findings["high_entropy"] = [mask_token(tok) for tok in sorted(entropy_hits)[:10]]
+    if identity_hits:
+        # Donor identity terms found in the redacted output. Samples are MASKED
+        # (never show the terms) — the repair path re-runs the identity engine.
+        findings["donor_identity"] = [
+            f"{identity_redaction.mask_term(term)} x{count}"
+            for term, count in identity_hits.most_common(10)
+        ]
     if not line_map:
         tmp_path.unlink(missing_ok=True)
         return findings, None, {}
@@ -271,7 +286,7 @@ def _scan_builtin_and_write_detect_candidates(path: Path) -> tuple[dict[str, lis
 # categories that are ADVISORY (shown for the user to eyeball, but don't fail —
 # entropy can't tell a base64 secret from a base64 content fragment in an LLM
 # log, so blocking on it makes verify never pass).
-BLOCKING = {"email", "home_path", "api_key", "detect_secrets", "malformed_jsonl"}
+BLOCKING = {"email", "home_path", "api_key", "detect_secrets", "malformed_jsonl", "donor_identity"}
 
 
 # detect-secrets plugins that fire on ANY high-entropy/encoded string. In LLM
@@ -455,8 +470,8 @@ def run_detect_secrets(path: Path) -> list[str]:
     return [str(item["type"]) for item in detect_secret_findings(path)]
 
 
-def verify_session(path: Path) -> dict:
-    findings, scan_path, line_map = _scan_builtin_and_write_detect_candidates(path)
+def verify_session(path: Path, identity_map: dict[str, str] | None = None) -> dict:
+    findings, scan_path, line_map = _scan_builtin_and_write_detect_candidates(path, identity_map=identity_map)
     if scan_path is not None:
         try:
             ds = [str(item["type"]) for item in _detect_secret_findings_in_candidate(scan_path, line_map)]

@@ -51,7 +51,7 @@ Points follow the scale in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | 30 | Anonymous donor 9f5fa5fe | 1 | 63 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
 | 31 | Anonymous donor 6d97690b | 1 | 54 | Claude Code | claude-sonnet-4.x (mixed) | 4 |
 
-*Corpus total: **57 sessions · 14,426 user turns**.*
+*Corpus total: **57 counted sessions** (54 accepted community donations + 3 founding); the 55 community ledger sessions sum to **12,337 user turns**.*
 
 > Public-anonymous donors are grouped under a stable anonymous alias when
 > maintainer-known identity fields match exactly after normalization.
@@ -72,7 +72,7 @@ per contributor counts toward points.
 |----|------------|-----------------|------------|-------|-------|-----|--------|------|------:|:---:|:---:|--------|
 | S1 | — | Anonymous donor S1 | named | Claude Code | Opus 4.x | Anthropic | agentic-coding | Python | 1,242 | 6 | 5 | v1.0 |
 | S2 | — | Anonymous donor S2 | named | Claude Code | Opus 4.x | Anthropic | manuscript-writing | mixed | 445 | 3 | 5 | v1.0 |
-| S3 | — | Anonymous donor S3 | named | Claude Code | Opus 4.x | Anthropic | non-coding-docs | mixed | 458 | 4 | 5 | v1.0 |
+| S3 | — | Anonymous donor S3 | named | Claude Code | Opus 4.x | Anthropic | non-coding-docs | mixed | 458 | 5 | 5 | v1.0 |
 | S4 | submission-86ff44fe | Anonymous donor 86ff44fe | anonymous | Claude Code | claude-sonnet-4-6 | Anthropic | agentic-coding | mixed | 61 | 1 | 5 | v2 |
 | S5 | submission-10498453 | Anonymous donor 10498453 | anonymous | Codex CLI | gpt-5.5 | OpenAI | agentic-coding | mixed | 54 | 1 | 5 | v2 |
 | S6 | submission-27249dbf | Anonymous donor 27249dbf | anonymous | Claude Code | claude-sonnet-4-6 | Anthropic | web-frontend | mixed | 118 | 3 | 5 | v2 |

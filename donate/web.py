@@ -32,6 +32,7 @@ from urllib.request import Request, urlopen
 
 from donate import describe as describe_mod
 from donate import discover as discover_mod
+from donate import identity_redaction as identity_mod
 from donate import minimize as minimize_mod
 from donate import redact as redact_mod
 from donate import submit as submit_mod
@@ -966,12 +967,106 @@ def _load_tracked_project_stats(local_path: Path | None = None) -> dict:
         return _fetch_json("https://raw.githubusercontent.com/Accenture/ContextEcho/main/docs/project_stats.json")
 
 
+# Display-only overlay of the live HF rolling last-month download count onto
+# the tracked snapshot. Mirrors the month-bucket accounting in
+# scripts/update_project_stats.py (download_buckets / roll_download_total)
+# without ever writing docs/project_stats.json.
+_STAT_DEFAULT_HISTORICAL_DOWNLOADS = 39_000
+_STAT_LIVE_DOWNLOAD_GLITCH_FACTOR = 10
+
+
+def _stat_int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _stat_month_key(value) -> str | None:
+    text = str(value or "")
+    if len(text) >= 7 and text[4] == "-":
+        return text[:7]
+    return None
+
+
+def _stat_previous_month(period: str) -> str | None:
+    if not _stat_month_key(period):
+        return None
+    year = int(period[:4])
+    month = int(period[5:7])
+    if month == 1:
+        return f"{year - 1:04d}-12"
+    return f"{year:04d}-{month - 1:02d}"
+
+
+def _tracked_download_buckets(tracked: dict) -> dict[str, int]:
+    """Read-only mirror of scripts/update_project_stats.py::download_buckets."""
+    raw = tracked.get("dataset_hf_monthly_downloads")
+    buckets: dict[str, int] = {}
+    if isinstance(raw, dict):
+        for key, value in raw.items():
+            count = _stat_int(value)
+            if count is not None and count >= 0 and _stat_month_key(str(key)):
+                buckets[str(key)[:7]] = count
+    if buckets:
+        return buckets
+
+    previous_snapshot = _stat_int(tracked.get("dataset_hf_downloads_last_month_previous"))
+    previous = _stat_int(tracked.get("dataset_hf_downloads_last_month"))
+    previous_period = _stat_month_key(str(tracked.get("dataset_total_downloads_updated") or ""))
+    if previous_snapshot is not None and previous_period:
+        prior_period = _stat_previous_month(previous_period)
+        if prior_period:
+            buckets[prior_period] = previous_snapshot
+    if previous is None:
+        historical = _stat_int(tracked.get("dataset_historical_downloads")) or _STAT_DEFAULT_HISTORICAL_DOWNLOADS
+        total = _stat_int(tracked.get("dataset_total_downloads")) or historical
+        inferred = total - historical
+        previous = inferred if inferred >= 0 else None
+    if previous is not None and previous_period and previous_period not in buckets:
+        buckets[previous_period] = previous
+    return buckets
+
+
+def display_total_downloads(tracked: dict, hf_live_last_month, today: str | None = None) -> int | None:
+    """Total-downloads value to display: tracked snapshot + live month-to-date overlay.
+
+    Reconstructs the month buckets update_project_stats.py maintains, then
+    overlays the live HF rolling last-month value onto the current period
+    (same month -> max(recorded, live); month rolled over -> live becomes the
+    new month's bucket, prior months keep their recorded values). Guard rails:
+    no live value -> tracked total unchanged; never below the tracked total;
+    live values >10x the recorded month are treated as API glitches.
+    """
+    if not isinstance(tracked, dict):
+        return None
+    tracked_total = _stat_int(tracked.get("dataset_total_downloads"))
+    live = _stat_int(hf_live_last_month)
+    if live is None or live < 0:
+        return tracked_total
+    historical = _stat_int(tracked.get("dataset_historical_downloads")) or _STAT_DEFAULT_HISTORICAL_DOWNLOADS
+    buckets = _tracked_download_buckets(tracked)
+    period = _stat_month_key(today) or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m")
+    reference = buckets.get(period)
+    if reference is None:
+        recorded_period = _stat_month_key(str(tracked.get("dataset_total_downloads_updated") or ""))
+        reference = buckets.get(recorded_period) if recorded_period else None
+    if reference and live > reference * _STAT_LIVE_DOWNLOAD_GLITCH_FACTOR:
+        return tracked_total
+    buckets[period] = max(buckets.get(period) or 0, live)
+    displayed = historical + sum(buckets.values())
+    if tracked_total is not None and displayed < tracked_total:
+        return tracked_total
+    return displayed
+
+
 def project_stats() -> dict:
     """Best-effort public project stats. Never block the donation flow."""
     stats = {
         "github_stars": None,
         "donated_sessions": None,
         "dataset_total_downloads": None,
+        "dataset_total_downloads_tracked": None,
         "dataset_downloads": None,
         "dataset_likes": None,
         "accepted_submission_ids": [],
@@ -990,9 +1085,11 @@ def project_stats() -> dict:
         stats["donated_sessions"] = _parse_donated_sessions(readme)
     except Exception:
         pass
+    tracked: dict = {}
     try:
         tracked = _load_tracked_project_stats()
         stats["dataset_total_downloads"] = tracked.get("dataset_total_downloads")
+        stats["dataset_total_downloads_tracked"] = tracked.get("dataset_total_downloads")
         accepted_ids = tracked.get("accepted_submission_ids", [])
         if isinstance(accepted_ids, list):
             stats["accepted_submission_ids"] = accepted_ids
@@ -1002,10 +1099,18 @@ def project_stats() -> dict:
             stats["accepted_submission_public_identities"] = identities
     except Exception:
         pass
+    hf_live_last_month = None
     try:
         hf = _fetch_json("https://huggingface.co/api/datasets/contextecho2026/persona-drift-contextecho")
         stats["dataset_downloads"] = hf.get("downloads") or hf.get("downloadsAllTime")
         stats["dataset_likes"] = hf.get("likes")
+        hf_live_last_month = hf.get("downloads")
+    except Exception:
+        pass
+    try:
+        displayed = display_total_downloads(tracked, hf_live_last_month)
+        if displayed is not None:
+            stats["dataset_total_downloads"] = displayed
     except Exception:
         pass
     try:
@@ -1065,11 +1170,53 @@ def _repair_malformed_jsonl_lines(path: Path) -> int:
     return repaired
 
 
+def identity_map_from_request(data: dict) -> dict[str, str]:
+    """Donor identity terms from consent fields carried in a wizard request.
+
+    Local-only scrub input: the values are used to REMOVE information and are
+    never logged, never echoed to the browser, never written to stats keys.
+    """
+    identity = data.get("identity") if isinstance(data.get("identity"), dict) else {}
+    name = str(identity.get("name") or data.get("contributor") or "").strip()
+    email = str(identity.get("email") or data.get("email") or "").strip()
+    institute = str(identity.get("institute") or data.get("institute") or "").strip()
+    handles = [str(h).strip() for h in (identity.get("handles") or []) if str(h).strip()]
+    if not (name or email or institute or handles):
+        return {}
+    return identity_mod.build_identity_terms(name, email, institute, extra_handles=handles)
+
+
+def person_scrub_map(data: dict) -> dict[str, str]:
+    """Donor-confirmed third-party person scrubs -> engine terms map."""
+    names = data.get("person_scrub") if isinstance(data.get("person_scrub"), list) else []
+    out: dict[str, str] = {}
+    for name in names:
+        term = str(name or "").strip()
+        if len(term) >= 3:
+            out[term.lower()] = "<PERSON>"
+    return out
+
+
+def _people_review_payload(path: Path, identity_map: dict[str, str], emit=None) -> dict:
+    """Third-party PERSON candidates for the donor to review (never auto-scrubbed)."""
+    try:
+        if emit:
+            emit({
+                "event": "verify",
+                "percent": 99,
+                "message": "Scanning prose for other people's names (review list)...",
+            })
+        return identity_mod.find_third_party_persons_in_jsonl(path, exclude_terms=identity_map)
+    except Exception:
+        return {"method": "unavailable", "candidates": []}
+
+
 def _auto_repair_until_verified(
     path: Path,
     verify_report: dict,
     stats: dict,
     emit=None,
+    identity_map: dict[str, str] | None = None,
 ) -> tuple[dict, dict, int]:
     """Bounded automatic repair loop after verify finds exact residual values."""
     repair_passes = 0
@@ -1078,6 +1225,24 @@ def _auto_repair_until_verified(
         if current_report.get("passed"):
             break
         blocking = current_report.get("blocking") or {}
+        if blocking.get("donor_identity") and identity_map:
+            repair_passes += 1
+            if emit:
+                emit({
+                    "event": "repair",
+                    "percent": min(98, 90 + pass_no),
+                    "message": f"Auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}: removing residual donor identity terms...",
+                })
+            id_counts = identity_mod.scrub_file(path, path, identity_map)
+            redact_mod._merge_identity_counts(stats, id_counts)
+            if emit:
+                emit({
+                    "event": "verify",
+                    "percent": min(99, 93 + pass_no),
+                    "message": f"Verifying after auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}...",
+                })
+            current_report = verify_mod.verify_session(path, identity_map=identity_map)
+            continue
         if blocking.get("malformed_jsonl"):
             repair_passes += 1
             if emit:
@@ -1095,7 +1260,7 @@ def _auto_repair_until_verified(
                     "percent": min(99, 93 + pass_no),
                     "message": f"Verifying after auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}...",
                 })
-            current_report = verify_mod.verify_session(path)
+            current_report = verify_mod.verify_session(path, identity_map=identity_map)
             continue
         repair_terms = _safe_repair_terms_from_report(path, current_report)
         if not repair_terms:
@@ -1122,7 +1287,7 @@ def _auto_repair_until_verified(
                 "percent": min(99, 93 + pass_no),
                 "message": f"Verifying after auto-repair {pass_no}/{MAX_AUTO_REPAIR_PASSES}...",
             })
-        current_report = verify_mod.verify_session(path)
+        current_report = verify_mod.verify_session(path, identity_map=identity_map)
     return current_report, stats, repair_passes
 
 
@@ -1434,6 +1599,9 @@ INDEX_HTML = r"""<!doctype html>
     .redact-info-strip:before { content:"i"; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; border:2px solid #3c6da8; color:#275c99; font-weight:950; font-family:ui-serif, Georgia, serif; }
     .scrub-helper { margin:6px 0 0; color:#59635e; font-size:13px; }
     .scrub-helper strong { color:#28332e; }
+    .people-review { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+    .people-review-item { display:flex; gap:8px; align-items:flex-start; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:#fbfcf8; }
+    .people-snippet { font-size:12px; margin-top:2px; word-break:break-word; }
     .redact-action-row { margin-top:12px; }
     .redact-action-row button { background:#be2e35; box-shadow:0 10px 18px rgba(190,46,53,.18); }
     .redact-review-grid { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:18px; align-items:start; margin-top:14px; }
@@ -1512,7 +1680,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="support-copy">Star the GitHub repo or like the dataset by clicking the cards.</div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
-          <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Total Downloads</div></a>
+          <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" title="Includes month-to-date Hugging Face downloads." target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Total Downloads</div></a>
           <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></a>
           <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></a>
         </div>
@@ -1596,7 +1764,7 @@ INDEX_HTML = r"""<!doctype html>
       <label class="privacy-card"><input type="radio" name="privacyTier" value="full_redacted" checked><div class="privacy-icon">✣</div><div><strong>Full redacted <span class="pill best">Recommended</span></strong><div class="hint">Default. Keeps task flow after PII/secrets/custom terms are removed.<br>Highest scientific fidelity.</div></div></label>
       <label class="privacy-card"><input type="radio" name="privacyTier" value="user_minimized"><div class="privacy-icon">♢</div><div><strong>User-minimized</strong><div class="hint">Selectively masks sensitive donor text after redaction.<br>Coding task context remains; stronger privacy.</div></div></label>
     </div>
-    <div class="redact-info-strip"><strong>Automatic redaction covers:</strong> paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings.</div>
+    <div class="redact-info-strip"><strong>Automatic redaction covers:</strong> paths, usernames, emails, names, phone numbers, IPs, URLs, API keys, tokens, and credential-like strings — plus your own name, email, and institute (identity-seeded, from the contributor info you provide).</div>
     <label><input id="safeConfirm" type="checkbox" style="width:auto"> I confirm this session is safe to donate.</label>
     <div class="row redact-action-row">
       <button id="redactBtn" disabled>Redact and Verify</button>
@@ -1778,6 +1946,19 @@ function currentContributorInfo(){
     email: ($('contributorEmail')?.value || '').trim(),
     institute: ($('contributorInstitute')?.value || '').trim(),
     publicAnonymous: !!$('publicAnonymous')?.checked
+  };
+}
+function donorIdentity(){
+  // Identity-seeded redaction input: consent fields already typed this run,
+  // falling back to the locally saved contributor info (repeat donors), and
+  // to the local donation record for this session. Local-only scrub input.
+  const typed = currentContributorInfo();
+  const saved = lastContributorInfo || {};
+  const record = selected ? localContributorRecord(selected) : {};
+  return {
+    name: typed.creditName || saved.creditName || record.creditName || '',
+    email: typed.email || saved.email || record.email || '',
+    institute: typed.institute || saved.institute || record.institute || ''
   };
 }
 function rememberContributorFields(){
@@ -2144,12 +2325,12 @@ function shellQuotePath(value){
 }
 function renderProjectStats(){
   const cards = [
-    ['download', 'Total Downloads', publicStats.dataset_total_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
-    ['star', 'GitHub Stars', publicStats.github_stars, 'https://github.com/Accenture/ContextEcho'],
-    ['heart', 'Dataset Likes', publicStats.dataset_likes, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho'],
+    ['download', 'Total Downloads', publicStats.dataset_total_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho', 'Includes month-to-date Hugging Face downloads.'],
+    ['star', 'GitHub Stars', publicStats.github_stars, 'https://github.com/Accenture/ContextEcho', ''],
+    ['heart', 'Dataset Likes', publicStats.dataset_likes, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho', ''],
   ];
-  $('projectStats').innerHTML = cards.map(([icon, label, value, href]) => `
-    <a class="stat-card" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
+  $('projectStats').innerHTML = cards.map(([icon, label, value, href, title]) => `
+    <a class="stat-card" href="${escapeHtml(href)}"${title ? ` title="${escapeHtml(title)}"` : ''} target="_blank" rel="noopener noreferrer">
       <div class="stat-icon" data-icon="${escapeHtml(icon)}">${iconSvg(icon)}</div>
       <div class="stat-value">${escapeHtml(fmtStat(value))}</div>
       <div class="stat-label">${escapeHtml(label)}</div>
@@ -2233,6 +2414,7 @@ function renderRedactResult(data){
   Object.entries(stats).forEach(([k,v]) => {
     const value = Number(v || 0);
     if(!value) return;
+    if(k === 'blob_guard_skips') return; // internal guard counter, not a removal
     if(k.startsWith('private_word:')){
       const term = k.slice('private_word:'.length);
       const noisy = term.length > 24 || /PRIVATE KEY|BEGIN |[A-Z0-9]{20,}|[@=]/.test(term);
@@ -2277,6 +2459,21 @@ function renderRedactResult(data){
     </div>
   `;
   const removedCount = entries.reduce((acc, item) => acc + Number(item[1] || 0), 0);
+  const people = ((data.people_review || {}).candidates || []);
+  const peopleSection = people.length ? `
+    <div class="field">
+      <div class="field-label">People detected in content <span class="removed-count">(${people.length})</span></div>
+      <div class="people-review">
+        ${people.map(p => `
+          <label class="people-review-item">
+            <input type="checkbox" class="person-scrub-check" data-person="${escapeHtml(p.name)}" checked style="width:auto" />
+            <span><strong>${escapeHtml(p.name)}</strong> <span class="muted">&times;${Number(p.count || 1)}</span>
+            ${(p.snippets && p.snippets[0]) ? `<div class="people-snippet muted">${escapeHtml(p.snippets[0])}</div>` : ''}</span>
+          </label>`).join('')}
+      </div>
+      <div class="row" style="margin-top:8px"><button class="secondary" id="scrubPeopleBtn">Scrub selected people</button></div>
+      <div class="hint">Names the tool found in prose (e.g. model-written summaries naming colleagues). Checked names are replaced with &lt;PERSON&gt; when you click the button; uncheck a name to keep it. Nothing is removed without your confirmation.</div>
+    </div>` : '';
   $('redactResult').innerHTML = `
     <div class="result-title">
       <div class="result-title-main">
@@ -2289,12 +2486,28 @@ function renderRedactResult(data){
     <div class="field"><div class="field-label">Redacted file</div><div class="redacted-path-row"><div class="pathbox">${escapeHtml(data.redacted_file)}</div><button class="copy-file-btn" type="button" id="copyRedactedPath">Copy</button></div></div>
     <div class="row" style="margin-top:8px"><button class="secondary" id="revealRedactedFile">Reveal File</button></div>
     <div class="field"><div class="field-label">Already redacted in this output ${removedCount ? `<span class="removed-count">(${removedCount})</span>` : ''}</div><div class="field-label" style="margin-top:10px">Automatic redaction</div><div class="metrics">${autoMetrics}</div>${privateEntries.length ? `<div class="field-label" style="margin-top:10px">Private words you asked to redact</div><div class="metrics">${privateMetrics}</div>` : ''}<div class="removed-note">These chips are a summary of what the tool already redacted. They are not terms to type.</div></div>
+    ${peopleSection}
   `;
   $('redactResult').className = `result show redact-card ${data.verify_passed ? 'pass-card' : 'fail-card'}`;
   $('searchPanel').classList.add('show');
   $('searchResult').classList.remove('show');
   $('revealRedactedFile').onclick = () => post('/api/open_path', {path:data.redacted_file, reveal:true}).catch(e => status('redactStatus','ERROR: '+e.message));
   $('copyRedactedPath').onclick = () => navigator.clipboard?.writeText(data.redacted_file).catch(()=>{});
+  const scrubPeopleBtn = $('scrubPeopleBtn');
+  if(scrubPeopleBtn){
+    scrubPeopleBtn.onclick = () => {
+      const names = [...document.querySelectorAll('.person-scrub-check')]
+        .filter(c => c.checked)
+        .map(c => c.dataset.person || '')
+        .filter(Boolean);
+      if(!names.length){
+        status('redactStatus', 'No names selected. Check the people you want removed, or continue if all remaining names are fine to keep.');
+        return;
+      }
+      $('reviewConfirm').checked = false;
+      runRedactVerify([], {personScrub: names});
+    };
+  }
   const suggestedBtn = $('useSuggestedScrub');
   if(suggestedBtn){
     suggestedBtn.onclick = () => {
@@ -3504,15 +3717,16 @@ async function runRedactVerify(extraTerms = [], opts = {}){
     let finalData = null;
     const directTerms = [...new Set((extraTerms || []).map(x => String(x || '').trim()).filter(Boolean))];
     const pendingScrubTerms = [...new Set([...newScrubTerms(), ...directTerms])];
+    const personScrub = [...new Set((opts.personScrub || []).map(x => String(x || '').trim()).filter(Boolean))];
     const canRepair = !!(
       redacted &&
       redacted.redacted_file &&
       redacted.privacy_tier === privacyTier() &&
-      (pendingScrubTerms.length || hasDetectSecretsFailure(redacted))
+      (pendingScrubTerms.length || personScrub.length || hasDetectSecretsFailure(redacted))
     );
     const previousStats = canRepair ? {...(redacted.stats || {})} : null;
     const scrubForRun = canRepair ? pendingScrubTerms.join(', ') : '';
-    if(redacted && redacted.verify_passed && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length){
+    if(redacted && redacted.verify_passed && !canRepair && redacted.privacy_tier === privacyTier() && !pendingScrubTerms.length && !personScrub.length){
       status('redactStatus', 'No new private words to redact. Review the current redacted file or use Check File for another word.');
       renderRedactResult(redacted);
       refreshButtons();
@@ -3525,7 +3739,9 @@ async function runRedactVerify(extraTerms = [], opts = {}){
       confirm_safe:$('safeConfirm').checked,
       privacy_tier:privacyTier(),
       repair_allowed: canRepair,
-      previous_redacted_file: canRepair ? redacted.redacted_file : ''
+      previous_redacted_file: canRepair ? redacted.redacted_file : '',
+      identity: donorIdentity(),
+      person_scrub: personScrub
     }, ev => {
       if(ev.event === 'start'){
         markStage('preparing', 'Preparing redaction');
@@ -3851,6 +4067,8 @@ class Handler(BaseHTTPRequestHandler):
         if not data.get("confirm_safe"):
             raise ValueError("safety confirmation is required")
         scrub_terms = {t.strip() for t in str(data.get("scrub", "")).split(",") if t.strip()}
+        identity_map = identity_map_from_request(data)
+        person_map = person_scrub_map(data)
         privacy_tier = str(data.get("privacy_tier") or "full_redacted")
         if privacy_tier not in {"full_redacted", "user_minimized"}:
             raise ValueError("invalid privacy tier")
@@ -3864,7 +4082,10 @@ class Handler(BaseHTTPRequestHandler):
                     "percent": 45,
                     "message": "Applying new private words and credential cleanup to the existing redacted file...",
                 })
-            stats = redact_mod.apply_scrub_terms_to_file(previous, previous, scrub_terms)
+            # Donor-confirmed person scrubs and identity terms go through the
+            # same JSONL-safe identity engine as the full pass.
+            repair_identity = {**identity_map, **person_map}
+            stats = redact_mod.apply_scrub_terms_to_file(previous, previous, scrub_terms, identity_map=repair_identity or None)
             if emit:
                 emit({
                     "event": "repair",
@@ -3876,12 +4097,13 @@ class Handler(BaseHTTPRequestHandler):
                     "percent": 90,
                     "message": "Verify 1/2: scanning for residual emails, paths, API keys, and secrets...",
                 })
-            verify_report = verify_mod.verify_session(previous)
+            verify_report = verify_mod.verify_session(previous, identity_map=identity_map)
             verify_report, stats, auto_repair_passes = _auto_repair_until_verified(
                 previous,
                 verify_report,
                 stats,
                 emit=emit,
+                identity_map=identity_map,
             )
             if emit:
                 emit({
@@ -3891,6 +4113,7 @@ class Handler(BaseHTTPRequestHandler):
                 })
             if verify_report.get("passed"):
                 submit_mod.write_verify_cache(previous, verify_report)
+            people_review = _people_review_payload(previous, identity_map, emit)
             return {
                 "redacted_file": str(previous),
                 "output_dir": str(previous.parent),
@@ -3901,6 +4124,8 @@ class Handler(BaseHTTPRequestHandler):
                 "repair_used": True,
                 "auto_repair_passes": auto_repair_passes,
                 "repair_terms": sorted(scrub_terms),
+                "identity_seeded": bool(identity_map),
+                "people_review": people_review,
             }
 
         src = Path(data.get("path", "")).expanduser()
@@ -3943,6 +4168,7 @@ class Handler(BaseHTTPRequestHandler):
             scrub_terms,
             progress=False,
             progress_callback=on_progress if emit else None,
+            identity_map={**identity_map, **person_map} or None,
         )
         if privacy_tier == "user_minimized":
             if emit:
@@ -3955,12 +4181,13 @@ class Handler(BaseHTTPRequestHandler):
                 "percent": 96,
                 "message": "Verify 1/2: scanning for residual emails, paths, API keys, and secrets...",
             })
-        verify_report = verify_mod.verify_session(out)
+        verify_report = verify_mod.verify_session(out, identity_map=identity_map)
         verify_report, stats, auto_repair_passes = _auto_repair_until_verified(
             out,
             verify_report,
             stats,
             emit=emit,
+            identity_map=identity_map,
         )
         if emit:
             emit({
@@ -3971,6 +4198,7 @@ class Handler(BaseHTTPRequestHandler):
         verify_ok = bool(verify_report.get("passed"))
         if verify_ok:
             submit_mod.write_verify_cache(out, verify_report)
+        people_review = _people_review_payload(out, identity_map, emit)
         return {
             "redacted_file": str(out),
             "output_dir": str(out_dir),
@@ -3981,6 +4209,8 @@ class Handler(BaseHTTPRequestHandler):
             "repair_used": False,
             "auto_repair_passes": auto_repair_passes,
             "scrub_terms": sorted(scrub_terms),
+            "identity_seeded": bool(identity_map),
+            "people_review": people_review,
         }
 
     def _handle_redact_stream(self) -> None:
@@ -4067,6 +4297,25 @@ class Handler(BaseHTTPRequestHandler):
         auto = metadata_for_redacted_artifact(data, session)
         if not donation_ready(auto.get("turns", 0), auto.get("compactions", 0)):
             raise ValueError("This session is not ready to donate yet. Keep working until it reaches 50+ turns.")
+        # Fail-closed identity gate: the consent fields collected for this
+        # submission are grepped against the redacted artifact. Any residual
+        # donor identity term blocks submission (same policy as secrets).
+        if emit:
+            emit({"event": "progress", "percent": 25, "message": "Checking the redacted file for your own identity terms..."})
+        identity_map = identity_map_from_request(data)
+        if identity_map:
+            identity_hits = 0
+            with session.open("r", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    identity_hits += sum(identity_mod.find_identity_hits(line, identity_map).values())
+                    if identity_hits:
+                        break
+            if identity_hits:
+                raise ValueError(
+                    "Your name, email, or institute still appears inside the redacted session "
+                    "content. Go back to the Redact step and run Redact and Verify again — the "
+                    "tool now removes your identity terms automatically."
+                )
         if emit:
             emit({"event": "progress", "percent": 30, "message": "Writing manifest and consent files..."})
         describe_result = self._describe_payload(data)

@@ -106,7 +106,9 @@ FOUNDING_SESSIONS = [
         language="mixed",
         turns=458,  # real user turns (human prompts) on redacted release file
         paper_position=4918,  # experiment checkpoint index — NOT user turns
-        compactions=4,
+        # 5 per the top-level-type detector (analysis/extract_session_proxies.py) and
+        # results/session_validation/compactions_rederived.csv (S3_chainassemble).
+        compactions=5,
         status="v1.0",
         source_key="founding-s3",
         promoted_utc="2026-01-03T00:00:00+00:00",
@@ -168,6 +170,17 @@ def merge_key(session: SessionEntry) -> tuple[str, ...]:
         kind = "anonymous-identity" if session.public_anonymous else "identified"
         return (kind, identity_name, email, institute)
     return ("unique", session.sid)
+
+
+def ledger_totals(dataset_root: Path) -> tuple[int, int]:
+    """Community-ledger population: (row count, summed user turns).
+
+    Sums over ALL rows in ledger.jsonl (including SUPERSEDED), i.e. the
+    "55 community sessions" population — distinct from the counted/accepted
+    population (ACCEPTABLE rows + founding sessions).
+    """
+    rows = iter_jsonl(dataset_root / "data" / "donations" / "ledger.jsonl")
+    return len(rows), sum(as_int(row.get("turns")) for row in rows)
 
 
 def load_contributor_groups(dataset_root: Path) -> dict[str, str]:
@@ -332,10 +345,20 @@ def public_identity_map(sessions: list[SessionEntry]) -> dict[str, dict[str, Any
     }
 
 
-def render_contributors(contributors: list[Contributor], sessions: list[SessionEntry]) -> str:
+def is_founding(session: SessionEntry) -> bool:
+    return session.source_key.startswith("founding-")
+
+
+def render_contributors(
+    contributors: list[Contributor],
+    sessions: list[SessionEntry],
+    ledger_rows: int,
+    ledger_turns: int,
+) -> str:
     counted = [s for s in sessions if s.counted]
     total_sessions = len(counted)
-    total_turns = sum(s.turns for s in counted)
+    founding_counted = sum(1 for s in counted if is_founding(s))
+    community_counted = total_sessions - founding_counted
     lines: list[str] = [
         "# ContextEcho Contributors",
         "",
@@ -374,7 +397,9 @@ def render_contributors(contributors: list[Contributor], sessions: list[SessionE
         )
     lines.extend([
         "",
-        f"*Corpus total: **{total_sessions} sessions · {total_turns:,} user turns**.*",
+        f"*Corpus total: **{total_sessions} counted sessions** ({community_counted} accepted"
+        f" community donations + {founding_counted} founding); the {ledger_rows} community"
+        f" ledger sessions sum to **{ledger_turns:,} user turns**.*",
         "",
         "> Public-anonymous donors are grouped under a stable anonymous alias when",
         "> maintainer-known identity fields match exactly after normalization.",
@@ -494,7 +519,8 @@ def main(argv: list[str] | None = None) -> int:
     sessions.extend(load_ledger_sessions(args.dataset_root))
     score_sessions(sessions)
     contributors = group_contributors(sessions)
-    rendered = render_contributors(contributors, sessions)
+    ledger_rows, ledger_turns = ledger_totals(args.dataset_root)
+    rendered = render_contributors(contributors, sessions, ledger_rows, ledger_turns)
     stats_current = json.loads(args.stats_out.read_text(encoding="utf-8")) if args.stats_out.exists() else {}
     stats_rendered = render_project_stats(stats_current, sessions)
     out = args.out

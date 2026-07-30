@@ -18,7 +18,8 @@ Code release for:
 ContextEcho measures whether a frontier LLM's trained Assistant persona
 survives long agentic-coding sessions (thousands of tool-using turns,
 hours of continuous use). It is a **25-probe identity suite + harness**
-that snapshots a real Claude Code session prefix, forks the
+that snapshots a real coding-agent session prefix (Claude Code or
+Codex CLI), forks the
 conversation state, and probes any chat-completions API target on the
 forked branch — without perturbing the main session.
 
@@ -28,8 +29,8 @@ forked branch — without perturbing the main session.
 
 ## Key findings
 
-Measured across **24 frontier models from 10 organizations** on three
-anonymized real Claude Code sessions (3,746–9,716 turns):
+Measured across **23 frontier model targets from 10 organizations** on three
+anonymized real Claude Code sessions (445–1,242 user turns; 3,746–9,643 agent steps):
 
 | # | Finding | Takeaway |
 |---|---------|----------|

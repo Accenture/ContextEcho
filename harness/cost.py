@@ -17,13 +17,19 @@ from threading import Lock
 # Rough prices per 1M tokens (input, output). Update if pricing shifts.
 PRICES_PER_M_TOKENS: dict[str, tuple[float, float]] = {
     # Anthropic
+    "claude-opus-4-8": (5.0, 25.0),   # verified 2026-07-28 (Opus 4.5+ pricing)
+    "claude-haiku-4-5": (1.0, 5.0),   # verified 2026-07-28
     "claude-opus-4-7": (15.0, 75.0),
     "claude-opus-4-6": (15.0, 75.0),
     "claude-opus-4-5-20251101": (15.0, 75.0),
     "claude-sonnet-4-6": (3.0, 15.0),
     "claude-sonnet-4-5-20250929": (3.0, 15.0),
+    # claude-sonnet-5: intro pricing $2/$10 per MTok through 2026-08-31,
+    # standard $3/$15 after. Date-aware switch lives in _estimate_cost.
+    "claude-sonnet-5": (2.0, 10.0),
     # OpenAI
     "gpt-5": (1.25, 10.0),  # placeholder; update to real prices
+    "gpt-5.5": (1.25, 10.0),  # estimate 2026-07-28: gpt-5/5.1 lineage price; update if announced otherwise
     "gpt-4o": (2.5, 10.0),
     "gpt-4o-mini": (0.15, 0.6),
 }
@@ -74,8 +80,15 @@ class CostTracker:
                 )
 
 
+# claude-sonnet-5 intro pricing ends 2026-08-31 (inclusive); standard from 2026-09-01.
+_SONNET5_INTRO_END = time.mktime(time.strptime("2026-09-01", "%Y-%m-%d"))
+_SONNET5_STANDARD = (3.0, 15.0)
+
+
 def _estimate_cost(model_id: str, input_tokens: int, output_tokens: int) -> float:
     in_price, out_price = PRICES_PER_M_TOKENS.get(model_id, (0.0, 0.0))
+    if model_id == "claude-sonnet-5" and time.time() >= _SONNET5_INTRO_END:
+        in_price, out_price = _SONNET5_STANDARD
     return (input_tokens / 1_000_000.0) * in_price + (output_tokens / 1_000_000.0) * out_price
 
 

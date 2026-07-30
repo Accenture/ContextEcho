@@ -35,7 +35,7 @@ unrecognized; substantial contributions earn authorship.
 ## The free self-audit (start here)
 
 Before you contribute anything, run ContextEcho on one of your own Claude Code
-sessions. You get back a personalized report:
+or Codex CLI sessions. You get back a personalized report:
 
 > *"Your session showed 14× verbosity inflation by turn 5,000. Your model
 > stopped honoring 'no-preamble' instructions after the second compaction.
