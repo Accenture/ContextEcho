@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 
 from donate.adapters.base import conversation_fingerprint
+from donate.device_id import is_valid_device_id
 from donate.redact import apply_scrub_terms_to_file, _literal_case_insensitive_counts
 
 STAGING_REPO = os.environ.get("CONTEXTECHO_STAGING_REPO", "contextecho2026/persona-drift-staging")
@@ -38,6 +39,8 @@ SUBMISSION_EVENTS = STATE_DIR / "submission_events.jsonl"
 METADATA_UPDATES = STATE_DIR / "metadata_updates.jsonl"
 SUPPORT_REQUESTS = STATE_DIR / "support_requests.jsonl"
 REDACTION_UPDATES = STATE_DIR / "redaction_updates.jsonl"
+DEVICE_DONATIONS = STATE_DIR / "device_donations.jsonl"
+MAX_CLAIMS_PER_REQUEST = 200
 ADMIN_TOKEN = os.environ.get("CONTEXTECHO_RELAY_ADMIN_TOKEN")
 MIN_SESSION_GROWTH_RATIO = float(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_RATIO", "0.20"))
 MIN_SESSION_GROWTH_TURNS = int(os.environ.get("CONTEXTECHO_RELAY_MIN_SESSION_GROWTH_TURNS", "50"))
@@ -153,6 +156,60 @@ def _read_jsonl(path: Path, limit: int = 200) -> list[dict]:
         if isinstance(row, dict):
             rows.append(row)
     return rows[-max(1, min(limit, 1000)) :]
+
+
+_SUBMISSION_ID_RE = re.compile(r"submission-[A-Za-z0-9_-]{4,64}")
+
+
+def _record_device_donation(device_id: str, submission_id: str, turns: int = 0,
+                            submitted_utc: str = "", source: str = "submission") -> bool:
+    """Append one device→submission link; skips invalid ids and exact repeats."""
+    if not is_valid_device_id(device_id):
+        return False
+    if not _SUBMISSION_ID_RE.fullmatch(str(submission_id or "")):
+        return False
+    existing = {
+        (row.get("device_id"), row.get("submission_id"))
+        for row in _read_jsonl(DEVICE_DONATIONS, limit=100_000)
+    }
+    if (device_id, submission_id) in existing:
+        return True
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with DEVICE_DONATIONS.open("a", encoding="utf-8") as f:
+        f.write(json.dumps({
+            "device_id": device_id,
+            "submission_id": submission_id,
+            "turns": int(turns or 0),
+            "submitted_utc": str(submitted_utc or "") or _utc_now(),
+            "source": source,
+            "recorded_utc": _utc_now(),
+        }) + "\n")
+    return True
+
+
+def _device_donations(device_id: str) -> list[dict]:
+    """All recorded donations for one device, newest first, deduped by submission."""
+    rows = [
+        row for row in _read_jsonl(DEVICE_DONATIONS, limit=100_000)
+        if row.get("device_id") == device_id
+    ]
+    by_submission: dict[str, dict] = {}
+    for row in rows:
+        sid = str(row.get("submission_id") or "")
+        previous = by_submission.get(sid)
+        if previous is None or int(row.get("turns") or 0) > int(previous.get("turns") or 0):
+            by_submission[sid] = row
+    out = [
+        {
+            "submission_id": sid,
+            "turns": int(row.get("turns") or 0),
+            "submitted_utc": row.get("submitted_utc", ""),
+            "source": row.get("source", ""),
+        }
+        for sid, row in by_submission.items()
+    ]
+    out.sort(key=lambda r: r.get("submitted_utc") or "", reverse=True)
+    return out
 
 
 def _status_backfill_marker() -> Path:
@@ -829,6 +886,7 @@ def _pending_submissions_from_hf() -> dict:
             "contributor": manifest.get("credit_name") or manifest.get("contributor") or "",
             "email": manifest.get("contributor_email", ""),
             "institute": manifest.get("contributor_institute", ""),
+            "donor_device_id": manifest.get("donor_device_id", ""),
             "public_anonymous": bool(manifest.get("public_anonymous")),
             "submitted_utc": manifest.get("submitted_utc", ""),
             "privacy_tier": manifest.get("privacy_tier", ""),
@@ -1461,6 +1519,46 @@ def donation_status(payload: Annotated[dict, Body()]) -> dict:
     return {"ok": True, "statuses": statuses}
 
 
+@app.post("/api/my-donations")
+def my_donations(payload: Annotated[dict, Body()]) -> dict:
+    """Donation history for one device (one-way machine hash as credential).
+
+    Returns only what this device donated or claimed; submission turn counts
+    are already public in the release ledger, so no private data is exposed.
+    """
+    device_id = str(payload.get("device_id") or "") if isinstance(payload, dict) else ""
+    if not is_valid_device_id(device_id):
+        raise HTTPException(status_code=400, detail="invalid device_id")
+    donations = _device_donations(device_id)
+    return {"ok": True, "donations": donations, "count": len(donations)}
+
+
+@app.post("/api/claim-donations")
+def claim_donations(payload: Annotated[dict, Body()]) -> dict:
+    """Backfill: link receipts recorded before device IDs existed to this device."""
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="invalid payload")
+    device_id = str(payload.get("device_id") or "")
+    if not is_valid_device_id(device_id):
+        raise HTTPException(status_code=400, detail="invalid device_id")
+    submissions = payload.get("submissions")
+    if not isinstance(submissions, list):
+        raise HTTPException(status_code=400, detail="submissions must be a list")
+    claimed = 0
+    for item in submissions[:MAX_CLAIMS_PER_REQUEST]:
+        if not isinstance(item, dict):
+            continue
+        if _record_device_donation(
+            device_id,
+            str(item.get("submission_id") or ""),
+            turns=_count_value(item.get("turns")),
+            submitted_utc=str(item.get("submitted_utc") or ""),
+            source="claim",
+        ):
+            claimed += 1
+    return {"ok": True, "claimed": claimed}
+
+
 @app.post("/api/metadata-update")
 def metadata_update(payload: Annotated[dict, Body()]) -> dict:
     record = _metadata_update_request(payload if isinstance(payload, dict) else {})
@@ -1540,6 +1638,13 @@ async def donate(
             )
             raise
         _record_seen_hash(artifact_hash, submission_id, manifest)
+        _record_device_donation(
+            str(manifest.get("donor_device_id") or ""),
+            submission_id,
+            turns=_count_value(manifest.get("turns")),
+            submitted_utc=str(manifest.get("submitted_utc") or ""),
+            source="submission",
+        )
         _append_submission_event(
             "submitted",
             submission_id=submission_id,

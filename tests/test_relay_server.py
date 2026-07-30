@@ -886,5 +886,76 @@ class RelayServerTests(unittest.TestCase):
         )
 
 
+@unittest.skipIf(relay_server is None, "relay dependencies are not installed")
+class DeviceDonationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._td = tempfile.TemporaryDirectory()
+        self.addCleanup(self._td.cleanup)
+        state = Path(self._td.name)
+        self._patches = [
+            mock.patch.object(relay_server, "STATE_DIR", state),
+            mock.patch.object(relay_server, "DEVICE_DONATIONS", state / "device_donations.jsonl"),
+        ]
+        for p in self._patches:
+            p.start()
+            self.addCleanup(p.stop)
+        self.device = "0123456789abcdef0123456789abcdef"
+
+    def test_record_and_list_device_donations(self) -> None:
+        ok = relay_server._record_device_donation(self.device, "submission-aaaa1111", turns=100, submitted_utc="2026-07-01T00:00:00+00:00")
+        self.assertTrue(ok)
+        # exact repeat is idempotent
+        self.assertTrue(relay_server._record_device_donation(self.device, "submission-aaaa1111", turns=100))
+        relay_server._record_device_donation(self.device, "submission-bbbb2222", turns=50, submitted_utc="2026-07-02T00:00:00+00:00")
+        donations = relay_server._device_donations(self.device)
+        self.assertEqual([d["submission_id"] for d in donations], ["submission-bbbb2222", "submission-aaaa1111"])
+        self.assertEqual(donations[1]["turns"], 100)
+
+    def test_invalid_ids_rejected(self) -> None:
+        self.assertFalse(relay_server._record_device_donation("", "submission-aaaa1111"))
+        self.assertFalse(relay_server._record_device_donation("nothex", "submission-aaaa1111"))
+        self.assertFalse(relay_server._record_device_donation(self.device, "not-a-submission"))
+        self.assertEqual(relay_server._device_donations(self.device), [])
+
+    def test_my_donations_endpoint_requires_valid_device(self) -> None:
+        from fastapi import HTTPException
+
+        with self.assertRaises(HTTPException):
+            relay_server.my_donations({"device_id": "bogus"})
+        relay_server._record_device_donation(self.device, "submission-cccc3333", turns=12)
+        result = relay_server.my_donations({"device_id": self.device})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["count"], 1)
+        self.assertEqual(result["donations"][0]["submission_id"], "submission-cccc3333")
+
+    def test_claim_donations_backfills(self) -> None:
+        result = relay_server.claim_donations({
+            "device_id": self.device,
+            "submissions": [
+                {"submission_id": "submission-dddd4444", "turns": 441, "submitted_utc": "2026-06-23T00:00:00+00:00"},
+                {"submission_id": "bad id", "turns": 1},
+                "not-a-dict",
+            ],
+        })
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["claimed"], 1)
+        donations = relay_server._device_donations(self.device)
+        self.assertEqual(donations[0]["submission_id"], "submission-dddd4444")
+        self.assertEqual(donations[0]["source"], "claim")
+
+    def test_donate_flow_records_device_link(self) -> None:
+        manifest = {"donor_device_id": self.device, "turns": 77, "submitted_utc": "2026-07-30T00:00:00+00:00"}
+        relay_server._record_device_donation(
+            str(manifest.get("donor_device_id") or ""),
+            "submission-eeee5555",
+            turns=relay_server._count_value(manifest.get("turns")),
+            submitted_utc=str(manifest.get("submitted_utc") or ""),
+            source="submission",
+        )
+        donations = relay_server._device_donations(self.device)
+        self.assertEqual(donations[0]["turns"], 77)
+        self.assertEqual(donations[0]["source"], "submission")
+
+
 if __name__ == "__main__":
     unittest.main()

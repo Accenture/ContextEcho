@@ -103,7 +103,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("async function discoverSessions()", INDEX_HTML)
         self.assertIn("let discoveryRunning = false", INDEX_HTML)
         self.assertIn("$('discoverBtn').onclick = () => discoverSessions();", INDEX_HTML)
-        self.assertIn("loadProjectStats();\ndiscoverSessions();", INDEX_HTML)
+        self.assertIn("loadProjectStats();\nloadMyDonations();\ndiscoverSessions();", INDEX_HTML)
         self.assertIn("Scanning starts automatically", INDEX_HTML)
 
     def test_donated_rows_show_copyable_support_submission_id(self):
@@ -826,6 +826,64 @@ class WebTests(unittest.TestCase):
 
         self.assertEqual(calls, [RELAY_STATUS_CHUNK, 50])
         self.assertEqual(len(statuses), len(sessions))
+
+    def test_my_donations_summary_merges_relay_and_receipts(self):
+        from donate.web import my_donations_summary
+
+        registry = {
+            "submissions": [
+                {"submission_id": "submission-aaaa1111", "turns": 100, "submitted_utc": "2026-06-01T00:00:00+00:00"},
+                {"submission_id": "submission-bbbb2222", "turns": 50, "submitted_utc": "2026-06-02T00:00:00+00:00"},
+            ]
+        }
+        relay_responses = [
+            {"ok": True, "claimed": 2},
+            {"ok": True, "donations": [
+                # relay knows one extra donation whose local receipt is gone
+                {"submission_id": "submission-cccc3333", "turns": 2509, "submitted_utc": "2026-06-17T00:00:00+00:00"},
+                {"submission_id": "submission-aaaa1111", "turns": 100, "submitted_utc": "2026-06-01T00:00:00+00:00"},
+            ]},
+        ]
+        with mock.patch("donate.web.device_id_mod.device_id", return_value="0" * 32), \
+                mock.patch("donate.web.load_donation_registry", return_value=registry), \
+                mock.patch("donate.web._relay_post_json", side_effect=relay_responses) as post:
+            summary = my_donations_summary()
+
+        self.assertTrue(summary["device_linked"])
+        self.assertTrue(summary["relay_checked"])
+        self.assertEqual(summary["count"], 3)
+        self.assertEqual(summary["total_turns"], 2659)
+        self.assertEqual(summary["donations"][0]["submission_id"], "submission-cccc3333")
+        # first call claims the local receipts onto the device record
+        self.assertEqual(post.call_args_list[0].args[0], "/api/claim-donations")
+
+    def test_my_donations_summary_falls_back_to_receipts_when_relay_down(self):
+        from donate.web import my_donations_summary
+
+        registry = {"submissions": [
+            {"submission_id": "submission-aaaa1111", "turns": 100, "submitted_utc": "2026-06-01T00:00:00+00:00"},
+        ]}
+        with mock.patch("donate.web.device_id_mod.device_id", return_value="0" * 32), \
+                mock.patch("donate.web.load_donation_registry", return_value=registry), \
+                mock.patch("donate.web._relay_post_json", side_effect=OSError("down")):
+            summary = my_donations_summary()
+
+        self.assertFalse(summary["relay_checked"])
+        self.assertEqual(summary["count"], 1)
+
+    def test_my_donations_summary_without_device_uses_receipts_only(self):
+        from donate.web import my_donations_summary
+
+        registry = {"submissions": [
+            {"submission_id": "submission-aaaa1111", "turns": 100, "submitted_utc": "2026-06-01T00:00:00+00:00"},
+        ]}
+        with mock.patch("donate.web.device_id_mod.device_id", return_value=""), \
+                mock.patch("donate.web.load_donation_registry", return_value=registry), \
+                mock.patch("donate.web._relay_post_json", side_effect=AssertionError("must not be called")):
+            summary = my_donations_summary()
+
+        self.assertFalse(summary["device_linked"])
+        self.assertEqual(summary["count"], 1)
 
     def test_annotate_donated_ignores_local_source_key_status(self):
         path = "/tmp/example-session.jsonl"

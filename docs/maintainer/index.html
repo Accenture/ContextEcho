@@ -755,15 +755,34 @@ function donorDisplayName(row){
   return String(row.contributor || '').trim() || 'Anonymous donor';
 }
 function donorGroups(rows){
+  // Union-find: rows sharing EITHER the identity triple (name/email/institute)
+  // OR the anonymous device hash belong to one donor. The device hash links a
+  // donor's submissions even when they typed different identities per donation.
+  const parent = rows.map((_, i) => i);
+  const find = i => { while(parent[i] !== i){ parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  const union = (i, j) => { const ri = find(i), rj = find(j); if(ri !== rj) parent[Math.max(ri, rj)] = Math.min(ri, rj); };
+  const firstOwner = new Map();
+  rows.forEach((row, i) => {
+    const keys = [];
+    const identity = donorIdentity(row);
+    if(identity) keys.push(`identity:${identity}`);
+    const device = String(row.donor_device_id || '').trim();
+    if(device) keys.push(`device:${device}`);
+    keys.forEach(key => {
+      if(firstOwner.has(key)) union(i, firstOwner.get(key));
+      else firstOwner.set(key, i);
+    });
+  });
   const groups = new Map();
-  rows.forEach(row => {
-    const key = donorGroupKey(row);
-    if(!groups.has(key)){
-      groups.set(key, {
-        key,
-        donor: donorDisplayName(row),
-        email: String(row.email || '').trim(),
-        institute: String(row.institute || '').trim(),
+  rows.forEach((row, i) => {
+    const root = find(i);
+    if(!groups.has(root)){
+      groups.set(root, {
+        key: donorGroupKey(rows[root]),
+        donor: donorDisplayName(rows[root]),
+        email: String(rows[root].email || '').trim(),
+        institute: String(rows[root].institute || '').trim(),
+        identities: new Set(),
         rows: [],
         turns: 0,
         records: 0,
@@ -773,7 +792,15 @@ function donorGroups(rows){
         latestSubmitted: 0,
       });
     }
-    const group = groups.get(key);
+    const group = groups.get(root);
+    // Prefer a named identity for the header when the root row is anonymous.
+    if(!group.email && String(row.email || '').trim()){
+      group.donor = donorDisplayName(row);
+      group.email = String(row.email || '').trim();
+      group.institute = String(row.institute || '').trim();
+    }
+    const identity = donorIdentity(row);
+    if(identity) group.identities.add(identity);
     group.rows.push(row);
     group.turns += Number(row.turns || 0);
     group.records += Number(row.records || 0);
@@ -798,7 +825,10 @@ function donorGroupSummary(group){
   const review = group.needsValidation
     ? `${compact(group.needsValidation)} need validation · ${compact(group.promoted)} promoted`
     : `${compact(group.promoted)} promoted`;
-  return `${compact(group.rows.length)} session${group.rows.length === 1 ? '' : 's'} · ${compact(group.turns)} turns · ${compact(group.records)} records · ${compact(group.compactions)} ctx · ${review}`;
+  const identityNote = (group.identities && group.identities.size > 1)
+    ? ` · ${group.identities.size} identities (device-linked)`
+    : '';
+  return `${compact(group.rows.length)} session${group.rows.length === 1 ? '' : 's'} · ${compact(group.turns)} turns · ${compact(group.records)} records · ${compact(group.compactions)} ctx · ${review}${identityNote}`;
 }
 function groupSortLabel(key){
   return key === 'donations' ? 'Donations' : 'Donation date';

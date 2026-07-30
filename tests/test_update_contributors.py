@@ -45,6 +45,35 @@ class UpdateContributorsTests(unittest.TestCase):
         self.assertEqual(contributors[0].name, "Anonymous donor controlled")
         self.assertEqual(len(contributors[0].counted_sessions), 2)
 
+    def test_same_device_merges_across_different_identities(self):
+        # The user's real failure mode: three different name/email/institute
+        # combos from one laptop must collapse into one contributor.
+        device = "0123456789abcdef0123456789abcdef"
+        sessions = [
+            SessionEntry(sid="S4", contributor="Anonymous donor a", identity_name="D One", email="a@corp.com", institute="Corp", device_id=device, public_anonymous=True, agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=100, compactions=1, source_key="a"),
+            SessionEntry(sid="S5", contributor="Anonymous donor b", identity_name="D. One", email="b@gmail.com", institute="Nat Lab", device_id=device, public_anonymous=True, agent="Claude", model="opus", org="Anthropic", domain="docs", language="mixed", turns=200, compactions=1, source_key="b"),
+            SessionEntry(sid="S6", contributor="Anonymous donor c", identity_name="Dee One", email="c@uni.edu", institute="Uni", device_id=device, public_anonymous=True, agent="Claude", model="opus", org="Anthropic", domain="coding", language="Python", turns=50, compactions=0, source_key="c"),
+        ]
+        score_sessions(sessions)
+        contributors = group_contributors(sessions)
+        self.assertEqual(len(contributors), 1)
+        self.assertEqual(len(contributors[0].counted_sessions), 3)
+        self.assertEqual(contributors[0].turns, 350)
+
+    def test_identity_bridges_two_devices_into_one_group(self):
+        # Laptop A + laptop B, same typed identity on one session each side:
+        # union-find must chain all four sessions together.
+        sessions = [
+            SessionEntry(sid="S4", contributor="A1", device_id="a" * 32, agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=10, source_key="a"),
+            SessionEntry(sid="S5", contributor="A2", identity_name="Dana", email="d@x.com", institute="Lab", device_id="a" * 32, agent="Codex", model="gpt", org="OpenAI", domain="coding", language="Python", turns=20, source_key="b"),
+            SessionEntry(sid="S6", contributor="B1", identity_name="Dana", email="d@x.com", institute="Lab", device_id="b" * 32, agent="Claude", model="opus", org="Anthropic", domain="docs", language="mixed", turns=30, source_key="c"),
+            SessionEntry(sid="S7", contributor="B2", device_id="b" * 32, agent="Claude", model="opus", org="Anthropic", domain="coding", language="Python", turns=40, source_key="d"),
+        ]
+        score_sessions(sessions)
+        contributors = group_contributors(sessions)
+        self.assertEqual(len(contributors), 1)
+        self.assertEqual(len(contributors[0].counted_sessions), 4)
+
     def test_future_anonymous_donor_uses_submission_id(self):
         fallback = anonymous_ledger_name({"submission_id": "submission-d51e3f33"}, "S4")
         self.assertEqual(display_name({"credit_name": "anonymous"}, fallback), "Anonymous donor d51e3f33")
@@ -113,7 +142,7 @@ class UpdateContributorsTests(unittest.TestCase):
             )
         ]
         score_sessions(sessions)
-        rendered = render_contributors(group_contributors(sessions), sessions)
+        rendered = render_contributors(group_contributors(sessions), sessions, ledger_rows=1, ledger_turns=100)
         self.assertIn("| ID | Submission | Public Identity | Visibility |", rendered)
         self.assertIn("| S4 | submission-d51e3f33 | Anonymous donor d51e3f33 | anonymous |", rendered)
 

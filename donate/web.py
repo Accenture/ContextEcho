@@ -31,6 +31,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from donate import describe as describe_mod
+from donate import device_id as device_id_mod
 from donate import discover as discover_mod
 from donate import identity_redaction as identity_mod
 from donate import minimize as minimize_mod
@@ -371,6 +372,74 @@ def relay_donation_status(sessions: list[dict]) -> list[dict]:
             got.extend({} for _ in range(len(chunk) - len(got)))
         statuses.extend(got[: len(chunk)])
     return statuses
+
+
+def _relay_post_json(path: str, payload: dict, timeout: int = 15) -> dict:
+    url = relay_url()
+    if not url:
+        raise ValueError("Relay URL is not configured.")
+    data = json.dumps(payload).encode("utf-8")
+    req = Request(
+        f"{url}{path}",
+        data=data,
+        headers={"content-type": "application/json", "user-agent": "contextecho-donate"},
+        method="POST",
+    )
+    with urlopen(req, timeout=timeout) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+    return result if isinstance(result, dict) else {}
+
+
+def my_donations_summary() -> dict:
+    """This machine's donation history: local receipts ∪ relay device record.
+
+    The relay side is keyed by the deterministic device hash, so history
+    survives loss of local receipts and transcripts; the local receipts
+    cover donations made while offline or before the relay index existed.
+    Local receipts are also (idempotently) claimed onto the device record
+    so a future reinstall sees them again.
+    """
+    device = device_id_mod.device_id()
+    receipts: list[dict] = []
+    for item in load_donation_registry().get("submissions", []):
+        sid = normalize_submission_id(item.get("submission_id") or item.get("submission"))
+        if sid and is_support_submission_id(sid):
+            receipts.append({
+                "submission_id": sid,
+                "turns": int(item.get("turns") or 0),
+                "submitted_utc": str(item.get("submitted_utc") or ""),
+            })
+    relay_donations: list[dict] = []
+    relay_checked = False
+    if device:
+        try:
+            if receipts:
+                _relay_post_json("/api/claim-donations", {"device_id": device, "submissions": receipts})
+            result = _relay_post_json("/api/my-donations", {"device_id": device})
+            relay_donations = [x for x in (result.get("donations") or []) if isinstance(x, dict)]
+            relay_checked = bool(result.get("ok"))
+        except Exception:
+            relay_checked = False
+    merged: dict[str, dict] = {}
+    for row in relay_donations + receipts:
+        sid = str(row.get("submission_id") or "")
+        if not sid:
+            continue
+        previous = merged.get(sid)
+        if previous is None or int(row.get("turns") or 0) > int(previous.get("turns") or 0):
+            merged[sid] = {
+                "submission_id": sid,
+                "turns": int(row.get("turns") or 0),
+                "submitted_utc": str(row.get("submitted_utc") or ""),
+            }
+    donations = sorted(merged.values(), key=lambda r: r.get("submitted_utc") or "", reverse=True)
+    return {
+        "device_linked": bool(device),
+        "relay_checked": relay_checked,
+        "count": len(donations),
+        "total_turns": sum(d["turns"] for d in donations),
+        "donations": donations,
+    }
 
 
 def relay_metadata_update(payload: dict) -> dict:
@@ -1652,7 +1721,7 @@ INDEX_HTML = r"""<!doctype html>
         <div class="topline">Donate a coding-agent session in a few local-first steps.</div>
       </div>
       <div class="hero-side">
-        <div class="privacy-note"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.
+        <div class="privacy-note"><strong>Donor privacy:</strong> ContextEcho analyzes assistant behavior, not donor personality.<br>Default: <strong>full redacted</strong>. Stronger privacy: <strong>user-minimized</strong>.<br><span title="A one-way hash of your machine identifier travels with each submission. It is maintainer-visible only, groups your contributions even if your name/email change, powers the My Donations panel, and is never published.">Submissions carry an anonymous device hash (maintainer-only, never published).</span>
           <div class="privacy-links">
             <a class="ranking" href="https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener noreferrer">Ranking</a>
             <a class="guide" href="https://accenture.github.io/ContextEcho/donate/#guideTitle" target="_blank" rel="noopener noreferrer">Guide</a>
@@ -1696,6 +1765,7 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
+        <div id="myDonations" class="composition-panel" aria-label="My donations from this machine" style="display:none"></div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Scanning starts automatically. Use Discover Sessions to rerun the scan.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
@@ -2399,6 +2469,35 @@ async function loadProjectStats(){
   } catch(e) {
     renderProjectStats();
   }
+}
+async function loadMyDonations(){
+  const target = $('myDonations');
+  if(!target) return;
+  try {
+    const r = await fetch('/api/my_donations', {cache:'no-store'});
+    if(!r.ok) return;
+    const data = await r.json();
+    const donations = data.donations || [];
+    if(!donations.length){ target.style.display = 'none'; return; }
+    const source = data.relay_checked
+      ? 'Synced with the donation relay by this machine’s anonymous device hash.'
+      : 'From local receipts; relay sync unavailable right now.';
+    target.innerHTML = `
+      <div class="composition-head">
+        <div class="composition-title">My Donations · ${donations.length}</div>
+        <div class="composition-subtitle">${escapeHtml(fmtStat(data.total_turns || 0))} turns donated from this machine. ${escapeHtml(source)} Donations stay in the dataset even after local session logs are deleted.</div>
+      </div>
+      <div class="composition-list" style="max-height:220px; overflow-y:auto">
+        ${donations.map(d => `
+          <div class="composition-row">
+            <div class="composition-label"><code>${escapeHtml(d.submission_id)}</code><small>${escapeHtml((d.submitted_utc || '').slice(0, 10))}</small></div>
+            <div class="composition-value">${escapeHtml(fmtStat(d.turns))} turns</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    target.style.display = '';
+  } catch(e) { /* panel is best-effort; never block the flow */ }
 }
 function renderRedactResult(data){
   const stats = data.stats || {};
@@ -3897,6 +3996,7 @@ $('submitBtn').onclick = async () => {
   }
 };
 loadProjectStats();
+loadMyDonations();
 discoverSessions();
 </script>
 </body>
@@ -3993,6 +4093,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/project_stats":
             self._json(project_stats(), no_store=True)
+            return
+        if parsed.path == "/api/my_donations":
+            self._json(my_donations_summary(), no_store=True)
             return
         if parsed.path == "/api/discover_stream":
             qs = parse_qs(parsed.query)

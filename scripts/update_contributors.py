@@ -19,6 +19,9 @@ class SessionEntry:
     identity_name: str = ""
     email: str = ""
     institute: str = ""
+    # One-way machine hash from the donation manifest (donor_device_id).
+    # Maintainer-visible only; used for grouping, never rendered.
+    device_id: str = ""
     public_anonymous: bool = False
     agent: str = ""
     model: str = ""
@@ -159,17 +162,27 @@ def anonymous_ledger_name(row: dict[str, Any], sid: str) -> str:
     return f"Anonymous donor {sid}"
 
 
-def merge_key(session: SessionEntry) -> tuple[str, ...]:
-    """Merge when maintainer-known identity fields match; render names separately."""
+def linkage_keys(session: SessionEntry) -> list[tuple[str, ...]]:
+    """Maintainer-known linkage signals for one session.
+
+    Sessions sharing ANY key belong to the same contributor (union-find in
+    group_contributors). Layered on purpose: the device hash survives donors
+    changing name/email/institute between submissions; the identity triple
+    bridges across machines when the typed identity is consistent; the manual
+    group is the maintainer override.
+    """
+    keys: list[tuple[str, ...]] = []
     if session.contributor_group:
-        return ("manual", session.contributor_group.lower())
+        keys.append(("manual", session.contributor_group.lower()))
     identity_name = norm(session.identity_name or session.contributor).lower()
     email = norm(session.email).lower()
     institute = norm(session.institute).lower()
     if identity_name and email and institute and identity_name not in {"anonymous", "anon", "donor"}:
         kind = "anonymous-identity" if session.public_anonymous else "identified"
-        return (kind, identity_name, email, institute)
-    return ("unique", session.sid)
+        keys.append((kind, identity_name, email, institute))
+    if session.device_id:
+        keys.append(("device", session.device_id))
+    return keys
 
 
 def ledger_totals(dataset_root: Path) -> tuple[int, int]:
@@ -235,6 +248,7 @@ def load_ledger_sessions(dataset_root: Path) -> list[SessionEntry]:
                 identity_name=identity_name,
                 email=email,
                 institute=institute,
+                device_id=norm(manifest.get("donor_device_id")),
                 public_anonymous=bool(public_record.get("public_anonymous")),
                 agent=norm(row.get("agent")),
                 model=norm(row.get("model")),
@@ -285,13 +299,48 @@ def score_sessions(sessions: list[SessionEntry]) -> None:
 
 
 def group_contributors(sessions: list[SessionEntry]) -> list[Contributor]:
-    grouped: dict[tuple[str, ...], Contributor] = {}
-    for session in sessions:
-        key = merge_key(session)
-        if key not in grouped:
-            grouped[key] = Contributor(key=key, name=session.contributor, email=session.email, institute=session.institute)
-        grouped[key].sessions.append(session)
-    ranked = [c for c in grouped.values() if c.counted_sessions]
+    """Union-find over linkage_keys: any shared signal merges two sessions."""
+    parent = list(range(len(sessions)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            parent[max(ri, rj)] = min(ri, rj)
+
+    first_owner: dict[tuple[str, ...], int] = {}
+    for i, session in enumerate(sessions):
+        for key in linkage_keys(session):
+            if key in first_owner:
+                union(i, first_owner[key])
+            else:
+                first_owner[key] = i
+
+    members: dict[int, list[SessionEntry]] = {}
+    for i, session in enumerate(sessions):
+        members.setdefault(find(i), []).append(session)
+
+    grouped: list[Contributor] = []
+    for root in sorted(members):
+        group = sorted(members[root], key=lambda s: (s.promoted_utc, s.sid))
+        # Manual group names win; otherwise credit the earliest session's
+        # display name (for anonymous donors that is a stable alias).
+        manual = next((s.contributor_group for s in group if s.contributor_group), "")
+        representative = group[0]
+        contributor = Contributor(
+            key=("group", str(root)) if not manual else ("manual", manual.lower()),
+            name=manual or representative.contributor,
+            email=representative.email,
+            institute=representative.institute,
+        )
+        contributor.sessions.extend(group)
+        grouped.append(contributor)
+    ranked = [c for c in grouped if c.counted_sessions]
     return sorted(ranked, key=lambda c: (-c.points, -len(c.counted_sessions), -c.turns, c.name.lower()))
 
 

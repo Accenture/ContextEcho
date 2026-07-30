@@ -21,6 +21,8 @@ import json
 import sys
 from pathlib import Path
 
+from donate import device_id as device_id_mod
+
 COVERAGE_GAPS = {
     "agent": ["Codex CLI", "Cursor", "Aider", "Windsurf", "Cline", "Continue"],
     "org": ["OpenAI", "Google", "Meta", "DeepSeek", "Alibaba", "Mistral", "Cohere", "NVIDIA", "Moonshot"],
@@ -41,6 +43,11 @@ I attest that:
       to my knowledge it contains no PII or secrets.
 - [x] I agree to release the redacted session under **CC-BY-SA-4.0**.
 
+I understand that my submission carries a one-way hash of my machine
+identifier, visible to maintainers only, used to group my contributions
+and show me my own donation history. It is never published and cannot be
+reversed to identify my machine.
+
 **Contributor (for credit; may be a handle/pseudonym):** {contributor}
 **Email (optional, maintainer contact only):** {email}
 **Institute (optional):** {institute}
@@ -49,7 +56,7 @@ I attest that:
 **Tool version:** {tool_version}
 """
 
-TOOL_VERSION = "contextecho-donate 0.4 (identity-seeded-redaction)"
+TOOL_VERSION = "contextecho-donate 0.5 (device-linked-history)"
 
 
 def session_fingerprint(session: Path) -> str:
@@ -141,6 +148,11 @@ def write_manifest_and_consent(
         "public_anonymous": bool(public_anonymous),
         "contributor_email": email,
         "contributor_institute": institute,
+        # One-way hash of the machine identifier (donate/device_id.py):
+        # maintainer-visible only, groups a donor's submissions across
+        # differing name/email/institute and powers the wizard's donation
+        # history. Never published; excluded from the release export.
+        "donor_device_id": device_id_mod.device_id(),
         "privacy_tier": privacy_tier,
         "allowed_uses": ["persona_drift_benchmarking"],
         "disallowed_uses": [
