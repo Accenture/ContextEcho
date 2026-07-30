@@ -900,9 +900,21 @@ def _parse_dataset_card_coverage(markdown: str) -> dict:
         elif section == "Composition":
             composition[cells[0]] = cells[1]
 
-    def as_int(label: str) -> int:
-        value = fields.get(label, "")
-        m = re.search(r"\d[\d,]*", value)
+    def field_value(*labels: str) -> str:
+        # Card row labels gain clarifying suffixes over time (e.g. a trailing
+        # "(54 accepted community + 3 founding)"), so match by prefix rather
+        # than exact key. Exact matches win over prefix matches.
+        for label in labels:
+            if label in fields:
+                return fields[label]
+        for label in labels:
+            for key, value in fields.items():
+                if key.startswith(label):
+                    return value
+        return ""
+
+    def as_int(*labels: str) -> int:
+        m = re.search(r"\d[\d,]*", field_value(*labels))
         return int(m.group(0).replace(",", "")) if m else 0
 
     def unique_count(axis: str) -> int:
@@ -923,8 +935,14 @@ def _parse_dataset_card_coverage(markdown: str) -> dict:
         "organizations": unique_count("Model organization"),
         "domains": unique_count("Task domain"),
         "languages": unique_count("Primary language"),
-        "compactions": as_int("Active public/candidate context compactions tracked locally"),
-        "turns": as_int("Active public/candidate user turns tracked locally"),
+        "compactions": as_int(
+            "Active public/candidate context compactions tracked locally",
+            "Context compactions in the accepted population",
+        ),
+        "turns": as_int(
+            "Active public/candidate user turns tracked locally",
+            "User turns in the community donation ledger",
+        ),
     }
 
 
@@ -968,10 +986,7 @@ def _load_tracked_project_stats(local_path: Path | None = None) -> dict:
 
 
 # Display-only overlay of the live HF rolling last-month download count onto
-# the tracked snapshot. Mirrors the month-bucket accounting in
-# scripts/update_project_stats.py (download_buckets / roll_download_total)
-# without ever writing docs/project_stats.json.
-_STAT_DEFAULT_HISTORICAL_DOWNLOADS = 39_000
+# the tracked snapshot in docs/project_stats.json; never writes that file.
 _STAT_LIVE_DOWNLOAD_GLITCH_FACTOR = 10
 
 
@@ -982,82 +997,33 @@ def _stat_int(value) -> int | None:
         return None
 
 
-def _stat_month_key(value) -> str | None:
-    text = str(value or "")
-    if len(text) >= 7 and text[4] == "-":
-        return text[:7]
-    return None
+def display_total_downloads(tracked: dict, hf_live_last_month) -> int | None:
+    """Total-downloads value to display: tracked total + live growth overlay.
 
-
-def _stat_previous_month(period: str) -> str | None:
-    if not _stat_month_key(period):
-        return None
-    year = int(period[:4])
-    month = int(period[5:7])
-    if month == 1:
-        return f"{year - 1:04d}-12"
-    return f"{year:04d}-{month - 1:02d}"
-
-
-def _tracked_download_buckets(tracked: dict) -> dict[str, int]:
-    """Read-only mirror of scripts/update_project_stats.py::download_buckets."""
-    raw = tracked.get("dataset_hf_monthly_downloads")
-    buckets: dict[str, int] = {}
-    if isinstance(raw, dict):
-        for key, value in raw.items():
-            count = _stat_int(value)
-            if count is not None and count >= 0 and _stat_month_key(str(key)):
-                buckets[str(key)[:7]] = count
-    if buckets:
-        return buckets
-
-    previous_snapshot = _stat_int(tracked.get("dataset_hf_downloads_last_month_previous"))
-    previous = _stat_int(tracked.get("dataset_hf_downloads_last_month"))
-    previous_period = _stat_month_key(str(tracked.get("dataset_total_downloads_updated") or ""))
-    if previous_snapshot is not None and previous_period:
-        prior_period = _stat_previous_month(previous_period)
-        if prior_period:
-            buckets[prior_period] = previous_snapshot
-    if previous is None:
-        historical = _stat_int(tracked.get("dataset_historical_downloads")) or _STAT_DEFAULT_HISTORICAL_DOWNLOADS
-        total = _stat_int(tracked.get("dataset_total_downloads")) or historical
-        inferred = total - historical
-        previous = inferred if inferred >= 0 else None
-    if previous is not None and previous_period and previous_period not in buckets:
-        buckets[previous_period] = previous
-    return buckets
-
-
-def display_total_downloads(tracked: dict, hf_live_last_month, today: str | None = None) -> int | None:
-    """Total-downloads value to display: tracked snapshot + live month-to-date overlay.
-
-    Reconstructs the month buckets update_project_stats.py maintains, then
-    overlays the live HF rolling last-month value onto the current period
-    (same month -> max(recorded, live); month rolled over -> live becomes the
-    new month's bucket, prior months keep their recorded values). Guard rails:
-    no live value -> tracked total unchanged; never below the tracked total;
-    live values >10x the recorded month are treated as API glitches.
+    docs/project_stats.json stores the cumulative total alongside the HF
+    rolling last-month count observed when that total was recorded
+    (dataset_hf_downloads_last_month). Any growth of the live rolling count
+    since that snapshot is added on top at render time, so the displayed
+    total ticks up as soon as Hugging Face reports new downloads.
+    scripts/update_project_stats.py folds the same delta into the stored
+    total whenever the maintainer refreshes the snapshot, keeping the
+    displayed value monotonic across refreshes. Guard rails: missing or
+    invalid live value -> tracked total unchanged; the rolling count
+    shrinking (old days falling out of the 30-day window) never subtracts;
+    live values >10x the snapshot are treated as API glitches.
     """
     if not isinstance(tracked, dict):
         return None
     tracked_total = _stat_int(tracked.get("dataset_total_downloads"))
     live = _stat_int(hf_live_last_month)
-    if live is None or live < 0:
+    if tracked_total is None or live is None or live < 0:
         return tracked_total
-    historical = _stat_int(tracked.get("dataset_historical_downloads")) or _STAT_DEFAULT_HISTORICAL_DOWNLOADS
-    buckets = _tracked_download_buckets(tracked)
-    period = _stat_month_key(today) or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m")
-    reference = buckets.get(period)
-    if reference is None:
-        recorded_period = _stat_month_key(str(tracked.get("dataset_total_downloads_updated") or ""))
-        reference = buckets.get(recorded_period) if recorded_period else None
-    if reference and live > reference * _STAT_LIVE_DOWNLOAD_GLITCH_FACTOR:
+    snapshot = _stat_int(tracked.get("dataset_hf_downloads_last_month"))
+    if snapshot is None or snapshot < 0:
         return tracked_total
-    buckets[period] = max(buckets.get(period) or 0, live)
-    displayed = historical + sum(buckets.values())
-    if tracked_total is not None and displayed < tracked_total:
+    if snapshot and live > snapshot * _STAT_LIVE_DOWNLOAD_GLITCH_FACTOR:
         return tracked_total
-    return displayed
+    return tracked_total + max(0, live - snapshot)
 
 
 def project_stats() -> dict:
@@ -1680,7 +1646,7 @@ INDEX_HTML = r"""<!doctype html>
           <div class="support-copy">Star the GitHub repo or like the dataset by clicking the cards.</div>
         </div>
         <div id="projectStats" class="stats" aria-live="polite">
-          <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" title="Includes month-to-date Hugging Face downloads." target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Total Downloads</div></a>
+          <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" title="Updates live as Hugging Face reports new downloads." target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="download"></div><div class="stat-value">...</div><div class="stat-label">Total Downloads</div></a>
           <a class="stat-card" href="https://github.com/Accenture/ContextEcho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="star"></div><div class="stat-value">...</div><div class="stat-label">GitHub Stars</div></a>
           <a class="stat-card" href="https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho" target="_blank" rel="noopener noreferrer"><div class="stat-icon" data-icon="heart"></div><div class="stat-value">...</div><div class="stat-label">Dataset Likes</div></a>
         </div>
@@ -2325,7 +2291,7 @@ function shellQuotePath(value){
 }
 function renderProjectStats(){
   const cards = [
-    ['download', 'Total Downloads', publicStats.dataset_total_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho', 'Includes month-to-date Hugging Face downloads.'],
+    ['download', 'Total Downloads', publicStats.dataset_total_downloads, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho', 'Updates live as Hugging Face reports new downloads.'],
     ['star', 'GitHub Stars', publicStats.github_stars, 'https://github.com/Accenture/ContextEcho', ''],
     ['heart', 'Dataset Likes', publicStats.dataset_likes, 'https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho', ''],
   ];

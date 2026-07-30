@@ -709,6 +709,37 @@ class WebTests(unittest.TestCase):
         self.assertEqual(coverage["compactions"], 21)
         self.assertEqual(coverage["turns"], 20380)
 
+    def test_parse_dataset_card_coverage_current_card_labels(self):
+        # Regression: the live DATASET_CARD.md renamed/suffixed the summary
+        # rows and the exact-match parser fell back to the 3 founding
+        # sessions with 0 turns (Sessions 3 / Total turns 0 in the wizard).
+        coverage = _parse_dataset_card_coverage(
+            "\n".join([
+                "## Dataset Summary",
+                "| Field | Value |",
+                "|-------|-------|",
+                "| Public v1 founding sessions | 3 |",
+                "| Active public/candidate sessions tracked locally (54 accepted community + 3 founding) | 57 |",
+                "| User turns in the community donation ledger (55 community sessions) | 12,337 |",
+                "| Context compactions in the accepted population (42 of 57 sessions) | 169 |",
+                "| Public contributors in leaderboard | 31 |",
+                "",
+                "## Composition",
+                "| Axis | Values |",
+                "|------|--------|",
+                "| Agent / harness | Claude Code (32), Codex CLI (25) |",
+                "| Model organization | Anthropic (32), OpenAI (25) |",
+                "| Institution coverage | 24 institutions |",
+            ])
+        )
+        self.assertEqual(coverage["sessions"], 57)
+        self.assertEqual(coverage["turns"], 12337)
+        self.assertEqual(coverage["compactions"], 169)
+        self.assertEqual(coverage["contributors"], 31)
+        self.assertEqual(coverage["institutions"], 24)
+        self.assertEqual(coverage["agents"], 2)
+        self.assertEqual(coverage["organizations"], 2)
+
     def test_load_contributors_markdown_falls_back_to_github_when_packaged(self):
         remote_text = "| Rank | Contributor | Sessions | Turns | Agents | Models | Points |\n"
         with TemporaryDirectory() as td:

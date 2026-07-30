@@ -37,7 +37,54 @@ def test_update_stats_migrates_previous_snapshot_to_prior_month_bucket():
 
     updated = update_stats(current, {"downloads": 5_029, "likes": 5}, "2026-07-06")
 
-    assert updated["dataset_total_downloads"] == 52_379
+    # live == snapshot -> zero delta; the stored total is authoritative and
+    # the month buckets are migrated as an informational record only.
+    assert updated["dataset_total_downloads"] == 47_350
     assert updated["dataset_hf_monthly_downloads"] == {"2026-06": 8_350, "2026-07": 5_029}
     assert updated["dataset_hf_downloads_last_month"] == 5_029
     assert updated["dataset_hf_downloads_last_month_period"] == "2026-07"
+
+
+def test_update_stats_adds_live_growth_since_snapshot():
+    current = {
+        "dataset_total_downloads": 47_350,
+        "dataset_total_downloads_updated": "2026-07-06",
+        "dataset_historical_downloads": 39_000,
+        "dataset_hf_downloads_last_month": 5_029,
+        "dataset_hf_monthly_downloads": {"2026-06": 8_350, "2026-07": 5_029},
+    }
+
+    updated = update_stats(current, {"downloads": 5_500}, "2026-07-20")
+
+    assert updated["dataset_total_downloads"] == 47_350 + 471
+    assert updated["dataset_hf_downloads_last_month"] == 5_500
+    assert updated["dataset_hf_monthly_downloads"]["2026-07"] == 5_500
+
+
+def test_update_stats_rolling_drop_never_subtracts():
+    current = {
+        "dataset_total_downloads": 47_350,
+        "dataset_hf_downloads_last_month": 5_029,
+        "dataset_historical_downloads": 39_000,
+        "dataset_hf_monthly_downloads": {"2026-07": 5_029},
+    }
+
+    updated = update_stats(current, {"downloads": 4_000}, "2026-07-25")
+
+    assert updated["dataset_total_downloads"] == 47_350
+    # snapshot follows the live value so future growth is measured from here
+    assert updated["dataset_hf_downloads_last_month"] == 4_000
+
+
+def test_update_stats_glitch_guard_keeps_total_and_snapshot():
+    current = {
+        "dataset_total_downloads": 47_350,
+        "dataset_hf_downloads_last_month": 5_029,
+        "dataset_historical_downloads": 39_000,
+        "dataset_hf_monthly_downloads": {"2026-07": 5_029},
+    }
+
+    updated = update_stats(current, {"downloads": 999_999}, "2026-07-25")
+
+    assert updated["dataset_total_downloads"] == 47_350
+    assert updated["dataset_hf_downloads_last_month"] == 5_029

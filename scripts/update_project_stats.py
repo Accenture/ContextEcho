@@ -80,16 +80,45 @@ def roll_download_total(current: dict[str, Any], hf_last_month: int | None, peri
     return historical + sum(buckets.values()), buckets
 
 
+LIVE_DOWNLOAD_GLITCH_FACTOR = 10
+
+
 def update_stats(current: dict[str, Any], hf: dict[str, Any] | None, today: str) -> dict[str, Any]:
+    """Delta-accumulation download accounting, mirrored by donate.web.
+
+    The cumulative total grows by max(0, live - previous snapshot) at each
+    refresh; the local donor wizard applies the identical delta at render
+    time (donate/web.py::display_total_downloads), so the number a donor sees
+    never moves backwards when this snapshot is refreshed. Month buckets are
+    kept as an informational record of the max rolling value seen per month;
+    they seed the total only when no prior total/snapshot exists.
+    """
     out = dict(current)
-    hf_last_month = as_int(hf.get("downloads")) if hf else as_int(current.get("dataset_hf_downloads_last_month"))
+    live = as_int(hf.get("downloads")) if hf else None
     period = month_key(today) or datetime.now(timezone.utc).strftime("%Y-%m")
-    total, buckets = roll_download_total(out, hf_last_month, period)
-    if hf_last_month is None:
-        hf_last_month = buckets.get(period)
+    total = as_int(current.get("dataset_total_downloads"))
+    snapshot = as_int(current.get("dataset_hf_downloads_last_month"))
+    buckets = download_buckets(out)
+    glitch = (
+        live is not None
+        and snapshot is not None
+        and snapshot > 0
+        and live > snapshot * LIVE_DOWNLOAD_GLITCH_FACTOR
+    )
+    if live is not None and live >= 0 and not glitch:
+        buckets[period] = max(buckets.get(period) or 0, live)
+        if total is not None and snapshot is not None and snapshot >= 0:
+            total += max(0, live - snapshot)
+        out["dataset_hf_downloads_last_month"] = live
+    elif snapshot is not None:
+        out["dataset_hf_downloads_last_month"] = snapshot
+    else:
+        out["dataset_hf_downloads_last_month"] = buckets.get(period)
+    if total is None:
+        historical = as_int(out.get("dataset_historical_downloads")) or DEFAULT_HISTORICAL_DOWNLOADS
+        total = historical + sum(buckets.values())
     out["dataset_historical_downloads"] = as_int(out.get("dataset_historical_downloads")) or DEFAULT_HISTORICAL_DOWNLOADS
     out["dataset_hf_monthly_downloads"] = dict(sorted(buckets.items()))
-    out["dataset_hf_downloads_last_month"] = hf_last_month
     out["dataset_hf_downloads_last_month_period"] = period
     out.pop("dataset_hf_downloads_last_month_previous", None)
     out.pop("dataset_hf_downloads_last_month_delta_applied", None)
@@ -97,7 +126,9 @@ def update_stats(current: dict[str, Any], hf: dict[str, Any] | None, today: str)
     out["dataset_total_downloads_updated"] = today
     out["dataset_total_downloads_note"] = (
         "Maintainer-tracked cumulative download count: historical public totals "
-        "plus one stored Hugging Face rolling last-month download bucket per month."
+        "plus accumulated growth of the Hugging Face rolling last-month download "
+        "count (each refresh adds max(0, live - previous snapshot); the donor "
+        "wizard overlays the same delta live at render time)."
     )
     if hf:
         out["dataset_hf_likes"] = as_int(hf.get("likes"))
