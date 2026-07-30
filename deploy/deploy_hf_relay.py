@@ -30,13 +30,16 @@ def main() -> None:
         raise SystemExit("Set HF_STAGING_TOKEN to a token that can write to the private staging dataset.")
 
     api = HfApi(token=token)
-    api.create_repo(
-        repo_id=SPACE_REPO_ID,
-        repo_type="space",
-        space_sdk="docker",
-        private=False,
-        exist_ok=True,
-    )
+    # HF rejects create_repo for Docker Spaces on free tier (402) even with
+    # exist_ok=True; skip creation entirely when the Space already exists.
+    if not api.repo_exists(SPACE_REPO_ID, repo_type="space"):
+        api.create_repo(
+            repo_id=SPACE_REPO_ID,
+            repo_type="space",
+            space_sdk="docker",
+            private=False,
+            exist_ok=True,
+        )
     api.add_space_secret(SPACE_REPO_ID, "HF_STAGING_TOKEN", staging_token)
     api.add_space_variable(SPACE_REPO_ID, "CONTEXTECHO_STAGING_REPO", STAGING_REPO)
     api.add_space_variable(SPACE_REPO_ID, "CONTEXTECHO_RELAY_STATE_DIR", "/data/.relay_state")
