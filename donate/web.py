@@ -442,6 +442,65 @@ def my_donations_summary() -> dict:
     }
 
 
+def merge_archived_donations(sessions: list[dict]) -> list[dict]:
+    """Append donated sessions whose local source file no longer exists.
+
+    The picker lists what is on disk; donations outlive the local logs, so
+    donations with no matching discovered row are synthesized from the
+    device-linked history and shown (non-actionable) in the same table.
+    """
+    try:
+        donations = my_donations_summary().get("donations") or []
+    except Exception:
+        return sessions
+    if not donations:
+        return sessions
+    present_ids = {normalize_submission_id(row.get("relay_submission_id")) for row in sessions}
+    present_ids.discard("")
+    present_path_keys = {source_path_key(row["path"]) for row in sessions if row.get("path")}
+    receipt_path_keys: dict[str, str] = {}
+    for item in load_donation_registry().get("submissions", []):
+        sid = normalize_submission_id(item.get("submission_id") or item.get("submission"))
+        if sid:
+            receipt_path_keys.setdefault(sid, str(item.get("source_path_key") or ""))
+    out = list(sessions)
+    for d in donations:
+        sid = normalize_submission_id(d.get("submission_id"))
+        if not sid or sid in present_ids:
+            continue
+        # If the receipt maps to a file that is still discoverable, the
+        # discovered row already represents this donation (covers the
+        # relay-unreachable case where relay_submission_id is empty).
+        if receipt_path_keys.get(sid) and receipt_path_keys[sid] in present_path_keys:
+            continue
+        turns = int(d.get("turns") or 0)
+        out.append({
+            "agent": "Donated session",
+            "project": "archive",
+            "session_label": "local log deleted",
+            "path": f"archived://{sid}",
+            "turns": turns,
+            "records": 0,
+            "compactions": 0,
+            "last_active": str(d.get("submitted_utc") or "")[:10],
+            "donated": True,
+            "donated_before": True,
+            "donated_turns": turns,
+            "new_turns": 0,
+            "update_ready": False,
+            "relay_submission_id": sid if is_support_submission_id(sid) else "",
+            "relay_public_session_id": "",
+            "relay_received": True,
+            "relay_checked": True,
+            "local_credit_name": "",
+            "local_contributor_email": "",
+            "local_institute": "",
+            "local_public_anonymous": True,
+            "archived_donation": True,
+        })
+    return out
+
+
 def relay_metadata_update(payload: dict) -> dict:
     url = relay_url()
     if not url:
@@ -1765,7 +1824,6 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
         <div id="datasetComposition" class="composition-panel" aria-label="Public dataset composition"></div>
-        <div id="myDonations" class="composition-panel" aria-label="My donations from this machine" style="display:none"></div>
         <button id="discoverBtn" class="discover-main">Discover Sessions</button>
         <div id="discoverStatus" class="muted" style="margin-top:16px; text-align:center">Scanning starts automatically. Use Discover Sessions to rerun the scan.</div>
         <div id="discoverProgress" class="progress"><div></div></div>
@@ -2469,35 +2527,6 @@ async function loadProjectStats(){
   } catch(e) {
     renderProjectStats();
   }
-}
-async function loadMyDonations(){
-  const target = $('myDonations');
-  if(!target) return;
-  try {
-    const r = await fetch('/api/my_donations', {cache:'no-store'});
-    if(!r.ok) return;
-    const data = await r.json();
-    const donations = data.donations || [];
-    if(!donations.length){ target.style.display = 'none'; return; }
-    const source = data.relay_checked
-      ? 'Synced with the donation relay by this machine’s anonymous device hash.'
-      : 'From local receipts; relay sync unavailable right now.';
-    target.innerHTML = `
-      <div class="composition-head">
-        <div class="composition-title">My Donations · ${donations.length}</div>
-        <div class="composition-subtitle">${escapeHtml(fmtStat(data.total_turns || 0))} turns donated from this machine. ${escapeHtml(source)} Donations stay in the dataset even after local session logs are deleted.</div>
-      </div>
-      <div class="composition-list" style="max-height:220px; overflow-y:auto">
-        ${donations.map(d => `
-          <div class="composition-row">
-            <div class="composition-label"><code>${escapeHtml(d.submission_id)}</code><small>${escapeHtml((d.submitted_utc || '').slice(0, 10))}</small></div>
-            <div class="composition-value">${escapeHtml(fmtStat(d.turns))} turns</div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-    target.style.display = '';
-  } catch(e) { /* panel is best-effort; never block the flow */ }
 }
 function renderRedactResult(data){
   const stats = data.stats || {};
@@ -3499,6 +3528,7 @@ function renderSessions(){
   const readyCount = (readyCounts.best || 0) + (readyCounts.good || 0);
   const improveCount = sessions.reduce((count, s) => count + (sessionNeedsMoreTurns(s) ? 1 : 0), 0);
   const donatedTotal = sessions.reduce((count, s) => count + (sessionIsBlockedDonation(s) ? 1 : 0), 0);
+  const discoveredCount = sessions.reduce((count, s) => count + (s.archived_donation ? 0 : 1), 0);
   const agentCounts = agentFamilyCounts();
   const sessionSummaryTitle = `Claude: ${agentCounts.claude}\nCodex: ${agentCounts.codex}\nOther: ${agentCounts.other}`;
   const readySummaryTitle = `Best: ${readyCounts.best || 0}\nExcellent: ${readyCounts.good || 0}`;
@@ -3512,7 +3542,7 @@ function renderSessions(){
   $('sessionCount').setAttribute('aria-label', sessionSummaryTitle);
   $('sessionCount').classList.toggle('active', sessionStatusFilter === 'all');
   $('sessionCount').setAttribute('aria-pressed', sessionStatusFilter === 'all' ? 'true' : 'false');
-  $('sessionCount').innerHTML = `<strong>${sessions.length}</strong><span>found</span>`;
+  $('sessionCount').innerHTML = `<strong>${discoveredCount}</strong><span>found</span>`;
   $('fitSummary').innerHTML = sessions.length
     ? `<button type="button" class="fit-chip donated${sessionStatusFilter === 'donated' ? ' active' : ''}" data-session-filter="donated" data-tooltip="${escapeHtml(donatedSummaryTitle)}" aria-label="${escapeHtml(donatedSummaryTitle)}" aria-pressed="${sessionStatusFilter === 'donated' ? 'true' : 'false'}">Donated ${donatedDisplay}</button><button type="button" class="fit-chip ready${sessionStatusFilter === 'ready' ? ' active' : ''}" data-session-filter="ready" data-tooltip="${escapeHtml(readySummaryTitle)}" aria-label="${escapeHtml(readySummaryTitle)}" aria-pressed="${sessionStatusFilter === 'ready' ? 'true' : 'false'}">Ready ${readyCount}</button><button type="button" class="fit-chip improve${sessionStatusFilter === 'improve' ? ' active' : ''}" data-session-filter="improve" data-tooltip="Not ready yet: needs more turns or a context compaction" aria-label="Not ready yet: needs more turns or a context compaction" aria-pressed="${sessionStatusFilter === 'improve' ? 'true' : 'false'}">Keep chatting ${improveCount}</button>`
     : '';
@@ -3688,11 +3718,14 @@ async function discoverSessions(){
     donatedLifetime = (final && final.donated_lifetime) || 0;
     page = 0;
     discoverTiming = `Completed in ${fmtElapsed(Date.now() - progressTimers.discoverProgress.start)}`;
-    status('discoverStatus', sessions.length === 0
+    const discovered = sessions.filter(s => !s.archived_donation).length;
+    const archived = sessions.length - discovered;
+    const archivedNote = archived ? ` Includes ${archived} donated session${archived === 1 ? '' : 's'} whose local logs were deleted (kept in the dataset).` : '';
+    status('discoverStatus', discovered === 0 && !archived
       ? noSessionsMessage()
       : (!relayStatusChecked()
-        ? `Found ${sessions.length} sessions. Donation status could not be checked with the relay, so previously donated sessions may not be marked here. You can still pick a session to donate.`
-        : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${sessions.length} sessions. Click a row to select.`)));
+        ? `Found ${discovered} sessions. Donation status could not be checked with the relay, so previously donated sessions may not be marked here. You can still pick a session to donate.`
+        : (allSessionsDonated() ? allSessionsDonatedMessage() : `Found ${discovered} sessions.${archivedNote} Click a row to select.`)));
     renderSessions();
   } catch(e) { status('discoverStatus','ERROR: '+friendlyRequestError(e, 'discovery scan')); }
   finally {
@@ -3996,7 +4029,6 @@ $('submitBtn').onclick = async () => {
   }
 };
 loadProjectStats();
-loadMyDonations();
 discoverSessions();
 </script>
 </body>
@@ -4087,7 +4119,7 @@ class Handler(BaseHTTPRequestHandler):
             max_per_agent = None if raw_max == "all" else int(raw_max)
             sessions = discover_mod.discover(max_per_agent=max_per_agent, progress=False)
             self._json({
-                "sessions": annotate_donated(sessions),
+                "sessions": merge_archived_donations(annotate_donated(sessions)),
                 "donated_lifetime": donated_lifetime_count(),
             })
             return
@@ -4109,7 +4141,7 @@ class Handler(BaseHTTPRequestHandler):
                 for event in discover_mod.discover_iter(max_per_agent=max_per_agent):
                     if event.get("event") == "done":
                         event = dict(event)
-                        event["sessions"] = annotate_donated(list(event.get("sessions") or []))
+                        event["sessions"] = merge_archived_donations(annotate_donated(list(event.get("sessions") or [])))
                         event["donated_lifetime"] = donated_lifetime_count()
                     self._write_body((json.dumps(event) + "\n").encode(), stream=True)
             except ClientDisconnected:

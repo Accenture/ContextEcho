@@ -103,7 +103,7 @@ class WebTests(unittest.TestCase):
         self.assertIn("async function discoverSessions()", INDEX_HTML)
         self.assertIn("let discoveryRunning = false", INDEX_HTML)
         self.assertIn("$('discoverBtn').onclick = () => discoverSessions();", INDEX_HTML)
-        self.assertIn("loadProjectStats();\nloadMyDonations();\ndiscoverSessions();", INDEX_HTML)
+        self.assertIn("loadProjectStats();\ndiscoverSessions();", INDEX_HTML)
         self.assertIn("Scanning starts automatically", INDEX_HTML)
 
     def test_donated_rows_show_copyable_support_submission_id(self):
@@ -884,6 +884,55 @@ class WebTests(unittest.TestCase):
 
         self.assertFalse(summary["device_linked"])
         self.assertEqual(summary["count"], 1)
+
+    def test_merge_archived_donations_appends_file_gone_rows(self):
+        from donate.web import merge_archived_donations
+
+        discovered = [
+            {"path": "/tmp/on-disk.jsonl", "turns": 100, "relay_submission_id": "submission-aaaa1111", "donated": True},
+        ]
+        summary = {"donations": [
+            {"submission_id": "submission-aaaa1111", "turns": 100, "submitted_utc": "2026-06-01T00:00:00+00:00"},
+            {"submission_id": "submission-cccc3333", "turns": 2509, "submitted_utc": "2026-06-17T00:00:00+00:00"},
+        ]}
+        with mock.patch("donate.web.my_donations_summary", return_value=summary), \
+                mock.patch("donate.web.load_donation_registry", return_value={}):
+            merged = merge_archived_donations(discovered)
+
+        self.assertEqual(len(merged), 2)
+        archived = merged[1]
+        self.assertTrue(archived["archived_donation"])
+        self.assertTrue(archived["donated"])
+        self.assertEqual(archived["turns"], 2509)
+        self.assertEqual(archived["relay_submission_id"], "submission-cccc3333")
+        self.assertEqual(archived["last_active"], "2026-06-17")
+        self.assertEqual(archived["path"], "archived://submission-cccc3333")
+
+    def test_merge_archived_donations_skips_receipts_whose_file_is_still_on_disk(self):
+        from donate.web import merge_archived_donations, source_path_key
+
+        # relay unreachable earlier -> discovered row carries no relay id, but
+        # the local receipt maps the submission to a still-existing path.
+        discovered = [{"path": "/tmp/on-disk.jsonl", "turns": 100, "relay_submission_id": ""}]
+        registry = {"submissions": [{
+            "submission_id": "submission-aaaa1111",
+            "source_path_key": source_path_key("/tmp/on-disk.jsonl"),
+        }]}
+        summary = {"donations": [
+            {"submission_id": "submission-aaaa1111", "turns": 100, "submitted_utc": "2026-06-01T00:00:00+00:00"},
+        ]}
+        with mock.patch("donate.web.my_donations_summary", return_value=summary), \
+                mock.patch("donate.web.load_donation_registry", return_value=registry):
+            merged = merge_archived_donations(discovered)
+
+        self.assertEqual(len(merged), 1)
+
+    def test_merge_archived_donations_survives_summary_failure(self):
+        from donate.web import merge_archived_donations
+
+        discovered = [{"path": "/tmp/x.jsonl", "turns": 5}]
+        with mock.patch("donate.web.my_donations_summary", side_effect=OSError("down")):
+            self.assertEqual(merge_archived_donations(discovered), discovered)
 
     def test_annotate_donated_ignores_local_source_key_status(self):
         path = "/tmp/example-session.jsonl"
