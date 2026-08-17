@@ -335,9 +335,35 @@ def relay_url() -> str:
 RELAY_STATUS_CHUNK = 200
 
 
+# The relay runs on a free-tier Space that sleeps when idle and takes
+# 45-60s to wake; a request racing the cold start times out and the wizard
+# silently degrades to local receipts. Wake it once per process first.
+_RELAY_AWAKE = {"ok": False}
+
+
+def _ensure_relay_awake(timeout_each: int = 45, attempts: int = 3) -> bool:
+    if _RELAY_AWAKE["ok"]:
+        return True
+    url = relay_url()
+    if not url:
+        return False
+    for _ in range(attempts):
+        try:
+            req = Request(f"{url}/health", headers={"user-agent": "contextecho-donate"})
+            with urlopen(req, timeout=timeout_each) as resp:
+                if getattr(resp, "status", 200) == 200:
+                    _RELAY_AWAKE["ok"] = True
+                    return True
+        except Exception:
+            time.sleep(2)
+    return False
+
+
 def relay_donation_status(sessions: list[dict]) -> list[dict]:
     url = relay_url()
     if not url or not sessions:
+        return []
+    if not _ensure_relay_awake():
         return []
     statuses: list[dict] = []
     for start in range(0, len(sessions), RELAY_STATUS_CHUNK):
@@ -361,7 +387,7 @@ def relay_donation_status(sessions: list[dict]) -> list[dict]:
             method="POST",
         )
         try:
-            with urlopen(req, timeout=30) as resp:
+            with urlopen(req, timeout=90) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
         except Exception:
             return []
@@ -374,10 +400,11 @@ def relay_donation_status(sessions: list[dict]) -> list[dict]:
     return statuses
 
 
-def _relay_post_json(path: str, payload: dict, timeout: int = 15) -> dict:
+def _relay_post_json(path: str, payload: dict, timeout: int = 60) -> dict:
     url = relay_url()
     if not url:
         raise ValueError("Relay URL is not configured.")
+    _ensure_relay_awake()
     data = json.dumps(payload).encode("utf-8")
     req = Request(
         f"{url}{path}",

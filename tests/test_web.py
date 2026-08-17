@@ -821,6 +821,7 @@ class WebTests(unittest.TestCase):
 
         with mock.patch("donate.web.relay_url", return_value="https://relay.example"), \
                 mock.patch("donate.web.urlopen", side_effect=fake_urlopen), \
+                mock.patch("donate.web._ensure_relay_awake", return_value=True), \
                 mock.patch("donate.web.describe_mod.source_session_id", return_value="sid"):
             statuses = relay_donation_status(sessions)
 
@@ -884,6 +885,42 @@ class WebTests(unittest.TestCase):
 
         self.assertFalse(summary["device_linked"])
         self.assertEqual(summary["count"], 1)
+
+    def test_relay_wake_retries_then_caches(self):
+        from donate import web as web_mod
+
+        calls = {"n": 0}
+
+        class OkResp:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        def flaky_urlopen(req, timeout=0):
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise OSError("cold start")
+            return OkResp()
+
+        with mock.patch.object(web_mod, "_RELAY_AWAKE", {"ok": False}), \
+                mock.patch("donate.web.relay_url", return_value="https://relay.example"), \
+                mock.patch("donate.web.urlopen", side_effect=flaky_urlopen), \
+                mock.patch("donate.web.time.sleep"):
+            self.assertTrue(web_mod._ensure_relay_awake(attempts=3))
+            # cached: no further urlopen calls
+            self.assertTrue(web_mod._ensure_relay_awake(attempts=3))
+        self.assertEqual(calls["n"], 3)
+
+    def test_relay_status_returns_empty_when_wake_fails(self):
+        from donate.web import relay_donation_status
+
+        with mock.patch("donate.web.relay_url", return_value="https://relay.example"), \
+                mock.patch("donate.web._ensure_relay_awake", return_value=False):
+            self.assertEqual(relay_donation_status([{"turns": 1}]), [])
 
     def test_merge_archived_donations_appends_file_gone_rows(self):
         from donate.web import merge_archived_donations

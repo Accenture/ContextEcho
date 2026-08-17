@@ -160,6 +160,51 @@ def _read_jsonl(path: Path, limit: int = 200) -> list[dict]:
 
 _SUBMISSION_ID_RE = re.compile(r"submission-[A-Za-z0-9_-]{4,64}")
 
+# Free-tier Spaces have no persistent disk: the local state dir is wiped on
+# every rebuild/restart. The device->donations index is therefore mirrored
+# to the private staging dataset (like the seen-hashes backfill) and lazily
+# restored when the local copy is missing.
+DEVICE_DONATIONS_REPO_PATH = "maintainer/device_donations.jsonl"
+_DEVICE_BACKFILL = {"attempted": False}
+
+
+def _staging_write_token() -> str | None:
+    return os.environ.get("HF_STAGING_TOKEN") or os.environ.get("CONTEXTECHO_STAGING_TOKEN")
+
+
+def _backfill_device_donations() -> None:
+    if _DEVICE_BACKFILL["attempted"]:
+        return
+    _DEVICE_BACKFILL["attempted"] = True
+    if DEVICE_DONATIONS.exists() and DEVICE_DONATIONS.stat().st_size > 0:
+        return
+    token = _staging_write_token()
+    if not token:
+        return
+    try:
+        data = _read_hf_file(STAGING_REPO, DEVICE_DONATIONS_REPO_PATH, token)
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        DEVICE_DONATIONS.write_bytes(data)
+    except Exception:
+        pass
+
+
+def _persist_device_donations() -> None:
+    token = _staging_write_token()
+    if not token or not DEVICE_DONATIONS.exists():
+        return
+    try:
+        api = HfApi(token=token)
+        api.upload_file(
+            path_or_fileobj=str(DEVICE_DONATIONS),
+            path_in_repo=DEVICE_DONATIONS_REPO_PATH,
+            repo_id=STAGING_REPO,
+            repo_type="dataset",
+            commit_message="Update device donations index",
+        )
+    except Exception:
+        pass
+
 
 def _record_device_donation(device_id: str, submission_id: str, turns: int = 0,
                             submitted_utc: str = "", source: str = "submission") -> bool:
@@ -168,6 +213,7 @@ def _record_device_donation(device_id: str, submission_id: str, turns: int = 0,
         return False
     if not _SUBMISSION_ID_RE.fullmatch(str(submission_id or "")):
         return False
+    _backfill_device_donations()
     existing = {
         (row.get("device_id"), row.get("submission_id"))
         for row in _read_jsonl(DEVICE_DONATIONS, limit=100_000)
@@ -189,6 +235,7 @@ def _record_device_donation(device_id: str, submission_id: str, turns: int = 0,
 
 def _device_donations(device_id: str) -> list[dict]:
     """All recorded donations for one device, newest first, deduped by submission."""
+    _backfill_device_donations()
     rows = [
         row for row in _read_jsonl(DEVICE_DONATIONS, limit=100_000)
         if row.get("device_id") == device_id
@@ -1556,6 +1603,8 @@ def claim_donations(payload: Annotated[dict, Body()]) -> dict:
             source="claim",
         ):
             claimed += 1
+    if claimed:
+        _persist_device_donations()
     return {"ok": True, "claimed": claimed}
 
 
@@ -1638,13 +1687,14 @@ async def donate(
             )
             raise
         _record_seen_hash(artifact_hash, submission_id, manifest)
-        _record_device_donation(
+        if _record_device_donation(
             str(manifest.get("donor_device_id") or ""),
             submission_id,
             turns=_count_value(manifest.get("turns")),
             submitted_utc=str(manifest.get("submitted_utc") or ""),
             source="submission",
-        )
+        ):
+            _persist_device_donations()
         _append_submission_event(
             "submitted",
             submission_id=submission_id,

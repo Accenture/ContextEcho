@@ -895,6 +895,9 @@ class DeviceDonationTests(unittest.TestCase):
         self._patches = [
             mock.patch.object(relay_server, "STATE_DIR", state),
             mock.patch.object(relay_server, "DEVICE_DONATIONS", state / "device_donations.jsonl"),
+            # keep unit tests hermetic: no staging-repo backfill/persist
+            mock.patch.object(relay_server, "_DEVICE_BACKFILL", {"attempted": True}),
+            mock.patch.object(relay_server, "_persist_device_donations", lambda: None),
         ]
         for p in self._patches:
             p.start()
