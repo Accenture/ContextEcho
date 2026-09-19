@@ -17,9 +17,11 @@ not included.
 | Public v1 founding sessions | 3 |
 | Public v1 per-cell evaluations | 41,921 |
 | Public v1 data size | 310 MB redacted sessions + 705 MB per-cell evaluations |
-| Active public/candidate sessions tracked locally (54 accepted community + 3 founding) | 57 |
-| User turns in the community donation ledger (55 community sessions) | 12,337 |
-| Context compactions in the accepted population (42 of 57 sessions) | 169 |
+| Analysis sessions (54 accepted community + 3 founding) | 57 |
+| Superseded duplicate submissions kept in the ledger for provenance, excluded from analyses | 1 |
+| User turns in the 57 analysis sessions (one user + assistant round per turn; `figure_inputs_v2.0.csv`) | 12,210 |
+| Ledger intake `turns` field over all 55 community rows (broader intake definition; 12,281 over the 54 accepted) | 12,337 |
+| Context compactions in the analysis population (42 of 57 sessions) | 169 |
 | Public contributors in leaderboard | 31 |
 | V2 promotion ledger status | 54 promoted accepted donation(s) |
 

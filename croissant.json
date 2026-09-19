@@ -1,0 +1,1106 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "cr": "http://mlcommons.org/croissant/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "equivalentProperty": "cr:equivalentProperty",
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
+    "rai": "http://mlcommons.org/croissant/RAI/"
+  },
+  "@type": "sc:Dataset",
+  "name": "ContextEcho",
+  "conformsTo": "http://mlcommons.org/croissant/1.0",
+  "description": "ContextEcho v2.0 is a consented, redacted corpus of real long agentic-coding sessions plus a persona-drift benchmark built on top of it. The analysis corpus contains 57 sessions: 54 accepted community donations (29 Claude Code + 25 Codex CLI) plus the 3 founding sessions from the v1 release (Claude Code; 445-1,242 user turns each), i.e. 32 Claude Code + 25 Codex CLI; 28-2,484 user turns per session (one user + assistant round per turn), 12,210 user turns in total; 42 of 57 sessions contain at least one in-session context compaction (169 compaction events). The ledger and session directory additionally carry one SUPERSEDED duplicate submission (submission-607d8b75), retained for provenance and excluded from all analyses; intake-level counts over all 55 community files are 225,570 JSONL records, 40,787 tool-call records, a ledger turns field summing to 12,337 (a broader intake definition than the paper's user turn), and 157 compaction markers (155 over the 54 accepted). Every community session was donated through a local-first redaction wizard, reviewed by maintainers, and promoted with an explicit per-donation CONSENT.md, manifest.json, and review_report.json; provenance is tracked in an append-only donations ledger (ledger.jsonl). The release also ships derived per-session results tables (summary_v2.0.csv drift-gap summaries, figure_inputs_v2.0.csv lexical proxies, compactions_rederived.csv compaction-count cross-validation). The corpus is extensible by design: new donations are promoted through the same pipeline and appended to the ledger, so the benchmark grows as a living, versioned dataset.",
+  "url": "https://github.com/Accenture/ContextEcho",
+  "sameAs": [
+    "https://huggingface.co/datasets/contextecho2026/persona-drift-contextecho",
+    "https://arxiv.org/abs/2605.24279"
+  ],
+  "license": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "version": "2.0.0",
+  "datePublished": "2026-07-28",
+  "isLiveDataset": true,
+  "citeAs": "@article{ding2026contextecho, title={ContextEcho: A Benchmark for Persona Drift in Long Agentic-Coding Sessions}, author={Ding, Xianzhong and Yu, Yangyang and Liu, Changwei and Zhao, Bill}, journal={arXiv preprint arXiv:2605.24279}, year={2026}}",
+  "creator": {
+    "@type": "sc:Organization",
+    "name": "ContextEcho contributors (pseudonymous contributor community)",
+    "description": "The corpus is built from community donations. Donors are credited pseudonymously ('Anonymous donor <id>') on the public contributor leaderboard in CONTRIBUTORS.md; donor identity fields are maintainer-visible only, per DONOR_PRIVACY.md.",
+    "url": "https://github.com/Accenture/ContextEcho/blob/main/CONTRIBUTORS.md"
+  },
+  "publisher": {
+    "@type": "sc:Organization",
+    "name": "contextecho2026",
+    "url": "https://huggingface.co/contextecho2026"
+  },
+  "keywords": [
+    "persona drift",
+    "long-context evaluation",
+    "agentic coding",
+    "coding agents",
+    "Claude Code",
+    "Codex CLI",
+    "context compaction",
+    "behavioral benchmarks",
+    "LLM evaluation",
+    "living benchmark"
+  ],
+  "usageInfo": "Allowed uses (DATA_USE_POLICY.md; mirrored in each donation manifest as allowed_uses=['persona_drift_benchmarking']): persona drift benchmarking; model behavior analysis in long agentic-coding sessions; redaction, validation, and aggregate dataset quality checks; reproduction of ContextEcho figures and claims. Disallowed uses: donor profiling; psychological or sentiment analysis of donors; employment, productivity, or performance evaluation of donors; attempts to deanonymize donors, organizations, repositories, or private paths.",
+  "rai:dataUseCases": "Persona-drift benchmarking on real long agentic-coding sessions: snapshot a real session prefix, fork the conversation state, probe any chat-completions target with the 25-probe identity suite, and score with an LLM-judge rubric plus judge-free metrics. The corpus supports compaction-aligned checkpoints (169 compaction events across 42 of the 57 analysis sessions), cross-harness comparison (Claude Code vs Codex CLI), and mitigation studies (anchor dosing). Out of scope per DATA_USE_POLICY.md: any analysis of the donors themselves.",
+  "rai:dataLimitations": "Sessions are a convenience sample of self-selected donors (24 institutions, 2 harnesses, mostly agentic-coding and web-frontend work, predominantly English). Metadata fields carry per-field confidence levels in each manifest (metadata_confidence); model and compaction counts are 'medium' confidence for some donations and are cross-validated in compactions_rederived.csv. Transcripts are redacted, not raw: PII, secrets, paths, URLs, and usernames are replaced with placeholders, and 3 sessions use the stricter user_minimized tier that additionally masks sensitive donor-authored spans.",
+  "rai:personalSensitiveInformation": "All sessions pass a local-first redaction pipeline on the donor machine (Presidio-based PERSON/EMAIL/IP/PHONE/CREDIT_CARD/URL/CRYPTO detection, home-path and username pseudonymization, API-key/secret pattern removal, detect-secrets entropy scan, donor-chosen scrub terms) followed by a fail-closed local verification step and an independent maintainer PII review before promotion. Privacy tiers: full_redacted (default; 52 of 55 community sessions) and user_minimized (3 of 55; additionally masks sensitive donor-authored spans). Each donor attests in CONSENT.md that the session contains no client-confidential material and no other person's personal data.",
+  "rai:hasSyntheticData": false,
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "github-repository",
+      "name": "github-repository",
+      "description": "ContextEcho release repository containing the v2 data archive (data_archive_release_v2/), the v1 founding-session archive (data_archive_release/), the benchmark harness, and governance documents (DATASET_CARD.md, DATA_USE_POLICY.md, DONOR_PRIVACY.md, DATASHEET.md).",
+      "contentUrl": "https://github.com/Accenture/ContextEcho",
+      "encodingFormat": "git+https",
+      "sha256": "main"
+    },
+    {
+      "@type": "cr:FileSet",
+      "@id": "community-sessions",
+      "name": "community-sessions",
+      "description": "55 community-donated redacted session transcripts (30 Claude Code + 25 Codex CLI; 54 ACCEPTABLE + 1 SUPERSEDED duplicate, submission-607d8b75, excluded from analyses), one JSONL file per session, named session_<donation-label>.jsonl. Intake totals over the 55 files: 225,570 records (40,787 tool-call records; ledger turns field summing to 12,337 under an intake turn definition broader than the paper's user turn). Each file's harness/schema is given by the source_format field of its ledger row ('claude-code-jsonl' or 'codex-cli-jsonl'); its provenance, consent, and review artifacts live in data_archive_release_v2/data/donations/<label>/.",
+      "containedIn": {
+        "@id": "github-repository"
+      },
+      "encodingFormat": "application/jsonlines",
+      "includes": "data_archive_release_v2/data/sessions/*.jsonl"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "founding-session-s1",
+      "name": "session_raw_transcript.jsonl",
+      "description": "Founding session S1 (v1 release): donated Claude Code session, 1,242 user turns, 6 compactions. Claude Code JSONL schema.",
+      "containedIn": {
+        "@id": "github-repository"
+      },
+      "contentUrl": "data_archive_release/data/sessions/session_raw_transcript.jsonl",
+      "encodingFormat": "application/jsonlines",
+      "contentSize": "158662274 B",
+      "sha256": "bbf4d1e356e17e52268d481ebdbe4578abdd3d175610e6df21f6bf47c08d6e54"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "founding-session-s2",
+      "name": "session_proeng.jsonl",
+      "description": "Founding session S2 (v1 release): donated Claude Code session, 445 user turns, 3 compactions. Claude Code JSONL schema.",
+      "containedIn": {
+        "@id": "github-repository"
+      },
+      "contentUrl": "data_archive_release/data/sessions/session_proeng.jsonl",
+      "encodingFormat": "application/jsonlines",
+      "contentSize": "89673223 B",
+      "sha256": "1594c6f620802123fb593a080cc5fdf63b424d0082f50b463a1c77ff0493716f"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "founding-session-s3",
+      "name": "session_chainassemble.jsonl",
+      "description": "Founding session S3 (v1 release): donated Claude Code session, 458 user turns, 5 compactions. Claude Code JSONL schema.",
+      "containedIn": {
+        "@id": "github-repository"
+      },
+      "contentUrl": "data_archive_release/data/sessions/session_chainassemble.jsonl",
+      "encodingFormat": "application/jsonlines",
+      "contentSize": "77454451 B",
+      "sha256": "a8b61c2c05fcd93547235366811ca7abae8c1894d69dd1563bef62cacaf44d8c"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "donations-ledger",
+      "name": "ledger.jsonl",
+      "description": "Append-only public donation ledger: one JSON row per promoted community donation (55 rows: 54 ACCEPTABLE + 1 SUPERSEDED). Source of truth for session provenance, harness/model/domain composition, per-field metadata confidence, contributor credit, and the contributor leaderboard.",
+      "containedIn": {
+        "@id": "github-repository"
+      },
+      "contentUrl": "data_archive_release_v2/data/donations/ledger.jsonl",
+      "encodingFormat": "application/jsonlines",
+      "contentSize": "66613 B",
+      "sha256": "beace17f21224c36fbb39db541fe85ff55a9189e928bc34b5788983f7146f2e2"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "summary-v2-csv",
+      "name": "summary_v2.0.csv",
+      "description": "Baseline benchmark results: per-session mean drift gap for the 57-session accepted population (54 community + 3 founding), from the compact_validation_v1 run (57 sessions x 3 checkpoints x 5 coding probes x {real, filler} arms; target claude-sonnet-5, judge claude-sonnet-4-6).",
+      "containedIn": {
+        "@id": "github-repository"
+      },
+      "contentUrl": "data_archive_release_v2/results/session_validation/summary_v2.0.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "2705 B",
+      "sha256": "dafe92e36307238ee5971558d05edaa3e34d0ebcf35175bf328df029df466b6d"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "figure-inputs-v2-csv",
+      "name": "figure_inputs_v2.0.csv",
+      "description": "Per-session lexical drift proxies and session-shape covariates (turns, compactions, assistant message counts, response-length and register-marker rates) used as figure inputs and predictor features.",
+      "containedIn": {
+        "@id": "github-repository"
+      },
+      "contentUrl": "data_archive_release_v2/results/session_validation/figure_inputs_v2.0.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "4245 B",
+      "sha256": "c6c5c962ed69ce01da5d305894a6f403e821ecb7e3bdb9e9dc751cd8d2438a8f"
+    },
+    {
+      "@type": "cr:FileObject",
+      "@id": "compactions-rederived-csv",
+      "name": "compactions_rederived.csv",
+      "description": "Compaction-count cross-validation: per-session compaction counts re-derived from JSONL top-level markers (Claude Code: type=system, subtype=compact_boundary; Codex CLI: type=compacted) reconciled against donor manifests and figure inputs. All sources agree (0 disagreements). Paper numbers (57 analysis sessions = 54 accepted community + 3 founding): 42/57 sessions with >=1 compaction, 169 events. Over all 58 session files including the superseded duplicate: 43/58 and 171 events (40/55 and 157 for the 55 community files; 39/54 and 155 for the accepted community files).",
+      "containedIn": {
+        "@id": "github-repository"
+      },
+      "contentUrl": "data_archive_release_v2/results/session_validation/compactions_rederived.csv",
+      "encodingFormat": "text/csv",
+      "contentSize": "2787 B",
+      "sha256": "5bfa07ec4306595660f8e7356a0a70c89965fb7a52a60637f71c912662ee5302"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "claude-code-records",
+      "name": "claude-code-records",
+      "description": "One record per JSONL line in a Claude Code session (community sessions with ledger source_format='claude-code-jsonl', plus the 3 founding sessions). Top-level record types include: 'user' (user turn), 'assistant' (assistant turn, including tool_use blocks inside message.content), 'system' (harness events; subtype='compact_boundary' marks an in-session context compaction), 'attachment', 'file-history-snapshot', 'mode', 'permission-mode', 'ai-title', 'last-prompt', and 'queue-operation'. Not every field is present on every record type.",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/type",
+          "name": "type",
+          "description": "Top-level record type: user | assistant | system | attachment | file-history-snapshot | mode | permission-mode | ai-title | last-prompt | queue-operation.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.type"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/sessionId",
+          "name": "sessionId",
+          "description": "Session identifier (redacted/pseudonymized in the release).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.sessionId"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/uuid",
+          "name": "uuid",
+          "description": "Unique record id; parentUuid links a record to its parent, giving the conversation DAG.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.uuid"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/parentUuid",
+          "name": "parentUuid",
+          "description": "uuid of the parent record (null for roots).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.parentUuid"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/timestamp",
+          "name": "timestamp",
+          "description": "ISO-8601 wall-clock timestamp of the record (present on user/assistant/system/attachment records).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.timestamp"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/isSidechain",
+          "name": "isSidechain",
+          "description": "True when the record belongs to a subagent sidechain rather than the main conversation thread.",
+          "dataType": "sc:Boolean",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.isSidechain"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/message",
+          "name": "message",
+          "description": "Message payload for user/assistant records: role plus content blocks (text, tool_use, tool_result). Assistant tool_use blocks are the corpus's tool-call events (40,787 across the 55 community sessions). All content is post-redaction.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.message"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/subtype",
+          "name": "subtype",
+          "description": "Subtype of 'system' records. subtype='compact_boundary' is the compaction marker used to derive the 157 (155 over the 54 accepted files) community-session compaction events.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.subtype"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/cwd",
+          "name": "cwd",
+          "description": "Working directory at record time (paths redacted to placeholders).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.cwd"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "claude-code-records/gitBranch",
+          "name": "gitBranch",
+          "description": "Git branch active at record time, when available.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.gitBranch"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "codex-cli-records",
+      "name": "codex-cli-records",
+      "description": "One record per JSONL line in a Codex CLI session (community sessions with ledger source_format='codex-cli-jsonl'). Every record is {type, timestamp, payload}. Top-level types: 'session_meta' (one per file: cli_version, cwd, model_provider, originator), 'turn_context' (per-turn model/approval/sandbox configuration), 'event_msg' (harness events; payload.type includes user_message, agent_message, task_started, task_complete, token_count, context_compacted, patch_apply_end, web_search_end), 'response_item' (model-stream items; payload.type includes message, reasoning, function_call, function_call_output, custom_tool_call, custom_tool_call_output, web_search_call), and 'compacted' (context-compaction marker with replacement_history).",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "codex-cli-records/type",
+          "name": "type",
+          "description": "Top-level record type: session_meta | turn_context | event_msg | response_item | compacted. type='compacted' is the compaction marker used in the compaction counts.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.type"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "codex-cli-records/timestamp",
+          "name": "timestamp",
+          "description": "ISO-8601 wall-clock timestamp of the record.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.timestamp"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "codex-cli-records/payload",
+          "name": "payload",
+          "description": "Type-specific payload object (post-redaction). For event_msg/response_item records, payload.type discriminates the event; message content lives in payload.message / payload.content; tool calls are response_item records with payload.type in {function_call, custom_tool_call} and their *_output counterparts.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.payload"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "codex-cli-records/payload_type",
+          "name": "payload_type",
+          "description": "payload.type discriminator for event_msg and response_item records (e.g. user_message, agent_message, function_call, function_call_output, reasoning, context_compacted).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "community-sessions"
+            },
+            "extract": {
+              "jsonPath": "$.payload.type"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "donation-ledger",
+      "name": "donation-ledger",
+      "description": "One record per promoted community donation (55 rows). Provenance, composition metadata, and review outcome for every community session; the file that makes the corpus extensible (new accepted donations append rows).",
+      "key": {
+        "@id": "donation-ledger/label"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/label",
+          "name": "label",
+          "description": "Donation label, e.g. 'anonymous-donor-submission-86ff44fe'; directory name under data_archive_release_v2/data/donations/ holding manifest.json, CONSENT.md, and review_report.json.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.label"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/submission_id",
+          "name": "submission_id",
+          "description": "Relay staging submission id.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.submission_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/decision",
+          "name": "decision",
+          "description": "Review outcome: ACCEPTABLE (54) or SUPERSEDED (1; a same-lineage older row replaced by a grown re-donation, linked via supersedes_submission/superseded_by).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.decision"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/agent",
+          "name": "agent",
+          "description": "Coding-agent harness: 'Claude Code' (30) or 'Codex CLI' (25).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.agent"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/source_format",
+          "name": "source_format",
+          "description": "Transcript schema: claude-code-jsonl | codex-cli-jsonl. Selects which RecordSet (claude-code-records / codex-cli-records) describes the session file.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.source_format"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/model",
+          "name": "model",
+          "description": "Model that drove the donated session (donor-reported, confidence-tagged), e.g. gpt-5.5, claude-sonnet-4-6, claude-opus-4-8.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.model"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/org",
+          "name": "org",
+          "description": "Model organization: Anthropic or OpenAI.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.org"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/domain",
+          "name": "domain",
+          "description": "Task domain: agentic-coding | web-frontend | manuscript-writing | non-coding-docs.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.domain"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/language",
+          "name": "language",
+          "description": "Primary programming language of the session ('mixed' for most).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.language"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/records",
+          "name": "records",
+          "description": "Number of JSONL records in the redacted session (sums to 225,570 across all 55 rows).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.records"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/turns",
+          "name": "turns",
+          "description": "Intake turn count for the session as recorded at donation (sums to 12,337 across all 55 rows; 12,281 across the 54 ACCEPTABLE rows). Uses a broader definition than the paper's user turn (one user + assistant round); the analysis-definition counts are in figure_inputs_v2.0.csv (turns column, 12,210 over the 57 analysis sessions).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.turns"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/compactions",
+          "name": "compactions",
+          "description": "Number of in-session context compactions (donor-manifest value; cross-validated in compactions_rederived.csv).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.compactions"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/privacy_tier",
+          "name": "privacy_tier",
+          "description": "Donor-selected privacy tier: full_redacted (default) or user_minimized (additionally masks sensitive donor-authored spans). See DONOR_PRIVACY.md.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.privacy_tier"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/public_anonymous",
+          "name": "public_anonymous",
+          "description": "True when the donor chose to appear publicly as an anonymous donor (all 55 rows). Public credit then uses 'Anonymous donor <id>'.",
+          "dataType": "sc:Boolean",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.public_anonymous"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/credit_name",
+          "name": "credit_name",
+          "description": "Contributor credit name (handle or pseudonym allowed per CONSENT.md).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.credit_name"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/session_path",
+          "name": "session_path",
+          "description": "Relative path of the redacted session JSONL under data_archive_release_v2/ (joins ledger rows to the community-sessions FileSet).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.session_path"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/session_sha256",
+          "name": "session_sha256",
+          "description": "SHA-256 of the redacted session artifact (used for exact-duplicate rejection at the relay).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.session_sha256"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/conversation_fingerprint",
+          "name": "conversation_fingerprint",
+          "description": "Privacy-preserving structural fingerprint (fingerprint_version='structure-v1') linking same-conversation re-donations for lineage/supersession checks.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.conversation_fingerprint"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "donation-ledger/promoted_utc",
+          "name": "promoted_utc",
+          "description": "UTC timestamp when the donation was promoted into the release archive (v2.0 range: 2026-06-25 to 2026-07-15).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "donations-ledger"
+            },
+            "extract": {
+              "jsonPath": "$.promoted_utc"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "session-drift-summary",
+      "name": "session-drift-summary",
+      "description": "Baseline benchmark result table: one row per session in the 57-session accepted population with its mean drift gap (real-context arm minus length-matched filler arm) from the compact_validation_v1 run. Population mean drift gap +0.1696; per-session means range -0.33 to +0.60.",
+      "key": {
+        "@id": "session-drift-summary/session_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "session-drift-summary/session_id",
+          "name": "session_id",
+          "description": "Session identifier (founding label or donation label).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "summary-v2-csv"
+            },
+            "extract": {
+              "column": "session_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-drift-summary/population",
+          "name": "population",
+          "description": "founding | community.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "summary-v2-csv"
+            },
+            "extract": {
+              "column": "population"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-drift-summary/agent",
+          "name": "agent",
+          "description": "Harness family of the source session (claude | codex).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "summary-v2-csv"
+            },
+            "extract": {
+              "column": "agent"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-drift-summary/n_cells",
+          "name": "n_cells",
+          "description": "Number of evaluation cells behind the mean (3 checkpoints x 5 probes per arm).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "summary-v2-csv"
+            },
+            "extract": {
+              "column": "n_cells"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-drift-summary/mean_drift_gap",
+          "name": "mean_drift_gap",
+          "description": "Mean judge-score gap between the real-session arm and the filler-control arm (positive = drift attributable to real context).",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "summary-v2-csv"
+            },
+            "extract": {
+              "column": "mean_drift_gap"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "session-figure-inputs",
+      "name": "session-figure-inputs",
+      "description": "One row per session in the accepted population: session-shape covariates and judge-free lexical drift proxies used for figures and drift predictors.",
+      "key": {
+        "@id": "session-figure-inputs/session_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/session_id",
+          "name": "session_id",
+          "description": "Session identifier.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "session_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/population",
+          "name": "population",
+          "description": "founding | community.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "population"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/agent",
+          "name": "agent",
+          "description": "Harness family (claude | codex).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "agent"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/turns",
+          "name": "turns",
+          "description": "User turns in the session.",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "turns"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/compactions",
+          "name": "compactions",
+          "description": "In-session context compactions.",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "compactions"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/mean_resp_len_words",
+          "name": "mean_resp_len_words",
+          "description": "Mean assistant response length in words.",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "mean_resp_len_words"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/first_person_rate",
+          "name": "first_person_rate",
+          "description": "First-person marker rate in assistant messages (lexical register proxy).",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "first_person_rate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/preamble_rate",
+          "name": "preamble_rate",
+          "description": "Preamble-phrase rate in assistant messages (lexical register proxy).",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "preamble_rate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/disclaimer_rate",
+          "name": "disclaimer_rate",
+          "description": "Disclaimer-phrase rate in assistant messages (lexical register proxy).",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "disclaimer_rate"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/resp_len_late_minus_early",
+          "name": "resp_len_late_minus_early",
+          "description": "Late-session minus early-session mean response length (within-session verbosity shift, words).",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "resp_len_late_minus_early"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "session-figure-inputs/n_assistant_msgs",
+          "name": "n_assistant_msgs",
+          "description": "Number of assistant messages (the length variable that predicts drift in the predictors analysis).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "figure-inputs-v2-csv"
+            },
+            "extract": {
+              "column": "n_assistant_msgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "compactions-rederived",
+      "name": "compactions-rederived",
+      "description": "One row per session file (58 = 54 accepted community + 1 superseded duplicate + 3 founding; analyses use the 57 accepted sessions, 169 compaction events): compaction counts independently re-derived from the JSONL compaction markers, reconciled against donor manifests and figure inputs. agree=True for all rows.",
+      "key": {
+        "@id": "compactions-rederived/session_id"
+      },
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "compactions-rederived/session_id",
+          "name": "session_id",
+          "description": "Session identifier.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "compactions-rederived-csv"
+            },
+            "extract": {
+              "column": "session_id"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "compactions-rederived/harness",
+          "name": "harness",
+          "description": "claude_code | codex_cli.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "compactions-rederived-csv"
+            },
+            "extract": {
+              "column": "harness"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "compactions-rederived/n_records",
+          "name": "n_records",
+          "description": "JSONL record count of the session file.",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "compactions-rederived-csv"
+            },
+            "extract": {
+              "column": "n_records"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "compactions-rederived/n_compactions_jsonl",
+          "name": "n_compactions_jsonl",
+          "description": "Compactions counted from top-level JSONL markers (Claude Code: system/compact_boundary; Codex CLI: compacted).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "compactions-rederived-csv"
+            },
+            "extract": {
+              "column": "n_compactions_jsonl"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "compactions-rederived/n_compactions_manifest",
+          "name": "n_compactions_manifest",
+          "description": "Compactions per the donor manifest (empty for founding sessions, which predate manifests).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "compactions-rederived-csv"
+            },
+            "extract": {
+              "column": "n_compactions_manifest"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "compactions-rederived/n_compactions_figure_inputs",
+          "name": "n_compactions_figure_inputs",
+          "description": "Compactions per figure_inputs_v2.0.csv.",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "compactions-rederived-csv"
+            },
+            "extract": {
+              "column": "n_compactions_figure_inputs"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "compactions-rederived/agree",
+          "name": "agree",
+          "description": "True when all available sources agree for this session (True for all 58 rows).",
+          "dataType": "sc:Boolean",
+          "source": {
+            "fileObject": {
+              "@id": "compactions-rederived-csv"
+            },
+            "extract": {
+              "column": "agree"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
