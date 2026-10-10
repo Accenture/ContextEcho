@@ -24,7 +24,7 @@ requests==2.34.2             # patches CVE-2026-25645 (temp-file reuse)
 
 # HuggingFace dataset release tooling
 huggingface_hub==1.10.2
-datasets==4.8.4
+datasets==5.0.1
 
 # Optional / experiment-specific
 modal==1.4.2                 # cloud execution for some experiments
