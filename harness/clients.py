@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from .cost import CostTracker
+from .clients_local import make_local_client
 from .retry import call_with_retry
 
 
@@ -37,7 +38,7 @@ class ToolResult:
 
 
 ProviderName = Literal["anthropic", "openai", "together", "gemini", "openrouter",
-                       "cohere", "nvidia"]
+                       "cohere", "nvidia", "local"]
 
 
 class TargetClient:
@@ -58,7 +59,9 @@ class TargetClient:
         self.model_id = model_id
         self.cost_tracker = cost_tracker
         self.session_id = session_id
-        if provider == "anthropic":
+        if provider == "local":
+            self._client = make_local_client()
+        elif provider == "anthropic":
             from anthropic import Anthropic
             self._client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         elif provider == "openai":
@@ -259,7 +262,17 @@ class TargetClient:
         # OpenRouter accepts both, but `max_tokens` is more reliable across
         # the diverse upstream models it routes to (gpt-5 needs a larger
         # budget to leave room for reasoning tokens).
-        if self.provider == "together":
+        if self.provider == "local":
+            # A local model alias must not change the requested token budget.
+            create_kwargs = dict(
+                model=self.model_id,
+                messages=openai_messages,
+                max_tokens=max_tokens,
+                temperature=0.0,
+            )
+            if openai_tools:
+                create_kwargs["tools"] = openai_tools
+        elif self.provider == "together":
             create_kwargs = dict(
                 model=self.model_id,
                 messages=openai_messages,

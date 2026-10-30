@@ -289,3 +289,44 @@ sustained rate limits, reduce `--concurrency` (default 4).
 git commit. Each per-cell JSON's `provenance` field records the
 harness commit it was produced at; plots use that data. Re-collecting
 cells against newer model snapshots will produce different numbers.
+
+## Self-hosted provider parity
+
+`TargetClient("local", model_id)` connects to the explicit `LOCAL_OPENAI_BASE_URL`
+using the existing OpenAI chat-completions message format. Set
+`LOCAL_OPENAI_API_KEY` if the endpoint requires authentication. The local adapter
+does not read the hosted `OPENAI_API_KEY` or infer an endpoint. It sends
+`temperature=0.0` and the exact requested `max_tokens`, including when a local
+model alias resembles a hosted reasoning model. Tool schemas and tool history
+use the existing normalized representation. The server must support those
+features for tool-using experiments.
+
+The following commands reproduce the included text-only parity run with
+Transformers 5.15.1. Model weights are downloaded separately. Start the server
+in one terminal and run the comparison from the repository root in another.
+
+```bash
+pip install 'transformers[serving]==5.15.1'
+transformers serve Qwen/Qwen3-4B --host 127.0.0.1 --port 18536 \
+  --device cuda:0 --dtype bfloat16 --attn-implementation sdpa \
+  --reasoning off --default-seed 20261030
+
+export LOCAL_OPENAI_BASE_URL=http://127.0.0.1:18536/v1
+python -m experiments.local_provider_parity.run --model Qwen/Qwen3-4B \
+  --budgets 16 64 128 --output parity.json
+```
+
+`experiments/local_provider_parity/results.json` records all 12 comparisons
+from four fresh test prompts at three output limits. Adapter calls matched
+direct SDK calls exactly in visible text, finish reason, prompt tokens and
+completion tokens. All completions respected their requested limits. The run
+used one H100 80GB on native Linux. Unit tests additionally exercise tool
+serialization, separate endpoint authentication, missing endpoint and usage,
+and model aliases that would otherwise trigger hosted-provider token floors.
+Those tool checks use a simulated HTTP endpoint, not a live tool-capable model.
+
+Validation: `python -m pytest tests/test_local_client.py -q` passed 10 tests,
+and `python -m pytest tests/test_session_validation.py -q` passed 2 tests.
+This run establishes adapter parity only. It uses no donated sessions, judge
+scores or persona-drift measurements. Existing hosted providers retain their
+parameters. The existing cost tracker does not estimate local hardware cost.
