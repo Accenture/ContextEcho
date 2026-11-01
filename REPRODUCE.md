@@ -292,18 +292,13 @@ cells against newer model snapshots will produce different numbers.
 
 ## Self-hosted provider parity
 
-`TargetClient("local", model_id)` connects to the explicit `LOCAL_OPENAI_BASE_URL`
-using the existing OpenAI chat-completions message format. Set
-`LOCAL_OPENAI_API_KEY` if the endpoint requires authentication. The local adapter
-does not read the hosted `OPENAI_API_KEY` or infer an endpoint. It sends
-`temperature=0.0` and the exact requested `max_tokens`, including when a local
-model alias resembles a hosted reasoning model. Tool schemas and tool history
-use the existing normalized representation. The server must support those
-features for tool-using experiments.
+`TargetClient("local", model_id)` connects to `LOCAL_OPENAI_BASE_URL` through
+OpenAI chat completions. Set `LOCAL_OPENAI_API_KEY` for authenticated endpoints.
+The adapter sends temperature 0 and the requested output token limit, and
+converts the harness tool schemas and conversation history into the API format.
 
-The following commands reproduce the included text-only parity run with
-Transformers 5.15.1. Model weights are downloaded separately. Start the server
-in one terminal and run the comparison from the repository root in another.
+Start a Transformers 5.15.1 server, then run the comparison from the repository
+root in another terminal:
 
 ```bash
 pip install 'transformers[serving]==5.15.1'
@@ -316,17 +311,45 @@ python -m experiments.local_provider_parity.run --model Qwen/Qwen3-4B \
   --budgets 16 64 128 --output parity.json
 ```
 
-`experiments/local_provider_parity/results.json` records all 12 comparisons
-from four fresh test prompts at three output limits. Adapter calls matched
-direct SDK calls exactly in visible text, finish reason, prompt tokens and
-completion tokens. All completions respected their requested limits. The run
-used one H100 80GB on native Linux. Unit tests additionally exercise tool
-serialization, separate endpoint authentication, missing endpoint and usage,
-and model aliases that would otherwise trigger hosted-provider token floors.
-Those tool checks use a simulated HTTP endpoint, not a live tool-capable model.
+The recorded `experiments/local_provider_parity/results.json` contains 12
+comparisons: four prompts at three output limits. Visible text, finish reason,
+and input and output token counts matched direct SDK requests in every case.
+Each completion stayed within its requested limit.
 
-Validation: `python -m pytest tests/test_local_client.py -q` passed 10 tests,
-and `python -m pytest tests/test_session_validation.py -q` passed 2 tests.
-This run establishes adapter parity only. It uses no donated sessions, judge
-scores or persona-drift measurements. Existing hosted providers retain their
-parameters. The existing cost tracker does not estimate local hardware cost.
+### Native Ollama
+
+`TargetClient("ollama", model_id)` uses Ollama's `/api/chat` endpoint at
+`OLLAMA_BASE_URL`. It supports tool calls and tool results, maps token limits to
+`num_predict`, and records `prompt_eval_count` and `eval_count`. Requests use
+temperature 0 and disable thinking.
+
+The recorded run used Ollama 0.40.13 and Qwen3.5-2B Q4_K_M on one H100 80GB.
+Download `Qwen3.5-2B-Q4_K_M.gguf` from
+[unsloth/Qwen3.5-2B-GGUF](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/tree/f6d5376be1edb4d416d56da11e5397a961aca8ae)
+into `experiments/ollama_provider_parity/`. Start Ollama, then create the model
+and run the comparison:
+
+```bash
+OLLAMA_HOST=127.0.0.1:18539 ollama serve
+```
+
+```bash
+export OLLAMA_HOST=127.0.0.1:18539
+ollama create contextecho-qwen3.5-2b -f experiments/ollama_provider_parity/Modelfile
+export OLLAMA_BASE_URL=http://127.0.0.1:18539
+python -m experiments.ollama_provider_parity.run --model contextecho-qwen3.5-2b \
+  --budgets 16 64 128 --output ollama-parity.json
+```
+
+`experiments/ollama_provider_parity/results.json` contains 12 text comparisons,
+a request that produces an arithmetic tool call, and a continuation consuming
+its result. All 14 comparisons matched direct native API requests in text,
+tool arguments, finish reason, and token counts. All respected the requested
+output limits.
+
+```bash
+python -m pytest tests/test_local_client.py tests/test_ollama_client.py -q
+```
+
+The 15 tests cover message conversion, tool history, multiple tool calls,
+endpoint configuration, token limits, and usage accounting.

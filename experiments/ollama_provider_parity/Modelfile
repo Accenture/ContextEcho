@@ -1,0 +1,4 @@
+FROM ./Qwen3.5-2B-Q4_K_M.gguf
+PARAMETER num_ctx 8192
+PARAMETER temperature 0
+PARAMETER seed 20261101
