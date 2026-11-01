@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from .cost import CostTracker
+from .clients_local import make_local_client
+from .clients_ollama import chat_payload, make_ollama_client, native_chat
 from .retry import call_with_retry
 
 
@@ -37,7 +39,7 @@ class ToolResult:
 
 
 ProviderName = Literal["anthropic", "openai", "together", "gemini", "openrouter",
-                       "cohere", "nvidia"]
+                       "cohere", "nvidia", "local", "ollama"]
 
 
 class TargetClient:
@@ -58,7 +60,11 @@ class TargetClient:
         self.model_id = model_id
         self.cost_tracker = cost_tracker
         self.session_id = session_id
-        if provider == "anthropic":
+        if provider == "ollama":
+            self._client = make_ollama_client()
+        elif provider == "local":
+            self._client = make_local_client()
+        elif provider == "anthropic":
             from anthropic import Anthropic
             self._client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         elif provider == "openai":
@@ -148,12 +154,32 @@ class TargetClient:
 
         Returns a provider-normalized TargetResponse.
         """
+        if self.provider == "ollama":
+            return self._step_ollama(system_prompt, messages, tools, max_tokens)
         if self.provider == "anthropic":
             return self._step_anthropic(system_prompt, messages, tools, max_tokens)
         if self.provider == "gemini":
             return self._step_gemini(system_prompt, messages, max_tokens)
         # together uses an OpenAI-compatible client; same code path
         return self._step_openai(system_prompt, messages, tools, max_tokens)
+
+    def _step_ollama(self, system_prompt, messages, tools, max_tokens) -> TargetResponse:
+        payload = chat_payload(self.model_id, system_prompt, messages, tools, max_tokens)
+        response = call_with_retry(lambda: native_chat(self._client, payload),
+                                   context=f"ollama.chat({self.model_id})")
+        message = response['message']
+        # Native Ollama calls can omit ids; assign an id within this conversation turn.
+        calls = [ToolCall(id=f"ollama-{len(messages)}-{index}",
+                          name=call['function']['name'], input=call['function']['arguments'])
+                 for index, call in enumerate(message.get('tool_calls', []))]
+        usage = {'input_tokens': response['prompt_eval_count'],
+                 'output_tokens': response['eval_count']}
+        if self.cost_tracker is not None:
+            self.cost_tracker.log(session_id=self.session_id, role='target',
+                                  model_id=self.model_id, **usage)
+        return TargetResponse(text=message['content'], tool_calls=calls,
+                              stop_reason='tool_calls' if calls else response['done_reason'],
+                              raw_usage=usage)
 
     def _step_anthropic(
         self, system_prompt: str, messages: list[dict], tools: list[dict], max_tokens: int
@@ -259,7 +285,17 @@ class TargetClient:
         # OpenRouter accepts both, but `max_tokens` is more reliable across
         # the diverse upstream models it routes to (gpt-5 needs a larger
         # budget to leave room for reasoning tokens).
-        if self.provider == "together":
+        if self.provider == "local":
+            # A local model alias must not change the requested token budget.
+            create_kwargs = dict(
+                model=self.model_id,
+                messages=openai_messages,
+                max_tokens=max_tokens,
+                temperature=0.0,
+            )
+            if openai_tools:
+                create_kwargs["tools"] = openai_tools
+        elif self.provider == "together":
             create_kwargs = dict(
                 model=self.model_id,
                 messages=openai_messages,

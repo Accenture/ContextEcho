@@ -1,0 +1,234 @@
+{
+  "model": "Qwen/Qwen3-4B",
+  "temperature": 0.0,
+  "openai_version": "2.18.0",
+  "comparisons": [
+    {
+      "case": "single_turn",
+      "max_tokens": 16,
+      "adapter": {
+        "text": "42",
+        "finish_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "42",
+        "finish_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "single_turn",
+      "max_tokens": 64,
+      "adapter": {
+        "text": "42",
+        "finish_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "42",
+        "finish_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "single_turn",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "42",
+        "finish_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "42",
+        "finish_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "text_blocks",
+      "max_tokens": 16,
+      "adapter": {
+        "text": "The area of a rectangle is calculated as width multiplied by height.  \nSo,",
+        "finish_reason": "length",
+        "input_tokens": 36,
+        "output_tokens": 16
+      },
+      "direct": {
+        "text": "The area of a rectangle is calculated as width multiplied by height.  \nSo,",
+        "finish_reason": "length",
+        "input_tokens": 36,
+        "output_tokens": 16
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "text_blocks",
+      "max_tokens": 64,
+      "adapter": {
+        "text": "The area of a rectangle is calculated as width multiplied by height.  \nSo, $ 3 \\times 4 = 12 $.  \n\nThe area is **12**.",
+        "finish_reason": "stop",
+        "input_tokens": 36,
+        "output_tokens": 38
+      },
+      "direct": {
+        "text": "The area of a rectangle is calculated as width multiplied by height.  \nSo, $ 3 \\times 4 = 12 $.  \n\nThe area is **12**.",
+        "finish_reason": "stop",
+        "input_tokens": 36,
+        "output_tokens": 38
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "text_blocks",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "The area of a rectangle is calculated as width multiplied by height.  \nSo, $ 3 \\times 4 = 12 $.  \n\nThe area is **12**.",
+        "finish_reason": "stop",
+        "input_tokens": 36,
+        "output_tokens": 38
+      },
+      "direct": {
+        "text": "The area of a rectangle is calculated as width multiplied by height.  \nSo, $ 3 \\times 4 = 12 $.  \n\nThe area is **12**.",
+        "finish_reason": "stop",
+        "input_tokens": 36,
+        "output_tokens": 38
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "multi_turn",
+      "max_tokens": 16,
+      "adapter": {
+        "text": "49.",
+        "finish_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 4
+      },
+      "direct": {
+        "text": "49.",
+        "finish_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 4
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "multi_turn",
+      "max_tokens": 64,
+      "adapter": {
+        "text": "49.",
+        "finish_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 4
+      },
+      "direct": {
+        "text": "49.",
+        "finish_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 4
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "multi_turn",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "49.",
+        "finish_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 4
+      },
+      "direct": {
+        "text": "49.",
+        "finish_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 4
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "unicode",
+      "max_tokens": 16,
+      "adapter": {
+        "text": "ΔA + ΔB = 3 + 5 = 8.",
+        "finish_reason": "length",
+        "input_tokens": 40,
+        "output_tokens": 16
+      },
+      "direct": {
+        "text": "ΔA + ΔB = 3 + 5 = 8.",
+        "finish_reason": "length",
+        "input_tokens": 40,
+        "output_tokens": 16
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "unicode",
+      "max_tokens": 64,
+      "adapter": {
+        "text": "ΔA + ΔB = 3 + 5 = 8.",
+        "finish_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 16
+      },
+      "direct": {
+        "text": "ΔA + ΔB = 3 + 5 = 8.",
+        "finish_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 16
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "unicode",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "ΔA + ΔB = 3 + 5 = 8.",
+        "finish_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 16
+      },
+      "direct": {
+        "text": "ΔA + ΔB = 3 + 5 = 8.",
+        "finish_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 16
+      },
+      "equal": true,
+      "within_budget": true
+    }
+  ],
+  "server": {
+    "implementation": "transformers serve",
+    "version": "5.15.1",
+    "model": "Qwen/Qwen3-4B",
+    "dtype": "bfloat16",
+    "attention": "sdpa",
+    "reasoning": "off",
+    "default_seed": 20261030,
+    "hardware": "one NVIDIA H100 80GB",
+    "execution": "native Linux, no container"
+  }
+}
