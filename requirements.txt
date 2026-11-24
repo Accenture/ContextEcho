@@ -16,7 +16,7 @@ python-pptx==1.0.2
 lxml==6.1.1                  # patches CVE-2026-41066 (XXE)
 
 # Data validation
-pydantic==2.12.5
+pydantic==2.14.4             # clears BDSA-2026-40849, -40852, -40856, -40858, -40867 (BDH medium)
 
 # Utility / IO
 tqdm==4.67.1
