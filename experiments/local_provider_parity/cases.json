@@ -1,0 +1,6 @@
+[
+  {"id": "single_turn", "system": "Answer briefly.", "messages": [{"role": "user", "content": [{"type": "text", "text": "What is 17 plus 25?"}]}]},
+  {"id": "text_blocks", "system": "Answer briefly.", "messages": [{"role": "user", "content": [{"type": "text", "text": "A rectangle has width 3 and height 4."}, {"type": "text", "text": "What is its area?"}]}]},
+  {"id": "multi_turn", "system": "Answer briefly.", "messages": [{"role": "user", "content": [{"type": "text", "text": "Let x equal 7."}]}, {"role": "assistant", "content": [{"type": "text", "text": "x = 7."}]}, {"role": "user", "content": [{"type": "text", "text": "What is x squared?"}]}]},
+  {"id": "unicode", "system": "Answer briefly.", "messages": [{"role": "user", "content": [{"type": "text", "text": "Given ΔA = 3 and ΔB = 5, calculate ΔA + ΔB."}]}]}
+]

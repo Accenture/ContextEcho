@@ -1,0 +1,304 @@
+{
+  "model": "contextecho-qwen3.5-2b",
+  "ollama_version": "0.40.13",
+  "thinking": false,
+  "temperature": 0,
+  "comparisons": [
+    {
+      "case": "single_turn",
+      "max_tokens": 16,
+      "adapter": {
+        "text": "42",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "42",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "single_turn",
+      "max_tokens": 64,
+      "adapter": {
+        "text": "42",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "42",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "single_turn",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "42",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "42",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 30,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "text_blocks",
+      "max_tokens": 16,
+      "adapter": {
+        "text": "The area of a rectangle is calculated by multiplying its width by its height.\n\n",
+        "tools": [],
+        "stop_reason": "length",
+        "input_tokens": 37,
+        "output_tokens": 16
+      },
+      "direct": {
+        "text": "The area of a rectangle is calculated by multiplying its width by its height.\n\n",
+        "tools": [],
+        "stop_reason": "length",
+        "input_tokens": 37,
+        "output_tokens": 16
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "text_blocks",
+      "max_tokens": 64,
+      "adapter": {
+        "text": "The area of a rectangle is calculated by multiplying its width by its height.\n\n$$ \\text{Area} = \\text{width} \\times \\text{height} = 3 \\times 4 = 12 $$\n\nThe area is **12**.",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 37,
+        "output_tokens": 56
+      },
+      "direct": {
+        "text": "The area of a rectangle is calculated by multiplying its width by its height.\n\n$$ \\text{Area} = \\text{width} \\times \\text{height} = 3 \\times 4 = 12 $$\n\nThe area is **12**.",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 37,
+        "output_tokens": 56
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "text_blocks",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "The area of a rectangle is calculated by multiplying its width by its height.\n\n$$ \\text{Area} = \\text{width} \\times \\text{height} = 3 \\times 4 = 12 $$\n\nThe area is **12**.",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 37,
+        "output_tokens": 56
+      },
+      "direct": {
+        "text": "The area of a rectangle is calculated by multiplying its width by its height.\n\n$$ \\text{Area} = \\text{width} \\times \\text{height} = 3 \\times 4 = 12 $$\n\nThe area is **12**.",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 37,
+        "output_tokens": 56
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "multi_turn",
+      "max_tokens": 16,
+      "adapter": {
+        "text": "49",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "49",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "multi_turn",
+      "max_tokens": 64,
+      "adapter": {
+        "text": "49",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "49",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "multi_turn",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "49",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "49",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 46,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "unicode",
+      "max_tokens": 16,
+      "adapter": {
+        "text": "8",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 2
+      },
+      "direct": {
+        "text": "8",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 2
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "unicode",
+      "max_tokens": 64,
+      "adapter": {
+        "text": "8",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 2
+      },
+      "direct": {
+        "text": "8",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 2
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "unicode",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "8",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 2
+      },
+      "direct": {
+        "text": "8",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 40,
+        "output_tokens": 2
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "tool_request",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "",
+        "tools": [
+          {
+            "name": "add",
+            "arguments": {
+              "a": 19,
+              "b": 23
+            }
+          }
+        ],
+        "stop_reason": "tool_calls",
+        "input_tokens": 297,
+        "output_tokens": 37
+      },
+      "direct": {
+        "text": "",
+        "tools": [
+          {
+            "name": "add",
+            "arguments": {
+              "a": 19,
+              "b": 23
+            }
+          }
+        ],
+        "stop_reason": "tool_calls",
+        "input_tokens": 297,
+        "output_tokens": 37
+      },
+      "equal": true,
+      "within_budget": true
+    },
+    {
+      "case": "tool_result",
+      "max_tokens": 128,
+      "adapter": {
+        "text": "42",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 359,
+        "output_tokens": 3
+      },
+      "direct": {
+        "text": "42",
+        "tools": [],
+        "stop_reason": "stop",
+        "input_tokens": 359,
+        "output_tokens": 3
+      },
+      "equal": true,
+      "within_budget": true
+    }
+  ]
+}
